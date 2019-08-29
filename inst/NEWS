@@ -1,0 +1,35 @@
+August 28th, 2019 (0.4-4)
+
+* run in all examples the example code (remove dontrun sections)
+
+August 27th, 2019 (0.4-3)
+
+* use message instead of cat in functions using printing except
+  summary or print
+* suppress by default messages from Stan, can be enable with
+  verbose=TRUE
+* make examples run with very short sampling
+
+August 27th, 2019 (0.4-2)
+
+* Correct loading and exporting of methods
+* Add tidybayes example for continuous use and visutalization of model
+* Allow multiple central probability widths in prob argument of
+  summary method
+
+July 31st, 2019 (0.3-0)
+
+* Correct external package loading in examples
+
+July 27th, 2019 (0.2-0)
+
+* Added function prior_summary
+* Restructured print output
+* Added examples single-agent, combo2 and combo3 along with example data sets
+* A lot more documentation on reference pages
+* New vignette on standard use case of blrm_exnex in Oncology
+* Qualified blrm_exnex model with Simulation Based Calibration
+
+May 15th, 2018 (0.1-0)
+
+* Initial release
