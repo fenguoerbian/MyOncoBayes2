@@ -95,15 +95,15 @@ num_inter <- choose(3,2) + 1
 num_strata <- nlevels(hist_combo3$stratum)
 num_groups <- nlevels(hist_combo3$group_id)
 
-blrmfit <- blrm_exnex(cbind(Ntox, Npat-Ntox) ~
-                          1 + I(log(DosesAdm1/dref[1])) |
-                          1 + I(log(DosesAdm2/dref[2])) |
-                          1 + I(log(DosesAdm3/dref[3])) |
+blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                          1 + I(log(drug_A/dref[1])) |
+                          1 + I(log(drug_B/dref[2])) |
+                          1 + I(log(drug_C/dref[3])) |
                           0
-                      + I(DosesAdm1/dref[1] * DosesAdm2/dref[2])
-                      + I(DosesAdm1/dref[1] * DosesAdm3/dref[3])
-                      + I(DosesAdm2/dref[2] * DosesAdm3/dref[3])
-                      + I(DosesAdm1/dref[1] * DosesAdm2/dref[2] * DosesAdm3/dref[3]) |
+                      + I(drug_A/dref[1] * drug_B/dref[2])
+                      + I(drug_A/dref[1] * drug_C/dref[3])
+                      + I(drug_B/dref[2] * drug_C/dref[3])
+                      + I(drug_A/dref[1] * drug_B/dref[2] * drug_C/dref[3]) |
                       stratum/group_id,
                       data=hist_combo3,
                       prior_EX_mu_mean_comp=matrix(c(logit(1/3), 0), nrow=num_comp, ncol=2, TRUE),

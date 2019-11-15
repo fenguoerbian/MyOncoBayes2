@@ -244,7 +244,7 @@ For a triple combination example please refer to \code{\link{example-combo3}}.
 Information on the toxicity of a drug may be available from multiple
 studies or sources. Furthermore, one may wish to stratify observations within a
 single study (for example into groups of patients corresponding to different geographic regions,
-or multiple dosing schedules).
+or multiple dosing dose_info).
 
 \code{blrm_exnex} provides tools for robust Bayesian hierarchical modeling to
 jointly model data from multiple sources. An additional index \eqn{j=1, \ldots, J} on
@@ -349,15 +349,15 @@ print(cbind(hist_combo3, summ))
 # summary of posterior for DLT rate by dose for new set of covariate levels
 newdata <- expand.grid(
   stratum = "BID", group_id = "Combo",
-  DosesAdm1 = 400, DosesAdm2 = 800, DosesAdm3 = c(320, 400, 600, 800),
+  drug_A = 400, drug_B = 800, drug_C = c(320, 400, 600, 800),
   stringsAsFactors = FALSE
 )
 summ_pred <- summary(blrmfit, newdata = newdata, interval_prob = c(0, 0.16, 0.33, 1))
 print(cbind(newdata, summ_pred))
 
 # update the model after observing additional data
-newdata$Npat <- rep(3, nrow(newdata))
-newdata$Ntox <- c(0, 1, 2, 2)
+newdata$num_patients <- rep(3, nrow(newdata))
+newdata$num_toxicities <- c(0, 1, 2, 2)
 library(dplyr)
 blrmfit_new <- update(blrmfit,
                       data = rbind(hist_combo3, newdata) \%>\%

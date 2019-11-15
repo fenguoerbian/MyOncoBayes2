@@ -1,6 +1,7 @@
 #' Summarise model results
 #'
-#' Provides model summaries for \code{\link{blrm_exnex}} analyses.
+#' Provides model summaries for \code{\link{blrm_exnex}} and
+#' \code{\link{blrm_trial}} analyses.
 #'
 #' @template args-methods
 #' @template args-prob
@@ -24,7 +25,7 @@
 #'     \code{\link{blrm_exnex}} analysis or the data specified in the
 #'     \code{newdata} argument.
 #'
-#' @template example-start
+#' @template start-example
 #' @examples
 #' example_model("single_agent")
 #'
@@ -32,7 +33,7 @@
 #' ## overdosing (0.33-1) probabilities
 #' summary(blrmfit, interval_prob=c(0,0.16,0.33,1))
 #'
-#' @template example-stop
+#' @template stop-example
 #'
 #' @method summary blrmfit
 #' @export
@@ -54,14 +55,14 @@ summary.blrmfit <- function(object, newdata, transform=TRUE, prob=0.95, interval
     . <- value <- Var1 <- Freq <- NULL
 
     probs <- sort(unique(c(0.5, 0.5- prob/2, 0.5+ prob/2)))
-    qsummaries <- lapply(probs, function(p) function(x) quantile(x, probs=p))
+    qsummaries <- lapply(probs, function(p) function(x) quantile(x, probs=p)) %>%
+      setNames(paste0(100 * probs, "%"))
 
     out_sum <- post_logit %>%
         group_by(id) %>%
         summarise_all(c(list(mean=mean, sd=sd), qsummaries)) %>%
         arrange(id) %>%
         ungroup()
-    names(out_sum)[-1*c(1,2,3)] <- paste0(100*probs, "%")
 
     if(!missing(interval_prob)) {
         assert_numeric(interval_prob, any.missing=FALSE, sorted=TRUE)
@@ -84,4 +85,55 @@ summary.blrmfit <- function(object, newdata, transform=TRUE, prob=0.95, interval
     out_sum
 }
 
+#' Summarise trial
+#'
+#' Provides model summaries for \code{\link{blrm_trial}} analyses.
+#' @param object \code{\link{blrm_trial}} object
+#' @param summarize one of the following options:
+#' \itemize{
+#'   \item{}{\code{blrmfit}: summary of the underlying blrmfit object with further arguments ...}
+#'   \item{}{\code{blrm_exnex_call}: blrm_exnex call used to create the \code{blrmfit} object}
+#'   \item{}{\code{dose_info}: dose_info that were defined}
+#'   \item{}{\code{dose_prediction} prediction for the defined dose_info}
+#'   \item{}{\code{data}: data that were observed}
+#'   \item{}{\code{data_prediction}: prediction for the observed data}
+#'   \item{}{\code{dimensionality}: numeric vector with entries "num_components", "num_interaction_terms", "num_groups", "num_strata" }
+#' }
+#' @param ... further arguments for summary.blrmfit
+#'
+#' @template start-example
+#' @examples
+#' # construct initial blrm_trial object from built-in example datasets
+#' combo2_trial_setup <- blrm_trial(
+#'   data = hist_combo2,
+#'   dose_info = dose_info_combo2,
+#'   drug_info = drug_info_combo2,
+#'   simplified_prior = TRUE
+#' )
+#'
+#' # extract blrm_call to see setup of the prior as passed to blrm_exnex
+#' summary(combo2_trial_setup, "blrm_exnex_call")
+#'
+#' @template stop-example
+#'
+#' @method summary blrm_trial
+#' @export
+summary.blrm_trial <- function (object, summarize=c("blrmfit", "blrm_exnex_call", "dose_info", "dose_prediction", "data", "data_prediction", "dimensionality"), ...) {
+  summarize <- match.arg(summarize)
+
+  if (summarize %in% c("blrmfit", "blrm_exnex_call", "dose_prediction", "data_prediction")) {
+    .assert_is_blrm_trial_and_prior_is_set(object)
+  } else {
+    .assert_is_blrm_trial(object)
+  }
+
+  switch(summarize,
+         blrmfit = summary(object$blrmfit, ...),
+         blrm_exnex_call = object$blrmfit$call,
+         dose_info = object$dose_info,
+         dose_prediction = .blrm_trial_predict(object, object$dose_info),
+         data = object$data,
+         data_prediction = .blrm_trial_predict(object, object$data),
+         dimensionality = object[c("num_components", "num_interaction_terms", "num_groups", "num_strata")])
+}
 

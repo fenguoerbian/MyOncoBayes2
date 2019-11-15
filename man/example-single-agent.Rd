@@ -53,8 +53,8 @@ dref <- 50
 ## Since there is no prior information the hierarchical model
 ## is not used in this example by setting tau to (almost) 0.
 blrmfit <- blrm_exnex(
-  cbind(Ntox, Npat - Ntox) ~
-    1 + log(DosesAdm1 / dref) |
+  cbind(num_toxicities, num_patients - num_toxicities) ~
+    1 + log(drug_A / dref) |
     0 |
     group_id,
   data = hist_SA,

@@ -7,10 +7,10 @@
 \format{A data frame with 20 rows and 5 variables:
 \describe{
   \item{group_id}{study}
-  \item{DosesAdm1}{dose of Drug A}
-  \item{DosesAdm2}{dose of Drug B}
-  \item{Npat}{number of patients}
-  \item{Ntox}{number of DLTs}
+  \item{drug_A}{dose of Drug A}
+  \item{drug_B}{dose of Drug B}
+  \item{num_patients}{number of patients}
+  \item{num_toxicities}{number of DLTs}
 }}
 \usage{
 codata_combo2
@@ -39,10 +39,10 @@ num_groups <- nlevels(codata_combo2$group_id) # no stratification needed
 num_strata <- 1 # no stratification needed
 
 blrmfit <- blrm_exnex(
-  cbind(Ntox, Npat - Ntox) ~
-      1 + I(log(DosesAdm1 / dref[1])) |
-      1 + I(log(DosesAdm2 / dref[2])) |
-      0 + I(DosesAdm1/dref[1] *DosesAdm2/dref[2]) |
+  cbind(num_toxicities, num_patients - num_toxicities) ~
+      1 + I(log(drug_A / dref[1])) |
+      1 + I(log(drug_B / dref[2])) |
+      0 + I(drug_A/dref[1] *drug_B/dref[2]) |
       group_id,
   data = codata_combo2,
   prior_EX_mu_mean_comp = matrix(

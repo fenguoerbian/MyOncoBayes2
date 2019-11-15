@@ -11,4 +11,4 @@ export R_HOME=/CHBS/apps/R/3.4.3/lib64/R
 export R_ENVIRON_USER=${HOME}/.Renviron_ob2
 export R_BATCHTOOLS_SEARCH_PATH=${HOME}/batchtools_lsf/
 
-${R_HOME}/bin/Rscript make_reference_rankhist.R
+${R_HOME}/bin/Rscript --no-save make_reference_rankhist.R

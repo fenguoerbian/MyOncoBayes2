@@ -20,5 +20,8 @@ fi
 "${R_HOME}/bin/R" --slave --file=tools/make-ds.R
 
 ## create documentation Rd files
-"${R_HOME}/bin/R" --slave -e 'library(devtools); devtools::load_all(); devtools::document()'
+#"${R_HOME}/bin/R" --slave -e 'library(devtools); devtools::load_all(); library(roxygen2); roxygen2::roxygenize()'
+"${R_HOME}/bin/R" --slave -e 'library(roxygen2); roxygen2::roxygenize()'
+
+##"${R_HOME}/bin/R" --slave -e 'library(devtools); devtools::load_all(); devtools::document()'
 

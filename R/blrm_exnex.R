@@ -168,7 +168,7 @@
 #' Information on the toxicity of a drug may be available from multiple
 #' studies or sources. Furthermore, one may wish to stratify observations within a
 #' single study (for example into groups of patients corresponding to different geographic regions,
-#' or multiple dosing schedules).
+#' or multiple dosing dose_info).
 #'
 #' \code{blrm_exnex} provides tools for robust Bayesian hierarchical modeling to
 #' jointly model data from multiple sources. An additional index \eqn{j=1, \ldots, J} on
@@ -263,7 +263,7 @@
 #' @template ref-critical_aspects
 #' @template ref-bayesindustry
 #'
-#' @template example-start
+#' @template start-example
 #' @examples
 #' # fit an example model. See documentation for "combo3" example
 #' example_model("combo3")
@@ -281,15 +281,15 @@
 #' # summary of posterior for DLT rate by dose for new set of covariate levels
 #' newdata <- expand.grid(
 #'   stratum = "BID", group_id = "Combo",
-#'   DosesAdm1 = 400, DosesAdm2 = 800, DosesAdm3 = c(320, 400, 600, 800),
+#'   drug_A = 400, drug_B = 800, drug_C = c(320, 400, 600, 800),
 #'   stringsAsFactors = FALSE
 #' )
 #' summ_pred <- summary(blrmfit, newdata = newdata, interval_prob = c(0, 0.16, 0.33, 1))
 #' print(cbind(newdata, summ_pred))
 #'
 #' # update the model after observing additional data
-#' newdata$Npat <- rep(3, nrow(newdata))
-#' newdata$Ntox <- c(0, 1, 2, 2)
+#' newdata$num_patients <- rep(3, nrow(newdata))
+#' newdata$num_toxicities <- c(0, 1, 2, 2)
 #' library(dplyr)
 #' blrmfit_new <- update(blrmfit,
 #'                       data = rbind(hist_combo3, newdata) %>%
@@ -298,7 +298,7 @@
 #' # updated posterior summary
 #' summ_upd <- summary(blrmfit_new, newdata = newdata, interval_prob = c(0, 0.16, 0.33, 1))
 #' print(cbind(newdata, summ_upd))
-#' @template example-stop
+#' @template stop-example
 #'
 #' @export
 blrm_exnex <- function(formula,
@@ -344,6 +344,7 @@ blrm_exnex <- function(formula,
 
     f <- Formula::Formula(formula)
     mf[[1]] <- as.name("model.frame")
+    ##mf[[1]] <- quote(stats::model.frame)
     mf$formula <- f
     mf <- eval(mf, parent.frame())
 
@@ -351,6 +352,8 @@ blrm_exnex <- function(formula,
     idx_group_term <- num_rhs_terms
     has_inter <- TRUE
     idx_inter_term <- num_rhs_terms-1
+
+    mt <- attr(mf, "terms")
 
     for (i in 1:num_rhs_terms) {
         tc <- terms(f, rhs=i)
@@ -459,16 +462,19 @@ blrm_exnex <- function(formula,
     assert_matrix(prior_EX_mu_mean_comp, any.missing=FALSE, nrows=num_comp, ncols=2)
     assert_matrix(prior_EX_mu_sd_comp, any.missing=FALSE, nrows=num_comp, ncols=2)
 
-    ## in case a single stratum is used, the user is expected to input
-    ## a matrix
+    ## in case a single stratum is used, the user can input a matrix
     if(num_strata == 1) {
-        assert_matrix(prior_EX_tau_mean_comp, any.missing=FALSE, nrows=num_comp, ncols=2)
-        assert_matrix(prior_EX_tau_sd_comp, any.missing=FALSE, nrows=num_comp, ncols=2)
-        prior_EX_tau_mean_comp <- array(prior_EX_tau_mean_comp, dim=c(1, dim(prior_EX_tau_mean_comp)))
-        prior_EX_tau_sd_comp <- array(prior_EX_tau_sd_comp, dim=c(1, dim(prior_EX_tau_sd_comp)))
+        if (is.matrix(prior_EX_tau_mean_comp))
+            prior_EX_tau_mean_comp  <- array(prior_EX_tau_mean_comp, c(1, dim(prior_EX_tau_mean_comp)))
+        if (is.matrix(prior_EX_tau_sd_comp))
+            prior_EX_tau_sd_comp  <- array(prior_EX_tau_sd_comp, c(1, dim(prior_EX_tau_sd_comp)))
     }
     assert_array(prior_EX_tau_mean_comp, any.missing=FALSE, d=3)
     assert_array(prior_EX_tau_sd_comp, any.missing=FALSE, d=3)
+    assert_that(all(dim(prior_EX_tau_mean_comp) == c(num_strata, num_comp, 2)),
+                msg="prior_EX_tau_mean_comp must have dimensionality of num_strata x num_comp x 2.\nIn case of only one stratum a matrix of num_comp x 2 is sufficient.")
+    assert_that(all(dim(prior_EX_tau_sd_comp) == c(num_strata, num_comp, 2)),
+                msg="prior_EX_tau_sd_comp must have dimensionality of num_strata x num_comp x 2.\nIn case of only one stratum a matrix of num_comp x 2 is sufficient.")
 
     if(missing(prior_EX_corr_eta_comp))
         prior_EX_corr_eta_comp <- rep(1.0, times=num_comp)
@@ -621,8 +627,8 @@ blrm_exnex <- function(formula,
         stanfit=stanfit,
         formula = f,
         model = mf,
-        ##terms = mt,
-        ##xlevels = .getXlevels(mt, mf),
+        terms = mt,
+        xlevels = .getXlevels(mt, mf),
         data = data,
         idx_group_term=idx_group_term,
         idx_inter_term=idx_inter_term,
@@ -787,3 +793,11 @@ print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
 .make_label_factor <- function(labels) {
     factor(1:length(labels), levels=1:length(labels), labels=labels)
 }
+
+#' @method model.matrix blrmfit
+#' @export
+model.matrix.blrmfit <- function(object, ...) {
+  return(model.matrix.default(object, object$data))
+}
+
+

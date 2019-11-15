@@ -63,11 +63,10 @@ prior for future groups.
 ## run single-agent analysis which defines blrmfit model object
 example_model("single_agent")
 
-## obtain posterior of linear prediction on 0-1 scale, but first name
-## rows of input data to obtain nice labels with bayesplot
-trial_design <- hist_SA
-row.names(trial_design) <- hist_SA$DosesAdm1
-post_prob_dlt <- posterior_linpred(blrmfit, TRUE, newdata=trial_design)
+## obtain posterior of linear prediction on 0-1 scale
+post_prob_dlt <- posterior_linpred(blrmfit, TRUE, newdata=hist_SA)
+## name columns to obtain nice bayesplot labels
+colnames(post_prob_dlt) <- hist_SA$drug_A
 
 library(bayesplot)
 library(ggplot2)

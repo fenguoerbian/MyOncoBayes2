@@ -11,7 +11,7 @@
 #'     inserts the example into the environment given and returns
 #'     (invisibly) the updated environment.
 #'
-#' @template example-start
+#' @template start-example
 #' @examples
 #'
 #' ## get a list of available examples
@@ -20,7 +20,7 @@
 #' ## run 3 component example
 #' example_model("combo3")
 #'
-#' @template example-stop
+#' @template stop-example
 #'
 #' @export
 example_model <- function(topic, envir=parent.frame(), silent=FALSE) {
@@ -32,7 +32,7 @@ example_model <- function(topic, envir=parent.frame(), silent=FALSE) {
     if(silent) {
         suppressMessages(capture.output(eval(parse(text=ex_str), envir=envir)))
     } else {
-        message("Running", topic, "example:\n")
+        message("Running ", topic, " example:\n")
         message(paste(c(ex_str, ""), collapse="\n"))
         eval(parse(text=ex_str), envir=envir)
     }

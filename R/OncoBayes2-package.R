@@ -27,13 +27,17 @@
 #' @template ref-critical_aspects
 #' @template ref-bayesindustry
 #'
+#' @references
+#' Stan Development Team (2019). RStan: the R interface to Stan. R package version 2.19.2. https://mc-stan.org
+#'
 #' @name OncoBayes2
+#' @alias OncoBayes2
 #' @docType package
 #' @useDynLib OncoBayes2, .registration = TRUE
 #' @import methods
 #' @importFrom rstan sampling get_sampler_params summary stanc_builder
-#' @importFrom utils capture.output modifyList
-#' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms
+#' @importFrom utils capture.output modifyList combn
+#' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms model.matrix.default setNames update update.default .getXlevels as.formula na.fail
 #' @importFrom RBesT inv_logit logit
 #' @import methods
 #' @import assertthat
@@ -46,7 +50,7 @@
 #' @importFrom tibble as_tibble
 #' @import abind
 #' @export posterior_linpred posterior_predict posterior_interval
-#' @export predictive_interval prior_summary
+#' @export predictive_interval prior_summary nsamples
 #'
 #'
 NULL

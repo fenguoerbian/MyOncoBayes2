@@ -7,21 +7,21 @@
 #' combinations. However, due to a difference in treatment schedule between the
 #' \code{Combo} study and the historical studies, a stratification (through \code{stratum})
 #' is made between the groups to allow differential discounting of the
-#' alternate-schedule data.
+#' alternate-dose data.
 #'
 #' @format A data frame with 18 rows and 7 variables:
 #' \describe{
 #'   \item{group_id}{study}
-#'   \item{DosesAdm1}{dose of Drug A}
-#'   \item{DosesAdm2}{dose of Drug B}
-#'   \item{DosesAdm3}{dose of Drug C}
-#'   \item{Npat}{number of patients}
-#'   \item{Ntox}{number of DLTs}
+#'   \item{drug_A}{dose of Drug A}
+#'   \item{drug_B}{dose of Drug B}
+#'   \item{drug_C}{dose of Drug C}
+#'   \item{num_patients}{number of patients}
+#'   \item{num_toxicities}{number of DLTs}
 #'   \item{stratum}{stratum for \code{group_id}'s used for differential discounting}
 #' }
 #'
-#' @template example-start
+#' @template start-example
 #' @template example-combo3
-#' @template example-stop
+#' @template stop-example
 #'
 "hist_combo3"

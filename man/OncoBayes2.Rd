@@ -48,4 +48,6 @@ Neuenschwander, B., Matano, A., Tang, Z., Roychoudhury, S.,
  Wandel, S. Bailey, Stuart. (2014). A Bayesian Industry Approach to 
  Phase I Combination Trials in Oncology. In \emph{Statistical methods 
  in drug combination studies} (Vol. 69). CRC Press.
+
+Stan Development Team (2019). RStan: the R interface to Stan. R package version 2.19.2. https://mc-stan.org
 }

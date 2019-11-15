@@ -16,7 +16,10 @@ make_ds <- function() {
     use_data(hist_combo3, # testdata2, testdata3,
              hist_combo2,
              codata_combo2,
-             hist_SA,# Add further data sets here (separated by comma)
+             hist_SA,
+             drug_info_combo2,
+             dose_info_combo2, # Add further data sets here (separated by comma)
+             
              overwrite=TRUE)
   # use_data will make a file called testdata.rda available in data/
 
@@ -85,6 +88,7 @@ library(devtools)
 library(dplyr)
 library(tibble)
 library(tidyr)
+library(RBesT)
 
 make_ds()
 make_internal_ds()

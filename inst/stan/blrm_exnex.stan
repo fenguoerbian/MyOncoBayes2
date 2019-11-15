@@ -1,6 +1,6 @@
 functions {
 
-#include /chunks/utils.stan
+#include /include/utils.stan
   
   real tau_prior_lpdf(real tau, int dist, real a, real b) {
     if (dist == 0) {

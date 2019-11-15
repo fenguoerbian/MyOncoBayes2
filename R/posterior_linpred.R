@@ -15,17 +15,16 @@
 #' @template note-groups
 #' @template return-samples
 #'
-#' @template example-start
+#' @template start-example
 #' @examples
 #'
 #' ## run single-agent analysis which defines blrmfit model object
 #' example_model("single_agent")
 #'
-#' ## obtain posterior of linear prediction on 0-1 scale, but first name
-#' ## rows of input data to obtain nice labels with bayesplot
-#' trial_design <- hist_SA
-#' row.names(trial_design) <- hist_SA$DosesAdm1
-#' post_prob_dlt <- posterior_linpred(blrmfit, TRUE, newdata=trial_design)
+#' ## obtain posterior of linear prediction on 0-1 scale
+#' post_prob_dlt <- posterior_linpred(blrmfit, TRUE, newdata=hist_SA)
+#' ## name columns to obtain nice bayesplot labels
+#' colnames(post_prob_dlt) <- hist_SA$drug_A
 #'
 #' library(bayesplot)
 #' library(ggplot2)
@@ -36,7 +35,7 @@
 #'     ggtitle("Posterior Probability of a DLT") +
 #'     scale_x_continuous(breaks=c(0.1,0.16,0.33, 0.5, 0.75))
 #'
-#' @template example-stop
+#' @template stop-example
 #'
 #' @method posterior_linpred blrmfit
 #' @aliases posterior_linpred
@@ -46,4 +45,15 @@ posterior_linpred.blrmfit <- function(object, transform=FALSE, newdata, draws, .
     if (transform)
         dat <- inv_logit(dat)
     return(dat)
+}
+
+#' @method posterior_linpred blrm_trial
+#' @export
+posterior_linpred.blrm_trial <- function(object, transform=FALSE, newdata, draws, ...) {
+    .assert_is_blrm_trial_and_prior_is_set(object)
+    if(missing(newdata)) {
+        return(posterior_linpred.blrmfit(object$blrmfit, transform=transform, newdata=object$data, draws=draws, ...))
+    } else {
+        return(posterior_linpred.blrmfit(object$blrmfit, transform=transform, newdata=newdata, draws=draws, ...))
+    }
 }

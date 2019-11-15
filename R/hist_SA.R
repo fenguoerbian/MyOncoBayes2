@@ -8,13 +8,13 @@
 #' @format A data frame with 5 rows and 4 variables:
 #' \describe{
 #'   \item{group_id}{study}
-#'   \item{DosesAdm1}{dose}
-#'   \item{Npat}{number of patients}
-#'   \item{Ntox}{number of events}
+#'   \item{drug_A}{dose}
+#'   \item{num_patients}{number of patients}
+#'   \item{num_toxicities}{number of events}
 #' }
 #' @template ref-critical_aspects
 #'
-#' @template example-start
+#' @template start-example
 #' @template example-single_agent
-#' @template example-stop
+#' @template stop-example
 "hist_SA"

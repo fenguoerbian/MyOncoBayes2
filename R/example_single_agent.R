@@ -34,8 +34,8 @@
 #'
 #' @template ref-critical_aspects
 #'
-#' @template example-start
+#' @template start-example
 #' @template example-single_agent
-#' @template example-stop
+#' @template stop-example
 #'
 NULL

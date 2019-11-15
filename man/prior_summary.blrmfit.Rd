@@ -8,23 +8,24 @@
 \method{prior_summary}{blrmfit}(object, digits = 2, ...)
 }
 \arguments{
-\item{object}{\code{blrmfit} object as returned from \code{\link{blrm_exnex}} analysis}
+\item{object}{\code{blrmfit} (\code{blrm_trial}) object as returned from \code{\link{blrm_exnex}} (\code{\link{blrm_trial}}) analysis}
 
 \item{digits}{number of digits to show}
 
 \item{...}{ignored by the function}
 }
 \value{
-Returns a list of class \code{prior_summary.blrmfit} which
-    has it's own \code{print} function. The returned list contains
-    arrays which represent the prior in a structured format.
+Returns an analysis specific list, which has it's own
+    \code{print} function. The returned list contains arrays which
+    represent the prior in a structured format.
 }
 \description{
 Extracts a summary of the prior in a structured data format.
 }
 \details{
-The summary of the prior creates a structured representation of the
-specified prior from a \code{\link{blrm_exnex}} analysis.
+The summary of the prior creates a structured
+    representation of the specified prior from a
+    \code{\link{blrm_exnex}} (\code{\link{blrm_trial}}) analysis.
 }
 \examples{
 ## Setting up dummy sampling for fast execution of example

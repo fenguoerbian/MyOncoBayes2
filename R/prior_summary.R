@@ -3,19 +3,19 @@
 #' @description
 #' Extracts a summary of the prior in a structured data format.
 #'
-#' @param object \code{blrmfit} object as returned from \code{\link{blrm_exnex}} analysis
+#' @param object \code{blrmfit} (\code{blrm_trial}) object as returned from \code{\link{blrm_exnex}} (\code{\link{blrm_trial}}) analysis
 #' @param digits number of digits to show
 #' @param ... ignored by the function
 #'
-#' @details
-#' The summary of the prior creates a structured representation of the
-#' specified prior from a \code{\link{blrm_exnex}} analysis.
+#' @details The summary of the prior creates a structured
+#'     representation of the specified prior from a
+#'     \code{\link{blrm_exnex}} (\code{\link{blrm_trial}}) analysis.
 #'
-#' @return Returns a list of class \code{prior_summary.blrmfit} which
-#'     has it's own \code{print} function. The returned list contains
-#'     arrays which represent the prior in a structured format.
+#' @return Returns an analysis specific list, which has it's own
+#'     \code{print} function. The returned list contains arrays which
+#'     represent the prior in a structured format.
 #'
-#' @template example-start
+#' @template start-example
 #' @examples
 #' ## run combo2 analysis which defines blrmfit model object
 #' example_model("combo2")
@@ -28,7 +28,7 @@
 #' ## the entries of the prior list are labelled arrays
 #' dimnames(prior_sum$EX_mu_log_beta)
 #'
-#' @template example-stop
+#' @template stop-example
 #'
 #' @method prior_summary blrmfit
 #' @aliases prior_summary
@@ -170,6 +170,23 @@ print.prior_summary.blrmfit <- function(x, digits, ...) {
     invisible(x)
 }
 
+#' @method prior_summary blrm_trial
+#' @export
+prior_summary.blrm_trial <- function(object, ...)
+{
+    .assert_is_blrm_trial_and_prior_is_set(object)
+
+    x <- list()
+    x$prior_summary.blrmfit <- prior_summary(object$blrmfit, ...)
+
+    structure(x, class = "prior_summary.blrm_trial")
+}
+
+#' @method print prior_summary.blrm_trial
+#' @export
+print.prior_summary.blrm_trial <- function(x, ...) {
+    print(x$prior_summary.blrmfit, ...)
+}
 
 ## internal -----
 

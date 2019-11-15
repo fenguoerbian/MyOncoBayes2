@@ -1,3 +1,5 @@
+library(checkmate)
+
 set_sampling_default  <- function(iter, warmup, chains, cores=1) {
     options(OncoBayes2.MC.iter=iter, OncoBayes2.MC.warmup=warmup, OncoBayes2.MC.chains=chains, mc.cores=cores)
 }
@@ -7,7 +9,7 @@ very_fast_sampling <- function() {
 }
 
 fake_sampling <- function() {
-    set_sampling_default(2, 1, 1, 1)
+    set_sampling_default(3, 1, 1, 1)
 }
 
 default_sampling <- function() {

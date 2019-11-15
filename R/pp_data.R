@@ -8,6 +8,8 @@ pp_data <- function(object, newdata, draws, re.form) {
     if(!missing(re.form))
         stop("ERROR: re.form not yet supported")
 
+    strata_group_fct <- .get_strata_group_fct(object, data)
+
     f <- object$formula
     orig_mf <- object$model
     idx_group_term <- object$idx_group_term
@@ -16,23 +18,6 @@ pp_data <- function(object, newdata, draws, re.form) {
     tt <- terms(f, data=orig_mf, lhs=1, rhs=1:idx_group_term)
     Terms <- delete.response(tt)
     mf <- model.frame(Terms, data)
-
-    group_index_term <- model.part(f, data = mf, rhs = idx_group_term)
-    if(ncol(group_index_term) == 2) {
-        idx_group_index <- 2
-        idx_strata_index <- 1
-    } else {
-        idx_group_index <- 1
-        idx_strata_index <- NA
-    }
-
-    model_group_fct <- object$group_fct
-    new_group_fct <- model.part(f, data = mf, rhs = idx_group_term)
-    new_group_fct <- new_group_fct[,idx_group_index]
-    ##new_group_fct  <- factor(new_group_fct, levels=levels(model_group_fct))
-    new_group_fct <- .validate_factor(new_group_fct, model_group_fct, "grouping")
-
-    new_group_index <- as.integer(unclass(new_group_fct))
 
     num_comp <- object$standata$num_comp
 
@@ -51,34 +36,14 @@ pp_data <- function(object, newdata, draws, re.form) {
 
     num_obs <- dim(X_comp)[2]
 
-    ## enforce that all strata labels are known and match what has
-    ## been defined at model fit
-    if(!is.na(idx_strata_index)) {
-        model_strata_fct <- object$strata_fct
-        strata_fct <- model.part(f, data = mf, rhs = idx_group_term)[,idx_strata_index]
-        ##strata_fct <- factor(strata_fct, levels=levels(model_strata_fct))
-        strata_fct <- .validate_factor(strata_fct, model_strata_fct, "stratum")
-        strata_index <- as.integer(unclass(strata_fct))
 
-        ## check that they match to what we think they should be
-        ## TODO: test this mismatch
-        if(FALSE) {
-        new_group_levels <- unique(as.character(new_group_fct))
-        unseen_group_levels <- setdiff(new_group_levels, levels(model_group_fct))
+    group_idx  <- as.integer(unclass(strata_group_fct$group_fct))
+    stratum_idx  <- as.integer(unclass(strata_group_fct$strata_fct))
 
-        strata_index_ref <- object$group_strata$strata_index[new_group_index]
-        if(any(strata_index_ref != strata_index)) {
-            mis <- strata_index_ref != strata_index
-            stop("Mismatched stratum index for group(s): ", paste(levels(model_group_fct)[new_group_index[mis]], sep=", "))
-        }
-        }
-        ##.validate_factor(strata_fct, model_strata_fct, "stratum")
-
-    } else {
-        strata_index <- rep(1, num_obs)
-    }
-
-    pred_data <- list(X_comp=X_comp, X_inter=X_inter, group=new_group_index, stratum=strata_index)
+    pred_data <- list(X_comp=X_comp,
+                      X_inter=X_inter,
+                      group=group_idx,
+                      stratum=stratum_idx)
 
     post <- rstan::extract(object$stanfit, c("beta_group", "eta_group"))
     names(post) <- sub("_group", "", names(post))
@@ -181,4 +146,45 @@ pp_binomial_trials <- function(object, newdata) {
     mf <- model.frame(tt, data)
     y <- model.response(mf)
     return(rowSums(y))
+}
+
+
+#' extracts from a blrmfit object and a given data-set the group and
+#' stratum factor
+#'
+#' @keywords internal
+.get_strata_group_fct  <- function(object, data) {
+    f <- object$formula
+    orig_mf <- object$model
+    idx_group_term <- object$idx_group_term
+    tt <- terms(f, data=orig_mf, lhs=1, rhs=1:idx_group_term)
+    Terms <- delete.response(tt)
+    mf <- model.frame(Terms, data)
+
+    group_index_term <- model.part(f, data = mf, rhs = idx_group_term)
+    if(ncol(group_index_term) == 2) {
+        idx_group_index <- 2
+        idx_strata_index <- 1
+    } else {
+        idx_group_index <- 1
+        idx_strata_index <- NA
+    }
+
+    model_group_fct <- object$group_fct
+    group_fct <- model.part(f, data = mf, rhs = idx_group_term)
+    group_fct <- group_fct[,idx_group_index]
+    group_fct <- .validate_factor(group_fct, model_group_fct, "grouping")
+
+    ## enforce that all strata labels are known and match what has
+    ## been defined at model fit
+    if(!is.na(idx_strata_index)) {
+        model_strata_fct <- object$strata_fct
+        strata_fct <- model.part(f, data = mf, rhs = idx_group_term)[,idx_strata_index]
+        strata_fct <- .validate_factor(strata_fct, model_strata_fct, "stratum")
+        strata_group <- data.frame(strata_fct=strata_fct, group_fct=group_fct)
+    } else {
+        strata_group <- data.frame(strata_fct=1, group_fct=group_fct)
+    }
+
+    strata_group
 }

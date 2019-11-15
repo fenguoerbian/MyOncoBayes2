@@ -111,7 +111,7 @@ example_models <- lapply(
       thin = 1,
       init = 0.5,
       chains = 2,
-      cores = 1,
+      ##cores = 1, ## control via mc.cores option
       control = list(),
       prior_PD = FALSE
 

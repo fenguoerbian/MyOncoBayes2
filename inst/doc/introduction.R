@@ -1,10 +1,7 @@
 ## ---- include=FALSE------------------------------------------------------
 library(OncoBayes2)
-library(RBesT)
 library(knitr)
 library(ggplot2)
-library(dplyr)
-library(tidybayes)
 
 theme_set(theme_bw())
 
@@ -29,7 +26,13 @@ kable(hist_combo2)
 levels(hist_combo2$group_id)
 
 ## ---- eval = FALSE-------------------------------------------------------
-#  # Design parameters ---------------------
+#  
+#  ## Load involved packages
+#  library(RBesT)  ## defines logit function
+#  library(dplyr)  ## for mutate
+#  library(tidyr)  ## defines crossing
+#  
+#  ## Design parameters ---------------------
 #  
 #  dref <- c(3, 960)
 #  num_comp <- 2 # two investigational drugs
@@ -37,13 +40,22 @@ levels(hist_combo2$group_id)
 #  num_groups <- nlevels(hist_combo2$group_id) # four groups of data
 #  num_strata <- 1 # no stratification needed
 #  
-#  # Model fit -----------------------------
+#  ## abbreviate labels (wait for prior_summary)
+#  options(OncoBayes2.abbreviate.min=8)
+#  
+#  ## disables abbreviations (default)
+#  #options(OncoBayes2.abbreviate.min=0)
+#  
+#  ## STRONGLY RECOMMENDED => uses 4 cores
+#  options(mc.cores=4)
+#  
+#  ## Model fit -----------------------------
 #  
 #  blrmfit <- blrm_exnex(
-#    cbind(Ntox, Npat - Ntox) ~
-#      1 + I(log(DosesAdm1 / dref[1])) |
-#      1 + I(log(DosesAdm2 / dref[2])) |
-#      0 + I(DosesAdm1/dref[1] *DosesAdm2/dref[2]) |
+#    cbind(num_toxicities, num_patients - num_toxicities) ~
+#      1 + I(log(drug_A / dref[1])) |
+#      1 + I(log(drug_B / dref[2])) |
+#      0 + I(drug_A/dref[1] * drug_B/dref[2]) |
 #      group_id,
 #    data = hist_combo2,
 #    prior_EX_mu_mean_comp = matrix(
@@ -78,15 +90,27 @@ levels(hist_combo2$group_id)
 #    prior_EX_mu_sd_inter = 1.121,
 #    prior_EX_tau_mean_inter = matrix(log(0.125), nrow = num_inter, ncol = num_strata),
 #    prior_EX_tau_sd_inter = matrix(log(4) / 1.96, nrow = num_inter, ncol = num_strata),
-#    prior_is_EXNEX_comp = rep(FALSE, num_comp),
+#    prior_is_EXNEX_comp = rep(TRUE, num_comp),
 #    prior_is_EXNEX_inter = rep(FALSE, num_inter),
-#    prior_EX_prob_comp = matrix(1, nrow = num_groups, ncol = num_comp),
+#    ## historical data is 100% EX
+#    ## new data only 80% EX
+#    prior_EX_prob_comp = matrix(c(1.0, 1.0,
+#                                  1.0, 1.0,
+#                                  0.8, 0.8,
+#                                  0.8, 0.8),
+#                                nrow = num_groups,
+#                                ncol = num_comp,
+#                                byrow=TRUE),
 #    prior_EX_prob_inter = matrix(1, nrow = num_groups, ncol = num_inter),
 #    prior_tau_dist = 1
 #  )
 
 ## ---- include = FALSE----------------------------------------------------
-# Design parameters ---------------------
+library(RBesT)  ## defines logit function
+library(dplyr)  ## for mutate
+library(tidyr)  ## defines crossing
+
+## Design parameters ---------------------
 
 dref <- c(3, 960)
 num_comp <- 2 # two investigational drugs
@@ -94,13 +118,22 @@ num_inter <- 1 # one drug-drug interaction needs to be modeled
 num_groups <- nlevels(hist_combo2$group_id) # four groups of data
 num_strata <- 1 # no stratification needed
 
-# Model fit -----------------------------
+## abbreviate labels (wait for prior_summary)
+options(OncoBayes2.abbreviate.min=8)
+
+## disables abbreviations (default)
+#options(OncoBayes2.abbreviate.min=0)
+
+## STRONGLY RECOMMENDED => uses 4 cores
+options(mc.cores=4)
+
+## Model fit -----------------------------
 
 blrmfit <- blrm_exnex(
-  cbind(Ntox, Npat - Ntox) ~
-    1 + I(log(DosesAdm1 / dref[1])) |
-    1 + I(log(DosesAdm2 / dref[2])) |
-    0 + I(DosesAdm1/dref[1] *DosesAdm2/dref[2]) |
+  cbind(num_toxicities, num_patients - num_toxicities) ~
+    1 + I(log(drug_A / dref[1])) |
+    1 + I(log(drug_B / dref[2])) |
+    0 + I(drug_A/dref[1] * drug_B/dref[2]) |
     group_id,
   data = hist_combo2,
   prior_EX_mu_mean_comp = matrix(
@@ -135,9 +168,17 @@ blrmfit <- blrm_exnex(
   prior_EX_mu_sd_inter = 1.121,
   prior_EX_tau_mean_inter = matrix(log(0.125), nrow = num_inter, ncol = num_strata),
   prior_EX_tau_sd_inter = matrix(log(4) / 1.96, nrow = num_inter, ncol = num_strata),
-  prior_is_EXNEX_comp = rep(FALSE, num_comp),
+  prior_is_EXNEX_comp = rep(TRUE, num_comp),
   prior_is_EXNEX_inter = rep(FALSE, num_inter),
-  prior_EX_prob_comp = matrix(1, nrow = num_groups, ncol = num_comp),
+  ## historical data is 100% EX
+  ## new data only 80% EX
+  prior_EX_prob_comp = matrix(c(1.0, 1.0,
+                                1.0, 1.0,
+                                0.8, 0.8,
+                                0.8, 0.8),
+                              nrow = num_groups,
+                              ncol = num_comp,
+                              byrow=TRUE),
   prior_EX_prob_inter = matrix(1, nrow = num_groups, ncol = num_inter),
   prior_tau_dist = 1
 )
@@ -146,19 +187,18 @@ blrmfit <- blrm_exnex(
 #  prior_summary(blrmfit) # not run here
 
 ## ------------------------------------------------------------------------
-newdata <- expand.grid(
+newdata <- crossing(
   group_id = c("trial_AB"),
-  DosesAdm1 = c(0, 3, 4.5, 6),
-  DosesAdm2 = c(0, 400, 600, 800),
-  stringsAsFactors = FALSE
+  drug_A = c(0, 3, 4.5, 6),
+  drug_B = c(0, 400, 600, 800)
 )
 newdata$group_id <- factor(newdata$group_id, levels(hist_combo2$group_id))
 
 ## ------------------------------------------------------------------------
-newdata <- expand.grid(
+newdata <- crossing(
   group_id = factor(c("trial_AB"), levels(hist_combo2$group_id)),
-  DosesAdm1 = c(0, 3, 4.5, 6),
-  DosesAdm2 = c(0, 400, 600, 800)
+  drug_A = c(0, 3, 4.5, 6),
+  drug_B = c(0, 400, 600, 800)
 )
 
 ## ------------------------------------------------------------------------
@@ -172,25 +212,24 @@ kable(cbind(newdata, summ_stats), digits = 3)
 ## ---- eval = FALSE-------------------------------------------------------
 #  # set up two scenarios at the starting dose level
 #  # store them as data frames in a named list
-#  scenarios <- expand.grid(
+#  scenarios <- crossing(
 #    group_id  = factor("trial_AB", levels(hist_combo2$group_id)),
-#    DosesAdm1 = 3,
-#    DosesAdm2 = 400,
-#    Npat      = 3,
-#    Ntox      = 1:2
+#    drug_A = 3,
+#    drug_B = 400,
+#    num_patients      = 3,
+#    num_toxicities      = 1:2
 #  ) %>% split(1:2) %>% setNames(paste(1:2, "DLTs"))
 #  
-#  candidate_doses = expand.grid(
+#  candidate_doses <- crossing(
 #    group_id = factor("trial_AB", levels(hist_combo2$group_id)),
-#    DosesAdm1 = c(3, 4.5),
-#    DosesAdm2 = 400
+#    drug_A = c(3, 4.5),
+#    drug_B = 400
 #  )
 #  
-#  scenario_inference <- lapply(scenarios, function(scen_row){
+#  scenario_inference <- lapply(scenarios, function(scenario_newdata){
 #  
 #    # refit the model with each scenario's additional data
-#    scenario_data <- rbind(hist_combo2, scen_row)
-#    scenario_fit <- update(blrmfit, data = scenario_data)
+#    scenario_fit <- update(blrmfit, add_data = scenario_newdata)
 #  
 #    # summarize posterior at candidate doses
 #    scenario_summ <- summary(scenario_fit,
@@ -205,25 +244,24 @@ kable(cbind(newdata, summ_stats), digits = 3)
 ## ---- include = FALSE----------------------------------------------------
 # set up two scenarios at the starting dose level
 # store them as data frames in a named list
-scenarios <- expand.grid(
+scenarios <- crossing(
   group_id  = factor("trial_AB", levels(hist_combo2$group_id)),
-  DosesAdm1 = 3,
-  DosesAdm2 = 400,
-  Npat      = 3,
-  Ntox      = 1:2
+  drug_A = 3,
+  drug_B = 400,
+  num_patients      = 3,
+  num_toxicities      = 1:2
 ) %>% split(1:2) %>% setNames(paste(1:2, "DLTs"))
 
-candidate_doses = expand.grid(
+candidate_doses = crossing(
   group_id = factor("trial_AB", levels(hist_combo2$group_id)),
-  DosesAdm1 = c(3, 4.5),
-  DosesAdm2 = 400
+  drug_A = c(3, 4.5),
+  drug_B = 400
 )
 
-scenario_inference <- lapply(scenarios, function(scen_row){
+scenario_inference <- lapply(scenarios, function(scenario_newdata){
   
   # refit the model with each scenario's additional data
-  scenario_data <- rbind(hist_combo2, scen_row)
-  scenario_fit <- update(blrmfit, data = scenario_data)
+  scenario_fit <- update(blrmfit, add_data = scenario_newdata)
   
   # summarize posterior at candidate doses
   scenario_summ <- summary(scenario_fit,
@@ -231,7 +269,6 @@ scenario_inference <- lapply(scenarios, function(scen_row){
                            interval_prob = c(0, 0.16, 0.33, 1))
   
   cbind(candidate_doses, scenario_summ)
-  
 })
 
 
@@ -249,7 +286,11 @@ kable(codata_combo2)
 ## ---- include = FALSE----------------------------------------------------
 final_fit <- update(blrmfit, data = codata_combo2)
 
+## we could equally obtain the same analysis with 
+## final_fit <- update(blrmfit, newdata = codata_combo2[12:20,])
+
 summ <- summary(final_fit, newdata, prob = c(0.5, 0.95), interval_prob = c(0,0.33,1))
+
 
 final_summ_stats <- cbind(newdata, summ) %>%
     mutate(EWOC=1*`(0.33,1]`<=0.25)
@@ -262,11 +303,11 @@ final_summ_stats <- cbind(newdata, summ) %>%
 #  final_summ_stats <- cbind(newdata, summ) %>%
 #      mutate(EWOC=1*`(0.33,1]`<=0.25)
 
-## ---- fig.height = 4 * 1.62----------------------------------------------
+## ---- fig.height = 4 * 1.62, fig.width=4---------------------------------
 
 ggplot(final_summ_stats,
-       aes(x=factor(DosesAdm2), colour=EWOC)) +
-    facet_wrap(~DosesAdm1, labeller=label_both) +
+       aes(x=factor(drug_B), colour=EWOC)) +
+    facet_wrap(~drug_A, labeller=label_both) +
     scale_y_continuous(breaks=c(0, 0.16, 0.33, 0.4, 0.6, 0.8, 1.0)) +
     coord_cartesian(ylim=c(0,0.8)) +
     geom_hline(yintercept = c(0.16, 0.33),
@@ -274,27 +315,6 @@ ggplot(final_summ_stats,
     geom_pointrange(aes(y=`50%`, ymin=`2.5%`, ymax=`97.5%`)) +
     geom_linerange(aes(ymin=`25%`, ymax=`75%`), size=1.5) +
     ggtitle("DLT Probability", "Shown is the median (dot), 50% CrI (thick line) and 95% CrI (thin line)") +
-    ylab(NULL) + 
-    xlab("Dose Drug B [mg]")
-
-
-## ---- fig.height = 4 * 1.62----------------------------------------------
-library(tidybayes)
-
-expand.grid(group_id=factor("trial_AB", levels=levels(codata_combo2$group_id)),
-            DosesAdm2=exp(seq(log(100),log(800),length=100)), DosesAdm1=c(0, 3, 4.5, 6)) %>%
-    add_draws(posterior_linpred(final_fit, newdata = ., transform=TRUE)) %>%
-    median_qi(.width=c(0.5, 0.95)) %>%
-    ggplot(aes(y = .value, x = DosesAdm2)) +
-    scale_x_log10(breaks=c(100,200,400,600,800)) +
-    facet_wrap(~DosesAdm1, labeller=label_both) +
-    scale_y_continuous(breaks=c(0, 0.16, 0.33, 0.4, 0.6, 0.8, 1.0)) +
-    geom_lineribbon() +
-    scale_fill_brewer() +
-    coord_cartesian(ylim=c(0,0.8)) + 
-    geom_hline(yintercept = c(0.16, 0.33),
-               linetype = "dotted") +
-    ggtitle("DLT Probability", "Shown is the median (line), 50% CrI (dark) and 95% CrI (light)") +
     ylab(NULL) + 
     xlab("Dose Drug B [mg]")
 

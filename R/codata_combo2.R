@@ -12,15 +12,15 @@
 #' @format A data frame with 20 rows and 5 variables:
 #' \describe{
 #'   \item{group_id}{study}
-#'   \item{DosesAdm1}{dose of Drug A}
-#'   \item{DosesAdm2}{dose of Drug B}
-#'   \item{Npat}{number of patients}
-#'   \item{Ntox}{number of DLTs}
+#'   \item{drug_A}{dose of Drug A}
+#'   \item{drug_B}{dose of Drug B}
+#'   \item{num_patients}{number of patients}
+#'   \item{num_toxicities}{number of DLTs}
 #' }
 #' @template ref-mac
 #'
-#' @template example-start
+#' @template start-example
 #' @template example-combo2
-#' @template example-stop
+#' @template stop-example
 #'
 "codata_combo2"

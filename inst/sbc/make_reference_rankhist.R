@@ -1,11 +1,10 @@
 library(pkgbuild)
 ## ensure that the current dev version of OncoBayes2 is loaded
 pkgbuild::compile_dll("../..")
-# library(devtools)
-# load_all("../..")
 
 library(batchtools)
 set.seed(453453)
+## load utilities and current dev version of OncoBayes2
 source("sbc_tools.R")
 
 #' according to the docs this speeds up the reduce step
@@ -20,6 +19,9 @@ reg <- makeExperimentRegistry(file.dir = tempfile("sbc_"),
                               seed = 47845854,
                               ## our worker functions and package loading
                               source="sbc_tools.R")
+
+## resources of each job: Less than 55min, 2000MB RAM and 2 cores
+job_resources <- list(walltime=55, memory=2000, ncpus=2)
 
 if(FALSE) {
   ## for debugging here
@@ -62,39 +64,32 @@ summarizeExperiments()
 if(FALSE) {
   ## used for debugging
   job1 <- testJob(7)
-
   job1
-
   job2 <- testJob(6)
   job3 <- testJob(11)
-
     job <- makeJob(1)
-
     attributes(job)
     names(job)
-
     example_model("combo2")
-
     sp  <- sample_prior(example_models$combo2_EXNEX)
     sp  <- sample_prior(example_models$log2bayes_EXNEX)
-
     out <- fit_exnex(data = base_data, job = job, instance = job$instance )
 }
 
 
 #'
-#' Chunk the jobs into 600 chunks to run
+#' Chunk the jobs into 4000 chunks to run
 #'
 ids <- getJobTable()
-ids[, chunk:=chunk(job.id, 300)]
+ids[, chunk:=chunk(job.id, 4000)]
 
 num_jobs <- nrow(ids)
 
 #' Once things run fine let's submit this work to the cluster.
-submitJobs(ids)
+##submitJobs(ids, job_resources)
 
-#' Wait for results.
-waitForJobs()
+#' This function deals with unstable nodes in the cluster
+auto_submit(ids, reg, job_resources)
 
 #' Check status:
 print(getStatus())

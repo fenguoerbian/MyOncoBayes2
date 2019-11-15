@@ -7,11 +7,11 @@
 \format{A data frame with 18 rows and 7 variables:
 \describe{
   \item{group_id}{study}
-  \item{DosesAdm1}{dose of Drug A}
-  \item{DosesAdm2}{dose of Drug B}
-  \item{DosesAdm3}{dose of Drug C}
-  \item{Npat}{number of patients}
-  \item{Ntox}{number of DLTs}
+  \item{drug_A}{dose of Drug A}
+  \item{drug_B}{dose of Drug B}
+  \item{drug_C}{dose of Drug C}
+  \item{num_patients}{number of patients}
+  \item{num_toxicities}{number of DLTs}
   \item{stratum}{stratum for \code{group_id}'s used for differential discounting}
 }}
 \usage{
@@ -25,7 +25,7 @@ of the treatments as single-agents, as well as two of the two-way
 combinations. However, due to a difference in treatment schedule between the
 \code{Combo} study and the historical studies, a stratification (through \code{stratum})
 is made between the groups to allow differential discounting of the
-alternate-schedule data.
+alternate-dose data.
 }
 \examples{
 ## Setting up dummy sampling for fast execution of example
@@ -43,15 +43,15 @@ num_inter <- choose(3,2) + 1
 num_strata <- nlevels(hist_combo3$stratum)
 num_groups <- nlevels(hist_combo3$group_id)
 
-blrmfit <- blrm_exnex(cbind(Ntox, Npat-Ntox) ~
-                          1 + I(log(DosesAdm1/dref[1])) |
-                          1 + I(log(DosesAdm2/dref[2])) |
-                          1 + I(log(DosesAdm3/dref[3])) |
+blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                          1 + I(log(drug_A/dref[1])) |
+                          1 + I(log(drug_B/dref[2])) |
+                          1 + I(log(drug_C/dref[3])) |
                           0
-                      + I(DosesAdm1/dref[1] * DosesAdm2/dref[2])
-                      + I(DosesAdm1/dref[1] * DosesAdm3/dref[3])
-                      + I(DosesAdm2/dref[2] * DosesAdm3/dref[3])
-                      + I(DosesAdm1/dref[1] * DosesAdm2/dref[2] * DosesAdm3/dref[3]) |
+                      + I(drug_A/dref[1] * drug_B/dref[2])
+                      + I(drug_A/dref[1] * drug_C/dref[3])
+                      + I(drug_B/dref[2] * drug_C/dref[3])
+                      + I(drug_A/dref[1] * drug_B/dref[2] * drug_C/dref[3]) |
                       stratum/group_id,
                       data=hist_combo3,
                       prior_EX_mu_mean_comp=matrix(c(logit(1/3), 0), nrow=num_comp, ncol=2, TRUE),

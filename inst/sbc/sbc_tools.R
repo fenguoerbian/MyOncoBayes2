@@ -367,3 +367,59 @@ fit_exnex <- function(data, job, instance, ...) {
 #     res
 #   }
 # }
+
+
+## Submits to batchtools cluster with fault tolerance, i.e.
+## resubmitting failed jobs max_num_tries times
+auto_submit <- function(jobs, registry, resources=list(), max_num_tries = 10) {
+  all_unfinished_jobs <- jobs
+  
+  num_unfinished_jobs <- nrow(all_unfinished_jobs)
+  remaining_tries <- max_num_tries
+  all_jobs_finished <- FALSE
+  while (remaining_tries > 0 && !all_jobs_finished) {
+    remaining_tries <- remaining_tries - 1
+    
+    print(paste("Submitting jobs at ", Sys.time()))
+    # Once things run fine let's submit this work to the cluster.
+    submitJobs(all_unfinished_jobs, resources=resources)
+    # Wait for results.
+    waitForJobs()
+    print(paste("Finished waiting for jobs at ", Sys.time()))
+    
+    # Check status:
+    print(getStatus())
+    
+    # Ensure that all jobs are done
+    if (nrow(findNotDone()) != 0) {
+      not_done_jobs <- findNotDone()
+      print(getErrorMessages(not_done_jobs))
+      ##browser()
+      ##invisible(readline(prompt="Press [enter] to continue"))
+      
+      print(paste0("Some jobs did not complete. Please check the batchtools registry ", registry$file.dir))
+      all_unfinished_jobs <- inner_join(not_done_jobs, all_unfinished_jobs)
+      
+      if (num_unfinished_jobs == nrow(all_unfinished_jobs))
+      {
+        # Unfinished job count did not change -> retrying will probably not help. Abort!
+        cat("Error: unfinished job count is not decreasing. Aborting job retries.")
+        remaining_tries <- 0
+      }
+      
+      if (num_unfinished_jobs == nrow(jobs))
+      {
+        # All jobs errored -> retrying will probably not help. Abort!
+        cat("Error: all jobs errored. Aborting job retries.")
+        remaining_tries <- 0
+      }
+      
+      num_unfinished_jobs <- nrow(all_unfinished_jobs)
+      print(paste0("Trying to resubmit jobs. Remaining tries: ", remaining_tries, " / ", max_num_tries))
+    } else {
+      all_jobs_finished <- TRUE
+    }
+  }
+  
+  all_jobs_finished
+}

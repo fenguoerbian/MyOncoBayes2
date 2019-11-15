@@ -13,3 +13,7 @@ test_that("posterior_predict example runs", example(posterior_predict.blrmfit, p
 test_that("posterior_interval example runs", example(posterior_interval.blrmfit, package="OncoBayes2", run.dontrun=TRUE))
 test_that("predictive_interval example runs", example(predictive_interval.blrmfit, package="OncoBayes2", run.dontrun=TRUE))
 }
+
+test_that("example_model() lists expected models", {
+    expect_set_equal(example_model(), names(example_cache))
+})

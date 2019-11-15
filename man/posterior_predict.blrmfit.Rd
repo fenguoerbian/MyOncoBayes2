@@ -59,14 +59,15 @@ example_model("single_agent")
 
 post_pred  <- posterior_predict(blrmfit)
 ## turn DLT counts into DLT rates
-post_pred_rate <- sweep(post_pred, 2, hist_SA$Npat, "/")
+post_pred_rate <- sweep(post_pred, 2, hist_SA$num_patients, "/")
 
 library(bayesplot)
 library(ggplot2)
 
 ## compare posterior predictive of the model for the response rates
 ## with observed data
-with(hist_SA, ppc_intervals(Ntox / Npat, post_pred_rate, x=DosesAdm1, prob_outer=0.95)) +
+with(hist_SA,
+    ppc_intervals(num_toxicities / num_patients, post_pred_rate, x=drug_A, prob_outer=0.95)) +
     xlab("Dose [mg]")
 
 ## Recover user set sampling defaults

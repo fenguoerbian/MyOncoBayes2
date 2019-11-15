@@ -81,7 +81,7 @@
 #'
 #' @template ref-mac
 #'
-#' @template example-start
+#' @template start-example
 #' @template example-combo3
-#' @template example-stop
+#' @template stop-example
 NULL

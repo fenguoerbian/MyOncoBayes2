@@ -37,7 +37,8 @@ Returns a \code{data.frame} of the key summaries of the
     \code{newdata} argument.
 }
 \description{
-Provides model summaries for \code{\link{blrm_exnex}} analyses.
+Provides model summaries for \code{\link{blrm_exnex}} and
+\code{\link{blrm_trial}} analyses.
 }
 \details{
 The calculated posterior summaries are returned as a
