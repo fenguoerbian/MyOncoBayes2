@@ -86,7 +86,7 @@ for the drug components.
 ## Load involved packages
 library(RBesT)  ## defines logit function
 library(dplyr)  ## for mutate
-library(tidyr)  ## defines crossing
+library(tidyr)  ## defines expand_grid
 
 ## Design parameters ---------------------
 
@@ -166,7 +166,7 @@ blrmfit <- blrm_exnex(
 ```{r, include = FALSE}
 library(RBesT)  ## defines logit function
 library(dplyr)  ## for mutate
-library(tidyr)  ## defines crossing
+library(tidyr)  ## defines expand_grid
 
 ## Design parameters ---------------------
 
@@ -267,7 +267,7 @@ In this case, we are interested in predicitons for `trial_AB`, with
 the possible combination doses of drugs A and B below.
 
 ```{r}
-newdata <- crossing(
+newdata <- expand_grid(
   group_id = c("trial_AB"),
   drug_A = c(0, 3, 4.5, 6),
   drug_B = c(0, 400, 600, 800)
@@ -280,7 +280,7 @@ Note it is important that the factor levels associated with
 factor used when calling `blrm_exnex`. In case you use `expand.grid`,
 then the `stringsAsFactors = FALSE`
 argument must be used to ensures that the variable will initially be treated as
-a character. We recommend using the `tidyr` command `crossing` which
+a character. We recommend using the `tidyr` command `expand_grid` which
 avoids casting strings to factors in an uncontrolled manner. The next
 line converts the `group_id` column to a factor with the correct
 set of four levels. Alternativley, we can create the `group_id` column
@@ -288,7 +288,7 @@ directly as a `factor` column within `newdata`. The code below results
 in the same `newdata` in a more compact form.
 
 ```{r}
-newdata <- crossing(
+newdata <- expand_grid(
   group_id = factor(c("trial_AB"), levels(hist_combo2$group_id)),
   drug_A = c(0, 3, 4.5, 6),
   drug_B = c(0, 400, 600, 800)
@@ -330,7 +330,7 @@ previous analysis.
 ```{r, eval = FALSE}
 # set up two scenarios at the starting dose level
 # store them as data frames in a named list
-scenarios <- crossing(
+scenarios <- expand_grid(
   group_id  = factor("trial_AB", levels(hist_combo2$group_id)),
   drug_A = 3,
   drug_B = 400,
@@ -338,7 +338,7 @@ scenarios <- crossing(
   num_toxicities      = 1:2
 ) %>% split(1:2) %>% setNames(paste(1:2, "DLTs"))
 
-candidate_doses <- crossing(
+candidate_doses <- expand_grid(
   group_id = factor("trial_AB", levels(hist_combo2$group_id)),
   drug_A = c(3, 4.5),
   drug_B = 400
@@ -363,7 +363,7 @@ scenario_inference <- lapply(scenarios, function(scenario_newdata){
 ```{r, include = FALSE}
 # set up two scenarios at the starting dose level
 # store them as data frames in a named list
-scenarios <- crossing(
+scenarios <- expand_grid(
   group_id  = factor("trial_AB", levels(hist_combo2$group_id)),
   drug_A = 3,
   drug_B = 400,
@@ -371,7 +371,7 @@ scenarios <- crossing(
   num_toxicities      = 1:2
 ) %>% split(1:2) %>% setNames(paste(1:2, "DLTs"))
 
-candidate_doses = crossing(
+candidate_doses = expand_grid(
   group_id = factor("trial_AB", levels(hist_combo2$group_id)),
   drug_A = c(3, 4.5),
   drug_B = 400

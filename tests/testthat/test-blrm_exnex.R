@@ -97,10 +97,17 @@ test_that("interval probabilites are consistent", {
 test_that("interval probabilites are not NaN", {
   ss1  <- summary(combo2$blrmfit, interval_prob=c(0.1, 0.4))
   expect_true(all(!is.na(ss1[,6])))
-  ss2  <- summary(combo2$blrmfit, transform=FALSE, interval_prob=c(0.1, 0.4))
+  ss2  <- summary(combo2$blrmfit, transform=FALSE, interval_prob=logit(c(0.1, 0.4)))
   expect_true(all(!is.na(ss2[,6])))
 })
 
+test_that("correctness of numerical stable log1m_exp_max0", {
+    b <- -1E-22
+    expect_true(abs(OncoBayes2:::log1m_exp_max0(b - 1E-5) - log1p(-exp(b - 1E-5))) < 1E-10)
+    expect_true(abs(OncoBayes2:::log1m_exp_max0(b - 1E-3) - log1p(-exp(b - 1E-3))) < 1E-10)
+    expect_true(abs(OncoBayes2:::log1m_exp_max0(b - 1E-1) - log1p(-exp(b - 1E-1))) < 1E-10)
+    expect_true(abs(OncoBayes2:::log1m_exp_max0(b - 1E-0) - log1p(-exp(b - 1E-0))) < 1E-10)
+})
 
 test_that("all expected posterior quantiles are returned", {
 

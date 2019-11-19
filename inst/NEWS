@@ -1,3 +1,9 @@
+November 18th, 2019 (0.5-4)
+
+* fix vignette documentation
+* correct blrm trial co-data example
+* fix test issues per CRAN checks on macosx-old-r run
+
 November 15th, 2019 (0.5-3)
 
 * new blrm_trial function which facilitates dose-escalation trial

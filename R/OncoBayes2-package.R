@@ -37,7 +37,7 @@
 #' @import methods
 #' @importFrom rstan sampling get_sampler_params summary stanc_builder
 #' @importFrom utils capture.output modifyList combn
-#' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms model.matrix.default setNames update update.default .getXlevels as.formula na.fail
+#' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms model.matrix.default setNames update update.default .getXlevels as.formula na.fail qlogis
 #' @importFrom RBesT inv_logit logit
 #' @import methods
 #' @import assertthat

@@ -108,6 +108,12 @@ log_inv_logit <- function(l) {
 ##     mu
 ## }
 
+## numerically stable version of log1m_exp(x) = log(1-exp(x)) for x < 0
+log1m_exp_max0  <- function(x) {
+    ## qlogis(x) = logit(exp(x)) = x - log(1-exp(x))
+    x - qlogis(x, log.p=TRUE)
+}
+
 ## vectorized version
 blrm_logit_grouped_vec <- function(group, stratum, X_comp, X_inter, beta, eta) {
     num_comp <- dim(X_comp)[1]
@@ -124,7 +130,8 @@ blrm_logit_grouped_vec <- function(group, stratum, X_comp, X_inter, beta, eta) {
             log_p0_nr <- log_p0_nr + log_inv_logit(-1 * adrop(X_comp[j,i,,drop=FALSE], drop=1) %*% t(matrix(beta[,g,j,,drop=FALSE], S, 2)))
         }
         ##mu[i] <- log(1 - exp(log_p0_nr)) - log_p0_nr
-        mu[,i] <- log1p(-exp(log_p0_nr)) - log_p0_nr
+        ##mu[,i] <- log1p(-exp(log_p0_nr)) - log_p0_nr
+        mu[,i] <- log1m_exp_max0(log_p0_nr) - log_p0_nr
         if(num_inter > 0) {
             mu[,i] <- mu[,i] + X_inter[i,,drop=FALSE] %*% t(matrix(eta[,g,,drop=FALSE], S, num_inter))
         }

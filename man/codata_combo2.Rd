@@ -11,6 +11,7 @@
   \item{drug_B}{dose of Drug B}
   \item{num_patients}{number of patients}
   \item{num_toxicities}{number of DLTs}
+  \item{cohort_time}{cohort number of patients}
 }}
 \usage{
 codata_combo2

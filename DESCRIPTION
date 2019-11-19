@@ -9,8 +9,8 @@ Description: Bayesian logistic regression model with optional
   drugs. Please refer to Neuenschwander et al. (2008)
   <doi:10.1002/sim.3230> and Neuenschwander et al. (2016)
   <doi:10.1080/19466315.2016.1174149> for details on the methodology.
-Version: 0.5-3
-Date: 2019-11-15
+Version: 0.5-4
+Date: 2019-11-18
 Authors@R: c(person("Novartis", "Pharma AG", role = "cph")
             ,person("Sebastian", "Weber", email="sebastian.weber@novartis.com", role=c("aut", "cre"))
             ,person("Andrew", "Bean", email="andrew.bean@novartis.com", role="aut")
@@ -20,7 +20,8 @@ Authors@R: c(person("Novartis", "Pharma AG", role = "cph")
 Depends: R (>= 3.4.0), Rcpp (>= 0.12.0), methods
 Imports: assertthat (>= 0.2.1), checkmate, Formula, rstan (>= 2.18.1),
         rstantools (>= 2.0.0), bayesplot (>= 1.4.0), ggplot2 (>=
-        2.2.1), dplyr (>= 0.8.0), tibble, tidyr, abind, RBesT
+        2.2.1), dplyr (>= 0.8.0), tibble, tidyr (>= 1.0.0), abind,
+        RBesT
 LinkingTo: StanHeaders (>= 2.18.0), rstan (>= 2.18.1), BH (>= 1.66.0),
         Rcpp (>= 0.12.0), RcppEigen (>= 0.3.3.3.0)
 License: GPL (>= 3)
@@ -32,7 +33,7 @@ RoxygenNote: 6.1.1
 Biarch: true
 SystemRequirements: GNU make, pandoc (>= 1.12.3), pandoc-citeproc
 Encoding: UTF-8
-Packaged: 2019-11-15 20:51:13 UTC; 
+Packaged: 2019-11-18 19:30:10 UTC; 
 Author: Novartis Pharma AG [cph],
   Sebastian Weber [aut, cre],
   Andrew Bean [aut],
@@ -41,4 +42,4 @@ Author: Novartis Pharma AG [cph],
     R/stanmodels.R, src/Makevars, src/Makevars.win)
 Maintainer: Sebastian Weber <sebastian.weber@novartis.com>
 Repository: CRAN
-Date/Publication: 2019-11-15 21:20:02 UTC
+Date/Publication: 2019-11-19 09:50:28 UTC

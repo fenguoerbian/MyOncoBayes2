@@ -30,7 +30,7 @@ levels(hist_combo2$group_id)
 #  ## Load involved packages
 #  library(RBesT)  ## defines logit function
 #  library(dplyr)  ## for mutate
-#  library(tidyr)  ## defines crossing
+#  library(tidyr)  ## defines expand_grid
 #  
 #  ## Design parameters ---------------------
 #  
@@ -108,7 +108,7 @@ levels(hist_combo2$group_id)
 ## ---- include = FALSE----------------------------------------------------
 library(RBesT)  ## defines logit function
 library(dplyr)  ## for mutate
-library(tidyr)  ## defines crossing
+library(tidyr)  ## defines expand_grid
 
 ## Design parameters ---------------------
 
@@ -187,7 +187,7 @@ blrmfit <- blrm_exnex(
 #  prior_summary(blrmfit) # not run here
 
 ## ------------------------------------------------------------------------
-newdata <- crossing(
+newdata <- expand_grid(
   group_id = c("trial_AB"),
   drug_A = c(0, 3, 4.5, 6),
   drug_B = c(0, 400, 600, 800)
@@ -195,7 +195,7 @@ newdata <- crossing(
 newdata$group_id <- factor(newdata$group_id, levels(hist_combo2$group_id))
 
 ## ------------------------------------------------------------------------
-newdata <- crossing(
+newdata <- expand_grid(
   group_id = factor(c("trial_AB"), levels(hist_combo2$group_id)),
   drug_A = c(0, 3, 4.5, 6),
   drug_B = c(0, 400, 600, 800)
@@ -212,7 +212,7 @@ kable(cbind(newdata, summ_stats), digits = 3)
 ## ---- eval = FALSE-------------------------------------------------------
 #  # set up two scenarios at the starting dose level
 #  # store them as data frames in a named list
-#  scenarios <- crossing(
+#  scenarios <- expand_grid(
 #    group_id  = factor("trial_AB", levels(hist_combo2$group_id)),
 #    drug_A = 3,
 #    drug_B = 400,
@@ -220,7 +220,7 @@ kable(cbind(newdata, summ_stats), digits = 3)
 #    num_toxicities      = 1:2
 #  ) %>% split(1:2) %>% setNames(paste(1:2, "DLTs"))
 #  
-#  candidate_doses <- crossing(
+#  candidate_doses <- expand_grid(
 #    group_id = factor("trial_AB", levels(hist_combo2$group_id)),
 #    drug_A = c(3, 4.5),
 #    drug_B = 400
@@ -244,7 +244,7 @@ kable(cbind(newdata, summ_stats), digits = 3)
 ## ---- include = FALSE----------------------------------------------------
 # set up two scenarios at the starting dose level
 # store them as data frames in a named list
-scenarios <- crossing(
+scenarios <- expand_grid(
   group_id  = factor("trial_AB", levels(hist_combo2$group_id)),
   drug_A = 3,
   drug_B = 400,
@@ -252,7 +252,7 @@ scenarios <- crossing(
   num_toxicities      = 1:2
 ) %>% split(1:2) %>% setNames(paste(1:2, "DLTs"))
 
-candidate_doses = crossing(
+candidate_doses = expand_grid(
   group_id = factor("trial_AB", levels(hist_combo2$group_id)),
   drug_A = c(3, 4.5),
   drug_B = 400

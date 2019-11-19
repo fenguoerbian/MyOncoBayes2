@@ -9,7 +9,7 @@ very_fast_sampling <- function() {
 }
 
 fake_sampling <- function() {
-    set_sampling_default(3, 1, 1, 1)
+    set_sampling_default(4, 2, 1, 1)
 }
 
 default_sampling <- function() {

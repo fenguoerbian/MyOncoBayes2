@@ -109,10 +109,8 @@ summary(combo2_trial_start, "dose_prediction")
 
 # alternate way using update() with add_data argument for
 # new observations only (those collected after the trial
-# design stage). Since codata_combo2 contains all observations
-# and hist_combo2 the ones at the design stage we first
-# take the set difference.
-new_data <- anti_join(codata_combo2, hist_combo2)
+# design stage).
+new_data <- filter(codata_combo2, cohort_time > 0)
 
 combo2_trial <- update(combo2_trial_start, add_data = new_data)
 
