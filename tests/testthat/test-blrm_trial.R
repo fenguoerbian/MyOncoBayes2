@@ -362,7 +362,7 @@ check_blrm_trial_update <- function(example)
 
     trial_with_new_data <- update(trial, add_data=new_data)
 
-    new_trial_data <- summary(trial_with_new_data, "data")
+    new_trial_data <- summary(trial_with_new_data, "data", prob = c(0.95, 0.5))
 
     # Data should have increased by one row
     expect_equal(nrow(new_trial_data), nrow(histdata) + nrow(new_data))
@@ -372,6 +372,33 @@ check_blrm_trial_update <- function(example)
 
     trial_with_replaced_data <- update(trial, data=new_trial_data)
     expect_equal(new_trial_data, summary(trial_with_replaced_data, "data"))
+    
+    # Test data aggregation works correctly
+    trial_with_new_data_2 <- update(trial_with_new_data, add_data=new_data)
+    new_trial_data_2 <- summary(trial_with_new_data_2, "data", prob = c(0.95, 0.5))
+    
+    # Data should have increased by one row
+    expect_equal(nrow(new_trial_data_2), nrow(new_trial_data) + nrow(new_data))   
+    
+    # Check for internal consistency with blrmfit data
+    blrmfit_data <- trial_with_new_data$blrmfit$data
+    blrmfit_data_2 <- trial_with_new_data_2$blrmfit$data
+    internal_data <- filter(blrmfit_data, group_id == new_data$group_id, drug1 == new_data$drug1)
+    internal_trial_data <- filter(new_trial_data, group_id == new_data$group_id, drug1 == new_data$drug1)
+    expect_equal(internal_trial_data$num_patients, new_data$num_patients)
+    expect_equal(internal_trial_data$num_toxicities, new_data$num_toxicities)
+    expect_equal(internal_data$num_patients, new_data$num_patients)
+    expect_equal(internal_data$num_toxicities, new_data$num_toxicities)
+    
+    internal_data_2 <- filter(blrmfit_data_2, group_id == new_data$group_id, drug1 == new_data$drug1)
+    internal_trial_data_2 <- filter(new_trial_data_2, group_id == new_data$group_id, drug1 == new_data$drug1)
+    expect_equal(sum(internal_trial_data_2$num_patients), 2*new_data$num_patients)
+    expect_equal(sum(internal_trial_data_2$num_toxicities), 2*new_data$num_toxicities)
+    expect_equal(internal_data_2$num_patients, 2*new_data$num_patients)
+    expect_equal(internal_data_2$num_toxicities, 2*new_data$num_toxicities)
+    
+    # Number of rows should not increase if same data is added twice
+    expect_equal(nrow(blrmfit_data_2), nrow(blrmfit_data))   
   })
 }
 
@@ -598,9 +625,6 @@ check_update_resolves_doses_to_dose_id <- function(example) {
 
     new_data_in_trial <- summary(trial_with_new_data, summarize="data")
 
-    print(new_data_in_trial)
-    print(new_data)
-    print(new_data_without_dose)
     expect_equal(select(new_data_in_trial[nrow(new_data_in_trial),], colnames(new_data)), new_data)
 
     ## Providing a non-predefined dose should create a warning
@@ -759,3 +783,65 @@ test_that("Full prior specification with update() enables prediction",
 
 test_that("Full prior specification with blrm_trial() enables prediction",
           check_full_prior_direct())
+
+
+# Test sorting in .blrm_trial_merge_data ------------------------------------------------------
+set_prior <- function(trial, mu_sd_inter = 0.5) 
+{
+  dims <- summary(trial, "dimensionality")
+
+  update(
+    trial,
+    # Prior mean and sd on mu_{alpha_i}, mu_{beta_i}
+    prior_EX_mu_mean_comp  = matrix(c(logit(0.10), 0), nrow = dims$num_components, ncol = 2, TRUE),
+    prior_EX_mu_sd_comp    = matrix(c(2, 1), nrow = dims$num_components, ncol = 2, TRUE),
+    
+    # Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}} 
+    prior_EX_tau_mean_comp = do.call("abind", c(
+      replicate(dims$num_strata, matrix(c(0, 0), nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
+      list(along = 0))
+    ),
+    prior_EX_tau_sd_comp = do.call("abind", c(
+      replicate(dims$num_strata, matrix(0, nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
+      list(along = 0))
+    ),
+    
+    # Prior mean and sd on mu_{eta}
+    prior_EX_mu_mean_inter  = rep(0,   dims$num_interaction_terms),
+    prior_EX_mu_sd_inter    = rep(mu_sd_inter, dims$num_interaction_terms), 
+    prior_EX_tau_mean_inter = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
+    prior_EX_tau_sd_inter   = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
+    
+    prior_is_EXNEX_comp = rep(FALSE, dims$num_components),
+    prior_EX_prob_comp = matrix(1, nrow = dims$num_groups, ncol = dims$num_components),
+    
+    prior_is_EXNEX_inter = rep(FALSE, dims$num_interaction_terms),
+    prior_EX_prob_inter = matrix(1, nrow = dims$num_groups, ncol = dims$num_interaction_terms),
+    
+    prior_tau_dist = 0
+  )
+}
+
+check_data_sorting <- function(example) {
+  with(example, {
+    trial <- blrm_trial(histdata, dose_info, drug_info)
+    trial <- set_prior(trial)
+    
+    new_data <- filter(summary(trial, "dose_info"))
+    new_data <- mutate(new_data, num_patients = 2*dose_id)
+    new_data$num_toxicities <- 1
+    new_data <- arrange(new_data, dose_id)
+    
+    rev_new_data <- arrange(new_data, desc(dose_id))
+    
+    trial_2 <- update(trial, add_data = new_data)
+    trial_2_rev <- update(trial, add_data = rev_new_data)
+    
+    expect_equal(trial_2$blrmfit$data, trial_2_rev$blrmfit$data)
+  })
+}
+
+test_that(".blrm_trial_merge_data sorts data",
+          check_data_sorting(examples$single_agent))
+test_that(".blrm_trial_merge_data sorts data",
+          check_data_sorting(examples$single_drug_with_strata))

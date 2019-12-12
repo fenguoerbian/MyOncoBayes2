@@ -461,7 +461,7 @@ print.blrm_trial <- function(x, ...)
   trial_est_ewoc
 }
 
-.blrm_trial_predict <- function(trial, newdata)
+.blrm_trial_predict <- function(trial, newdata, ...)
 {
   .assert_is_blrm_trial_and_prior_is_set(trial)
   assert_tibble(newdata)
@@ -470,11 +470,13 @@ print.blrm_trial <- function(x, ...)
   {
     trial_est <- summary(trial$blrmfit,
                          newdata = newdata,
-                         interval_prob = trial$interval_prob
+                         interval_prob = trial$interval_prob,
+                         ...
     )
   } else {
     trial_est <- summary(trial$blrmfit,
-                         newdata = newdata
+                         newdata = newdata,
+                         ...
     )
   }
 
@@ -597,7 +599,7 @@ print.blrm_trial <- function(x, ...)
   dot.args <- list(...) # Evaluate arguments here
   ref_doses <- trial[["ref_doses"]]
   formula <- as.formula(trial[["formula"]][["blrm_formula"]])
-  data <- bind_rows(trial[["group_to_stratum_mapping"]], trial[["data"]])
+  data <- .blrm_trial_merge_data(trial, bind_rows(trial[["group_to_stratum_mapping"]], trial[["data"]]))
   ## SW: the as.name is something I picked up here:
   ## https://github.com/WinVector/wrapr/blob/master/extras/MacrosInR.md
   ## (just delete this comment if you fine with this change)
@@ -631,6 +633,12 @@ print.blrm_trial <- function(x, ...)
       }
 
       trial$data <- bind_rows(trial$data, args[["add_data"]])
+      args[["data"]] <- bind_rows(trial$group_to_stratum_mapping, trial$data)
+      args[["add_data"]] <- NULL
+    }
+
+    if (has_name(args, "data")) {
+      args[["data"]] <- .blrm_trial_merge_data(trial, args[["data"]])
     }
 
     trial$blrmfit <- do.call("update", c(list(trial$blrmfit), args))
@@ -639,6 +647,21 @@ print.blrm_trial <- function(x, ...)
   }
 
   trial
+}
+
+.blrm_trial_merge_data <- function(trial, data)
+{
+  .assert_is_blrm_trial(trial)
+  assert_tibble(data)
+
+  ## Silence R CRAN check notes
+  num_patients <- num_toxicities <- NULL
+
+  ## Summarize data for performance
+  summarized_data <- ungroup(summarize(group_by_at(data, c("group_id", "stratum_id", names(trial$ref_doses))), num_patients = sum(num_patients), num_toxicities = sum(num_toxicities)))
+
+  ## Return sorted data for improved reproducibility
+  arrange_at(summarized_data, c("group_id", "stratum_id", names(trial$ref_doses)))
 }
 
 .blrm_trial_sanitize_data <- function(trial, data)

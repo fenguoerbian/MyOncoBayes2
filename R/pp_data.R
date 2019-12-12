@@ -81,10 +81,15 @@ pp_data <- function(object, newdata, draws, re.form) {
     factor(test, levels=expected_levels)
 }
 
-log_inv_logit <- function(l) {
-    ##-log(1+exp(-l))
-    -log1p(exp(-l))
+
+
+#' Numerically stable summation of log inv logit
+#' @keywords internal
+log_inv_logit <- function(mat) {
+    - ifelse(is.finite(mat) & (mat < 0), log1p(exp(mat)) - mat, log1p(exp(-mat)))
 }
+
+
 
 ## blrm_logit_grouped <- function(group, stratum, X_comp, X_inter, beta, eta) {
 ##     num_comp <- dim(X_comp)[1]

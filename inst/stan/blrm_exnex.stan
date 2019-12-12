@@ -21,9 +21,11 @@ functions {
     return [ [tau[1], 0.0], [tau[2] * rho, tau[2] * sqrt(1.0-rho^2)]];
   }
 
-  /* given design matrices and parameters calculates the logit
+  /* given design matrices and parameters calculates the logit. The
+   * number of tries n is only passed to sort out n=0 cases.
    */
-  vector blrm_logit_fast(matrix[] X_comp, int[,] finite_cov,
+  vector blrm_logit_fast(int[] n,
+                         matrix[] X_comp, int[,] finite_cov,
                          matrix X_inter, 
                          vector[] beta, vector eta) {
     int num_obs = rows(X_inter);
@@ -33,15 +35,19 @@ functions {
 
     for(i in 1:num_obs) {
       real log_p0_nr = 0.0;
-      for(j in 1:num_comp) {
-        // ensure that input is finite
-        if(finite_cov[j,i]) {
-          //log_p0_nr += log1m_inv_logit( X_comp[j,i] * beta[j] );
-          log_p0_nr += log_inv_logit( -1.0 * X_comp[j,i] * beta[j] );
+      if(n[i] == 0) {
+        // in case of no observation we merely fill in 0 as a dummy
+        mu[i] = 0.0;
+      } else {
+        for(j in 1:num_comp) {
+          // ensure that input is finite
+          if(finite_cov[j,i]) {
+            log_p0_nr += log_inv_logit( -1.0 * X_comp[j,i] * beta[j] );
+          }
         }
+        // turn log(1-p0) into a logit for p0
+        mu[i] = log1m_exp(log_p0_nr) - log_p0_nr;
       }
-      // turn log(1-p0) into a logit for p0
-      mu[i] = log1m_exp(log_p0_nr) - log_p0_nr;
     }
 
     // add interaction part
@@ -53,7 +59,8 @@ functions {
 
   // convenience version which creates finite_cov on the fly (for
   // prediction)
-  vector blrm_logit(matrix[] X_comp,
+  vector blrm_logit(int[] n,
+                    matrix[] X_comp,
                     matrix X_inter, 
                     vector[] beta, vector eta) {
     int num_obs = rows(X_inter);
@@ -65,14 +72,14 @@ functions {
         finite_cov[j,i] = !is_inf(X_comp[j,i,1]) && !is_inf(X_comp[j,i,2]) ? 1 : 0;
       }
 
-    return blrm_logit_fast(X_comp, finite_cov, X_inter, beta, eta);
+    return blrm_logit_fast(n, X_comp, finite_cov, X_inter, beta, eta);
   }
   
   real blrm_lpmf(int[] r, int[] n,
                  matrix[] X_comp, int[,] finite_cov,
                  matrix X_inter,
                  vector[] beta, vector eta) {
-    return binomial_logit_lpmf(r | n, blrm_logit_fast(X_comp, finite_cov, X_inter, beta, eta) );
+    return binomial_logit_lpmf(r | n, blrm_logit_fast(n, X_comp, finite_cov, X_inter, beta, eta) );
   }
 
   // calculates for a given group all mixture configurations
@@ -196,6 +203,8 @@ transformed data {
   int<lower=1,upper=2> mix_idx_eta[ num_mix_comp,num_inter];
   // number of observations per group
   int<lower=0,upper=num_obs> num_obs_group[num_groups] = count_elems(group, seq_int(1, num_groups));
+  // number of cases per group
+  int<lower=0> num_cases_group[num_groups] = rep_array(0, num_groups);
   // indices for each group
   int<lower=0,upper=num_obs> group_obs_idx[num_groups,max(num_obs_group)] = rep_array(0, num_groups, max(num_obs_group));
   vector<upper=0>[num_mix_comp] mix_log_weight[num_groups];
@@ -234,6 +243,13 @@ transformed data {
   for(i in 1:num_obs)
     n[i] = r[i] + nr[i];
 
+  // count number of cases per group
+  for(g in 1:num_groups) {
+    int group_size = num_obs_group[g];
+    int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
+    num_cases_group[g] = sum(n[obs_gidx]);
+  }
+  
   {
     int finite_cov_sum[num_obs] = rep_array(0, num_obs);
     for(j in 1:num_comp) {
@@ -415,23 +431,27 @@ model {
     int s = group_stratum_cid[g];
     int group_size = num_obs_group[g];
     int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
-    // lpmf for each mixture configuration
-    vector[num_mix_comp] mix_lpmf =
-        blrm_mix_lpmf_comp(// subset data
-            r[obs_gidx],
-            n[obs_gidx],
-            X_comp[:,obs_gidx],
-            finite_cov[:,obs_gidx],
-            X_inter[obs_gidx],
-            // select EX+NEX of this group
-            beta[{g,g+num_groups}], mix_idx_beta,
-            eta[{g,g+num_groups}], mix_idx_eta)
-        // prior weight for each component
-        + mix_log_weight[g];
-
-    // finally add the sum (on the natural scale) as log to the target
-    // log density
-    log_lik_group[g] = log_sum_exp(mix_lpmf);
+    if(num_cases_group[g] == 0) {
+      log_lik_group[g] = 0;
+    } else {
+      // lpmf for each mixture configuration
+      vector[num_mix_comp] mix_lpmf =
+          blrm_mix_lpmf_comp(// subset data
+              r[obs_gidx],
+              n[obs_gidx],
+              X_comp[:,obs_gidx],
+              finite_cov[:,obs_gidx],
+              X_inter[obs_gidx],
+              // select EX+NEX of this group
+              beta[{g,g+num_groups}], mix_idx_beta,
+              eta[{g,g+num_groups}], mix_idx_eta)
+          // prior weight for each component
+          + mix_log_weight[g];
+      
+      // finally add the sum (on the natural scale) as log to the target
+      // log density
+      log_lik_group[g] = log_sum_exp(mix_lpmf);
+    }
   }
   if (!prior_PD)
     target += sum(log_lik_group);

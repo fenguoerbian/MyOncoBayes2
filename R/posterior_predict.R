@@ -49,7 +49,7 @@ posterior_predict.blrmfit <- function(object, newdata, draws, ...) {
     pr
 }
 
-#' @method posterior_linpred blrm_trial
+#' @method posterior_predict blrm_trial
 #' @export
 posterior_predict.blrm_trial <- function(object, newdata, draws, ...) {
     .assert_is_blrm_trial_and_prior_is_set(object)

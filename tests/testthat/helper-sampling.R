@@ -1,4 +1,8 @@
 library(checkmate)
+library(assertthat)
+library(Formula)
+library(abind)
+library(rstan)
 
 set_sampling_default  <- function(iter, warmup, chains, cores=1) {
     options(OncoBayes2.MC.iter=iter, OncoBayes2.MC.warmup=warmup, OncoBayes2.MC.chains=chains, mc.cores=cores)

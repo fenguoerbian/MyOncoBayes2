@@ -131,9 +131,9 @@ summary.blrm_trial <- function (object, summarize=c("blrmfit", "blrm_exnex_call"
          blrmfit = summary(object$blrmfit, ...),
          blrm_exnex_call = object$blrmfit$call,
          dose_info = object$dose_info,
-         dose_prediction = .blrm_trial_predict(object, object$dose_info),
+         dose_prediction = .blrm_trial_predict(object, object$dose_info, ...),
          data = object$data,
-         data_prediction = .blrm_trial_predict(object, object$data),
+         data_prediction = .blrm_trial_predict(object, object$data, ...),
          dimensionality = object[c("num_components", "num_interaction_terms", "num_groups", "num_strata")])
 }
 

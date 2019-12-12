@@ -375,6 +375,7 @@ auto_submit <- function(jobs, registry, resources=list(), max_num_tries = 10) {
   all_unfinished_jobs <- jobs
   
   num_unfinished_jobs <- nrow(all_unfinished_jobs)
+  num_all_jobs <- num_unfinished_jobs
   remaining_tries <- max_num_tries
   all_jobs_finished <- FALSE
   while (remaining_tries > 0 && !all_jobs_finished) {
@@ -400,7 +401,7 @@ auto_submit <- function(jobs, registry, resources=list(), max_num_tries = 10) {
       print(paste0("Some jobs did not complete. Please check the batchtools registry ", registry$file.dir))
       all_unfinished_jobs <- inner_join(not_done_jobs, all_unfinished_jobs)
       
-      if (num_unfinished_jobs == nrow(all_unfinished_jobs))
+      if (num_unfinished_jobs == nrow(all_unfinished_jobs) &&  nrow(all_unfinished_jobs) > 0.25 * num_all_jobs)
       {
         # Unfinished job count did not change -> retrying will probably not help. Abort!
         cat("Error: unfinished job count is not decreasing. Aborting job retries.")

@@ -4,7 +4,17 @@
 #'     compounds using EXchangability and NonEXchangability (EXNEX)
 #'     modeling.
 #'
-#' @param formula the model formula describing the linear predictor
+#' @param formula the model formula describing the linear predictors
+#'     of the model. The lhs of the formula is a two-column matrix
+#'     which are the number of occured events and the number of times
+#'     no event occured. The rhs of the formula defines the linear
+#'     predictors for the marginal models for each drug component,
+#'     then the interaction model and at last the grouping and
+#'     optional stratum factors of the models. These elements of the
+#'     formula are separated by a vertical bar. The marginal models
+#'     must follow a intercept and slope form while the interaction
+#'     model must not include an interaction term. See the examples
+#'     below for an example instantiation.
 #' @param data optional data frame containing the variables of the
 #'     model. If not found in \code{data}, the variables are taken
 #'     from \code{environment(formula)}.
@@ -110,7 +120,7 @@
 #' each component, and (2) optional interaction terms \eqn{\gamma(d_1,d_2)}
 #' representing synergy or antagonism between the drugs. On the log-odds scale,
 #'
-#' \deqn{\mbox{logit} \,\pi(d_1,d_2) = \mbox{logit} \, \tilde \pi(d_1,d_2) + \gamma(d_1,d_2). }
+#' \deqn{\mbox{logit} \,\pi(d_1,d_2) = \mbox{logit} \, \tilde \pi(d_1,d_2) + \eta \, \gamma(d_1,d_2). }
 #'
 #' The "no interaction" part \eqn{\tilde \pi(d_1,d_2)} represents the probability
 #' of a DLT triggered by either treatment component acting \emph{independently}.
@@ -120,7 +130,7 @@
 #' To complete this part, the treatment components can then be modeled with monotone
 #' logistic regressions as before.
 #'
-#' \deqn{\pi_i(d_i) = \log\, \alpha_i + \beta_i \, t(d_i),}
+#' \deqn{\mbox{logit} \, \pi_i(d_i) = \log\, \alpha_i + \beta_i \, t(d_i),}
 #'
 #' where \eqn{t(d_i)} is a monotone transformation of the doses, such as
 #' \eqn{t(d_i) = \log (d_i \big / d_i^*)}.
@@ -130,87 +140,110 @@
 #' the interaction term may also be made dependent on the doses (or other covariates)
 #' through regression. As an example, one could let
 #'
-#' \deqn{\gamma(d_1, d_2) = \eta \frac{d_1}{d_1^*} \frac{d_1}{d_2^*}.}
+#' \deqn{\gamma(d_1, d_2) = \frac{d_1}{d_1^*} \frac{d_1}{d_2^*}.}
 #'
-#' A dual combination example can be found in \code{\link{example-combo2}}.
+#' The specific functional form is specified in the usual notation for
+#' a design matrix. The interaction model must respect the constraint
+#' that whenever any dose approaches zero, then the interaction
+#' term must vanish as well. Therefore, the interaction model must not
+#' include an intercept term which would violate this consistency
+#' requirement. A dual combination example can be found in
+#' \code{\link{example-combo2}}.
 #'
 #' @section General combinations:
 #'
-#' The model is extended to general combination treatments consisting of \eqn{N} components by
-#' expressing the probability \eqn{\pi} on the logit scale as
+#' The model is extended to general combination treatments consisting
+#' of \eqn{N} components by expressing the probability \eqn{\pi} on
+#' the logit scale as
 #'
-#' \deqn{ \mbox{logit} \, \pi(d_1,\ldots,d_N) = \mbox{logit} \Bigl( 1 - \prod_{i = 1}^N ( 1 - \pi_i(d_i) ) \Bigr) + \sum_{k=1}^K \gamma_k(d_1,\ldots,d_N), }
+#' \deqn{ \mbox{logit} \, \pi(d_1,\ldots,d_N) = \mbox{logit} \Bigl( 1 - \prod_{i = 1}^N ( 1 - \pi_i(d_i) ) \Bigr) + \sum_{k=1}^K \eta_k \, \gamma_k(d_1,\ldots,d_N), }
 #'
-#' Multiple drug-drug interactions among the \eqn{N} components are now possible,
-#' and are represented through the \eqn{K} interaction terms \eqn{\gamma_k}.
+#' Multiple drug-drug interactions among the \eqn{N} components are
+#' now possible, and are represented through the \eqn{K} interaction
+#' terms \eqn{\gamma_k}.
 #'
-#' Regression models can be again be specified for each \eqn{\pi_i} and \eqn{\gamma_k},
-#' such as
+#' Regression models can be again be specified for each \eqn{\pi_i}
+#' and \eqn{\gamma_k}, such as
 #'
 #' \deqn{ \mbox{logit}\, \pi_i(d_i) = \log\, \alpha_i + \beta_i \, t(d_i) }
 #'
-#' Interactions for some subset \eqn{I(k) \subset \{1,\ldots,N \}} of the treatment
-#' components can be modeled with regression as well, for example on products
-#' of doses,
+#' Interactions for some subset \eqn{I(k) \subset \{1,\ldots,N \}} of
+#' the treatment components can be modeled with regression as well,
+#' for example on products of doses,
 #'
-#' \deqn{ \gamma_k(d_1,\ldots,d_N) = \eta_k \prod_{i \in I(k)} \frac{d_i}{d_i^*}.}
+#' \deqn{ \gamma_k(d_1,\ldots,d_N) = \prod_{i \in I(k)} \frac{d_i}{d_i^*}.}
 #'
-#' For example, \eqn{I(k) = \{1,2,3\}} results in the three-way interaction term
+#' For example, \eqn{I(k) = \{1,2,3\}} results in the three-way
+#' interaction term
 #'
-#' \deqn{ \eta_k \frac{d_1}{d_1^*} \frac{d_2}{d_2^*} \frac{d_3}{d_3^*} }
+#' \deqn{ \frac{d_1}{d_1^*} \frac{d_2}{d_2^*} \frac{d_3}{d_3^*} }
 #'
 #' for drugs 1, 2, and 3.
 #'
-#' For a triple combination example please refer to \code{\link{example-combo3}}.
+#' For a triple combination example please refer to
+#' \code{\link{example-combo3}}.
 #'
 #' @section Meta-analytic framework:
 #'
-#' Information on the toxicity of a drug may be available from multiple
-#' studies or sources. Furthermore, one may wish to stratify observations within a
-#' single study (for example into groups of patients corresponding to different geographic regions,
-#' or multiple dosing dose_info).
+#' Information on the toxicity of a drug may be available from
+#' multiple studies or sources. Furthermore, one may wish to stratify
+#' observations within a single study (for example into groups of
+#' patients corresponding to different geographic regions, or multiple
+#' dosing \code{dose_info} corresponding to different schedules).
 #'
-#' \code{blrm_exnex} provides tools for robust Bayesian hierarchical modeling to
-#' jointly model data from multiple sources. An additional index \eqn{j=1, \ldots, J} on
-#' the parameters and observations denotes the \eqn{J} groups. The resulting
-#' model allows the DLT rate to differ across the groups. The general \eqn{N}-component
-#' model becomes
+#' \code{blrm_exnex} provides tools for robust Bayesian hierarchical
+#' modeling to jointly model data from multiple sources. An additional
+#' index \eqn{j=1, \ldots, J} on the parameters and observations
+#' denotes the \eqn{J} groups. The resulting model allows the DLT rate
+#' to differ across the groups. The general \eqn{N}-component model
+#' becomes
 #'
-#' \deqn{ \mbox{logit} \, \pi_j(d_1,\ldots,d_N) = \mbox{logit} \Bigl( 1 - \prod_{i = 1}^N ( 1 - \pi_{ij}(d_i) ) \Bigr) + \sum_{k=1}^K \gamma_{kj}(d_1,\ldots,d_N), }
+#' \deqn{ \mbox{logit} \, \pi_j(d_1,\ldots,d_N) = \mbox{logit} \Bigl( 1 - \prod_{i = 1}^N ( 1 - \pi_{ij}(d_i) ) \Bigr) + \sum_{k=1}^K \eta_{kj} \, \gamma_{k}(d_1,\ldots,d_N), }
 #'
-#' for groups \eqn{j = 1,\ldots,J}. The component toxicities \eqn{\pi_{ij}}
-#' and interaction terms \eqn{\gamma_{kj}} are modelled, as before, through
-#' regression. For example, \eqn{\pi_{ij}} could be a logistic regression
-#' on \eqn{t(d_i) = \log(d_i/d_i^*)} with intercept and log-slope
-#' \eqn{\boldsymbol \theta_{ij}}, and \eqn{\gamma_{kj}} regressed with
-#' coefficient \eqn{\eta_{kj}} on a product \eqn{\prod_{i\in I(k)} (d_i/d_i^*)}
+#' for groups \eqn{j = 1,\ldots,J}. The component toxicities
+#' \eqn{\pi_{ij}} and interaction terms \eqn{\gamma_{k}} are
+#' modelled, as before, through regression. For example,
+#' \eqn{\pi_{ij}} could be a logistic regression on \eqn{t(d_i) =
+#' \log(d_i/d_i^*)} with intercept and log-slope \eqn{\boldsymbol
+#' \theta_{ij}}, and \eqn{\gamma_{k}} regressed with coefficient
+#' \eqn{\eta_{kj}} on a product \eqn{\prod_{i\in I(k)} (d_i/d_i^*)}
 #' for some subset \eqn{I(k)} of components.
 #'
 #' Thus, for \eqn{j=1,\ldots,J}, we now have group-specific parameters
-#' \eqn{\boldsymbol\theta_{ij} = (\log\, \alpha_{ij}, \log\, \beta_{ij})} and
-#' \eqn{\eta_{kj}} for each component \eqn{i=1,\ldots,N} and
-#' interaction \eqn{k =1,\ldots,K}.
+#' \eqn{\boldsymbol\theta_{ij} = (\log\, \alpha_{ij}, \log\,
+#' \beta_{ij})} and \eqn{\boldsymbol\nu_{j} = (\eta_{1j}, \ldots,
+#' \eta_{Kj})} for each component \eqn{i=1,\ldots,N} and interaction
+#' \eqn{k=1,\ldots,K}.
 #'
 #' The structure of the prior on
-#' \eqn{(\boldsymbol\theta_{i1},\ldots,\boldsymbol\theta_{iJ})}
-#' and \eqn{(\eta_{k1}, \ldots, \eta_{kJ})} determines how much information will
-#' be shared across groups \eqn{j}. Several modeling choices are available in the function.
+#' \eqn{(\boldsymbol\theta_{i1},\ldots,\boldsymbol\theta_{iJ})} and
+#' \eqn{(\boldsymbol\nu_{1}, \ldots, \boldsymbol\nu_{J})} determines how much
+#' information will be shared across groups \eqn{j}. Several modeling
+#' choices are available in the function.
+#'
 #' \itemize{
 #'
-#' \item \emph{EX (Full exchangeability):} One can assume the parameters are conditionally
-#' exchangeable given hyperparameters
+#' \item \emph{EX (Full exchangeability):} One can assume the
+#' parameters are conditionally exchangeable given hyperparameters
 #'
-#' \deqn{\boldsymbol \theta_{ij} \sim \mbox{BVN}\bigl( \boldsymbol \mu_i, \boldsymbol \Sigma_i \bigr), }
+#' \deqn{\boldsymbol \theta_{ij} \sim \mbox{N}\bigl( \boldsymbol \mu_{\boldsymbol \theta i}, \boldsymbol \Sigma_{\boldsymbol \theta i} \bigr), }
 #'
-#' independently across groups \eqn{j = 1,\ldots, J} and treatment components
-#' \eqn{i=1,\ldots,N}. The covariance matrix \eqn{\boldsymbol \Sigma_i} captures
-#' the patterns of cross-group heterogeneity, and is parametrized with standard deviations
-#' \eqn{\boldsymbol \tau_{\boldsymbol\theta i} = (\tau_{\alpha i}, \tau_{\beta i})} and
-#' correlation \eqn{\rho_i}. Similarly for the interactions, the fully-exchangeable model is
-#' \deqn{\eta_{kj} \sim \mbox{N}( \mu_{\eta k}, \tau^2_{\eta k})}
-#' for groups \eqn{j = 1,\ldots, J} and interactions \eqn{k=1,\ldots,K}, and
-#' the prior on \eqn{\tau^2_{\eta k}} captures the amount of heterogeneity
-#' expected in the interaction terms a-priori.
+#' independently across groups \eqn{j = 1,\ldots, J} and treatment
+#' components \eqn{i=1,\ldots,N}. The covariance matrix
+#' \eqn{\boldsymbol \Sigma_{\boldsymbol \theta i}} captures the patterns of cross-group
+#' heterogeneity, and is parametrized with standard deviations
+#' \eqn{\boldsymbol \tau_{\boldsymbol\theta i} = (\tau_{\alpha i},
+#' \tau_{\beta i})} and the correlation \eqn{\rho_i}. Similarly for the
+#' interactions, the fully-exchangeable model is
+#'
+#' \deqn{\boldsymbol \nu_{j} \sim \mbox{N}\bigl( \boldsymbol \mu_{\boldsymbol \nu}, \boldsymbol \Sigma_{\boldsymbol \nu} \bigr)}
+#'
+#' for groups \eqn{j = 1,\ldots, J} and interactions
+#' \eqn{k=1,\ldots,K}, and the prior on the covariance matrix
+#' \eqn{\boldsymbol \Sigma_{\boldsymbol \nu}} captures the amount of
+#' heterogeneity expected in the interaction terms a-priori. The
+#' covariance is again parametrized with standard deviations
+#' \eqn{(\tau_{\eta 1}, \ldots, \tau_{\eta K})} and its correlation matrix.
 #'
 #' \item \emph{Differential discounting:} For one or more of the groups \eqn{j=1,\ldots,J},
 #' larger deviations of \eqn{\boldsymbol\theta_{ij}} may be expected from the mean
@@ -218,36 +251,44 @@
 #' \eqn{\mu_{\eta,k}}. Such differential heterogeneity can be modeled by mapping the groups
 #' \eqn{j = 1,\ldots,J} to \emph{strata} through \eqn{s_j \in \{1,\ldots,S\}},
 #' and modifying the model specification to
-#' \deqn{\boldsymbol \theta_{ij} \sim \mbox{BVN}\bigl( \boldsymbol \mu_i, \boldsymbol \Sigma_{ij} \bigr), }
+#' \deqn{\boldsymbol \theta_{ij} \sim \mbox{N}\bigl( \boldsymbol \mu_{\boldsymbol \theta i}, \boldsymbol \Sigma_{\boldsymbol \theta ij} \bigr), }
 #' where
-#' \deqn{\Sigma_{ij} = \left( \begin{array}{cc}
+#' \deqn{\boldsymbol \Sigma_{\boldsymbol \theta ij} = \left( \begin{array}{cc}
 #' \tau^2_{\alpha s_j i} & \rho_i \tau_{\alpha s_j i} \tau_{\beta s_j i}\\
 #' \rho_i \tau_{\alpha s_j i} \tau_{\beta s_j i} & \tau^2_{\beta s_j i}
 #' \end{array} \right).}
 #' For the interactions, the model becomes
-#' \deqn{\eta_{kj} \sim \mbox{N}(\mu_{\eta k}, \tau^2_{\eta s_j k}).} Each stratum
-#' \eqn{s=1,\ldots,S} then corresponds to its own set of \eqn{\tau} parameters.
+#' \deqn{\boldsymbol \nu_{j} \sim \mbox{N}\bigl( \boldsymbol \mu_{\boldsymbol \nu}, \boldsymbol \Sigma_{\boldsymbol \nu j} \bigr),}
+#' where the covariance matrix \eqn{\boldsymbol \Sigma_{\boldsymbol \nu j}} is modelled as stratum specific standard deviations \eqn{(\tau_{\eta 1 s_j}, \ldots, \tau_{\eta K s_j})} and a stratum independent correlation matrix.
+#' Each stratum
+#' \eqn{s=1,\ldots,S} then corresponds to its own set of standard deviations \eqn{\tau} leading to different discounting per stratum.
 #' Independent priors are specified for the component parameters
 #' \eqn{\tau_{\alpha s i}} and \eqn{\tau_{\beta s i}} and
 #' for the interaction parameters \eqn{\tau_{\eta s k}} for each stratum
 #' \eqn{s=1,\ldots,S}. Inference for strata \eqn{s} where the prior is centered
 #' on larger values of the \eqn{\tau} parameters will exhibit less shrinkage
-#' towards the the means, \eqn{\boldsymbol\mu_i} and \eqn{\mu_{\eta,k}} respectively.
+#' towards the the means, \eqn{\boldsymbol\mu_{\boldsymbol \theta i}} and \eqn{\boldsymbol \mu_{\boldsymbol \nu}} respectively.
+#'
 #'
 #' \item \emph{EXNEX (Partial exchangeability):} Another mechansim for increasing
 #' robustness is to introduce mixture priors for the group-specific parameters,
 #' where one mixture component is shared across groups, and the other is group-specific.
 #' The result, known as an EXchangeable-NonEXchangeable (EXNEX) type prior, has a form
-#' \deqn{\boldsymbol \theta_{ij} \sim p_{ij}\, \mbox{BVN}\bigl( \boldsymbol \mu_i, \boldsymbol \Sigma_i \bigr) +(1-p_{ij})\, \mbox{BVN}\bigl(\boldsymbol m_{ij}, \boldsymbol S_{ij}\bigr)}
+#'
+#' \deqn{\boldsymbol \theta_{ij} \sim p_{\boldsymbol \theta ij}\, \mbox{N}\bigl( \boldsymbol \mu_{\boldsymbol \theta i}, \boldsymbol \Sigma_{\boldsymbol \theta i} \bigr) +(1-p_{\boldsymbol \theta ij})\, \mbox{N}\bigl(\boldsymbol m_{\boldsymbol \theta ij}, \boldsymbol S_{\boldsymbol \theta ij}\bigr)}
+#'
 #' when applied to the treatment-component parameters, and
-#' \deqn{\eta_{kj} \sim p_{\eta k j} \,\mbox{N}(\mu_{\eta k},\tau^2_{\eta k}) + (1-p_{\eta k j})\, \mbox{N}(m_{\eta k j}, s^2_{\eta k j})}
+#'
+#' \deqn{\boldsymbol \nu_{kj} \sim p_{\boldsymbol \nu_{kj}} \,\mbox{N}\bigl(\mu_{\boldsymbol \nu}, \boldsymbol \Sigma_{\boldsymbol \nu}\bigr)_k + (1-p_{\boldsymbol \nu_{kj}})\, \mbox{N}(m_{\boldsymbol \nu_{kj}}, s^2_{\boldsymbol \nu_{kj}})}
+#'
 #' when applied to the interaction parameters. The \emph{exchangeability weights}
-#' \eqn{p_{ij}} and \eqn{p_{\eta k j}} are fixed constants in the interval \eqn{[0,1]}
+#' \eqn{p_{\boldsymbol \theta ij}} and \eqn{p_{\boldsymbol \nu_{kj}}} are fixed constants in the interval \eqn{[0,1]}
 #' that control the degree to which inference for group \eqn{j} is informed
 #' by the exchangeable mixture components. Larger values for the
 #' weights correspond to greater exchange of information, while smaller values
 #' increase robustness in case of outlying observations in individual groups
 #' \eqn{j}.
+#'
 #'
 #' }
 #'
@@ -255,7 +296,6 @@
 #' @return The function returns a S3 object of type
 #'     \code{blrmfit}.
 #'
-#SW: This seealso does not work unfortunatley at the moment. Putting them into the text.
 #' @seealso \code{\link{example-single-agent}}, \code{\link{example-combo2}, \code{\link{example-combo3}}
 #'
 #' @template ref-mac

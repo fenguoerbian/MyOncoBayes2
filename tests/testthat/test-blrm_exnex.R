@@ -237,11 +237,44 @@ test_that("update.blrmfit grows the data set", {
 
     combo2_new$new_codata  <-  mutate(combo2_new$new_codata,
                                       group_id=as.character(group_id))
-
+    set.seed(123144)
     new_blrmfit_3 <- with(combo2_new, update(blrmfit, add_data=new_codata))
     expect_true(nrow(summary(new_blrmfit_3)) == nrow(codata_combo2)+2)
+    ## Test that adding dummy data does not change results in the other rows
+    set.seed(123144)
+    combo2_new_with_dummy <- combo2
+    combo2_new_with_dummy$new_codata <- add_row(combo2_new_with_dummy$new_codata, group_id = "IIT", drug_A = 1, drug_B = 1, drug_C = 1, num_patients = 0, num_toxicities = 0)
 
-    ## level Reihnfolge vertauschen und testen
+    new_blrmfit_3_with_dummy <- with(combo2_new_with_dummy, update(blrmfit, add_data=new_codata))
+    expect_equal(nrow(summary(new_blrmfit_3)) + 1, nrow(summary(new_blrmfit_3_with_dummy)))
+
+    ## test if the log-likelihood is the same for parameter-vector 0
+    ## on unconstrained space
+    num_pars  <- rstan::get_num_upars(new_blrmfit_3$stanfit)
+    theta_uconst <- rep(0.0, num_pars)
+    log_prob_group <- rstan::log_prob(new_blrmfit_3$stanfit, theta_uconst, gradient=FALSE)
+    log_prob_group_and_dummy  <- rstan::log_prob(new_blrmfit_3_with_dummy$stanfit, theta_uconst, gradient=FALSE)
+    expect_equal(log_prob_group, log_prob_group_and_dummy)
+    
+    
+    ## Same for empty group
+    set.seed(123144)
+    new_blrmfit_with_empty_group <- with(combo2_new, update(blrmfit, data=blrmfit$data))
+    set.seed(123144)
+    new_blrmfit_with_empty_group_and_dummy <- with(combo2_new, update(blrmfit, data=add_row(blrmfit$data, group_id = "IIT", drug_A = 1, drug_B = 1, num_patients = 0, num_toxicities = 0)))
+    expect_equal(nrow(summary(new_blrmfit_with_empty_group)) + 1, nrow(summary(new_blrmfit_with_empty_group_and_dummy)))
+    ##summary(new_blrmfit_with_empty_group) - summary(new_blrmfit_with_empty_group_and_dummy)[1:nrow(summary(new_blrmfit_with_empty_group)),]
+    ## change level order and test
+
+    ## test if the log-likelihood is the same for parameter-vector 0
+    ## on unconstrained space
+    num_pars  <- rstan::get_num_upars(new_blrmfit_with_empty_group$stanfit)
+    theta_uconst <- rep(0.0, num_pars)
+    log_prob_prob_ref  <- rstan::log_prob(combo2_new$blrmfit$stanfit, theta_uconst, gradient=FALSE)
+    log_prob_empty_group <- rstan::log_prob(new_blrmfit_with_empty_group$stanfit, theta_uconst, gradient=FALSE)
+    log_prob_empty_group_and_dummy  <- rstan::log_prob(new_blrmfit_with_empty_group_and_dummy$stanfit, theta_uconst, gradient=FALSE)
+    expect_equal(log_prob_prob_ref, log_prob_empty_group)
+    expect_equal(log_prob_prob_ref, log_prob_empty_group_and_dummy)
 
     combo2_new$flaky_new_codata  <-  mutate(combo2_new$new_codata,
                                             group_id=NULL)

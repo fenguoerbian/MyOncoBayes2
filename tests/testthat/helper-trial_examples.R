@@ -1,34 +1,38 @@
 ## Examples used for blrm_trial tests
 
+library(tibble)
+library(tidyr)
+library(dplyr)
+
 examples <- list(
 
   # Single-agent example -------------------------------------------------------
   single_agent = list(
-    histdata = bind_rows(list(
-      tibble(
+    histdata = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "hist_A",
         drug1 = 1:2,
         num_patients = 3,
         num_toxicities = 0
       ),
-      tibble(
+      tibble::tibble(
         group_id = "hist_B",
         drug1 = 1:2,
         num_patients = 3,
         num_toxicities = 0
       )
     )),
-    dose_info = bind_rows(list(
-      tibble(
+    dose_info = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "cur_A",
         drug1 = 1:2
       ),
-      tibble(
+      tibble::tibble(
         group_id = "cur_B",
         drug1 = 1:2
       )
     )),
-    drug_info = tibble(
+    drug_info = tibble::tibble(
       drug_name = "drug1",
       dose_ref  = 1,
       dose_unit = "ngogn",
@@ -38,15 +42,15 @@ examples <- list(
 
   # Combo2 example -------------------------------------------------------
   combo2 = list(
-    histdata = bind_rows(list(
-      tibble(
+    histdata = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "hist_A",
         drug1 = 1:2,
         drug2 = 100 * (1:2),
         num_patients = 3,
         num_toxicities = 0
       ),
-      tibble(
+      tibble::tibble(
         group_id = "hist_B",
         drug1 = 1:2,
         drug2 = 100 * (1:2),
@@ -54,19 +58,19 @@ examples <- list(
         num_toxicities = 0
       )
     )),
-    dose_info = bind_rows(list(
-      tibble(
+    dose_info = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "cur_A",
         drug1 = 1:2,
         drug2 = 100 * (1:2)
       ),
-      tibble(
+      tibble::tibble(
         group_id = "cur_B",
         drug1 = 1:2,
         drug2 = 100 * (1:2)
       )
     )),
-    drug_info = tibble(
+    drug_info = tibble::tibble(
       drug_name = c("drug1", "drug2"),
       dose_ref  = c(1, 100),
       dose_unit = c("ngogn", "potrzebie"),
@@ -76,8 +80,8 @@ examples <- list(
 
   # Combo3 example -------------------------------------------------------
   combo3 = list(
-    histdata = bind_rows(list(
-      tibble(
+    histdata = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "hist_A",
         drug1 = 1:2,
         drug2 = 100 * (1:2),
@@ -85,7 +89,7 @@ examples <- list(
         num_patients = 3,
         num_toxicities = 0
       ),
-      tibble(
+      tibble::tibble(
         group_id = "hist_B",
         drug1 = 1:2,
         drug2 = 100 * (1:2),
@@ -94,21 +98,21 @@ examples <- list(
         num_toxicities = 0
       )
     )),
-    dose_info = bind_rows(list(
-      tibble(
+    dose_info = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "cur_A",
         drug1 = 1:2,
         drug2 = 100 * (1:2),
         drug3 = 1000 * (1:2)
       ),
-      tibble(
+      tibble::tibble(
         group_id = "cur_B",
         drug1 = 1:2,
         drug2 = 100 * (1:2),
         drug3 = 1000 * (1:2)
       )
     )),
-    drug_info = tibble(
+    drug_info = tibble::tibble(
       drug_name = paste0("drug", 1:3),
       dose_ref  = 10 ^ c(0, 2, 3),
       dose_unit = c("ngogn", "potrzebie", "blintz")
@@ -116,35 +120,42 @@ examples <- list(
   ),
 
   single_drug_with_strata = list(
-    histdata = bind_rows(list(
-      tibble(
+    histdata = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "hist_A",
         stratum_id = "strat_A",
         drug1 = 1:2,
         num_patients = 3,
         num_toxicities = 0
       ),
-      tibble(
+      tibble::tibble(
         group_id = "hist_B",
+        stratum_id = "strat_A",
+        drug1 = 1:2,
+        num_patients = 3,
+        num_toxicities = 0
+      ),
+      tibble::tibble(
+        group_id = "hist_C",
         stratum_id = "strat_B",
         drug1 = 1:2,
         num_patients = 3,
         num_toxicities = 0
       )
     )),
-    dose_info = bind_rows(list(
-      tibble(
+    dose_info = dplyr::bind_rows(list(
+      tibble::tibble(
         group_id = "cur_A",
         stratum_id = "strat_A",
         drug1 = 1:2
       ),
-      tibble(
+      tibble::tibble(
         group_id = "cur_B",
         stratum_id = "strat_B",
         drug1 = 1:2
       )
     )),
-    drug_info = tibble(
+    drug_info = tibble::tibble(
       drug_name = "drug1",
       dose_ref  = 1,
       dose_unit = "ngogn"

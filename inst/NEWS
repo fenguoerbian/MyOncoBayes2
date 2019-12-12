@@ -1,3 +1,26 @@
+December 12th, 2019 (0.5-8)
+
+* Merge data with same group and dosing in blrm_trial before passing
+  into blrm_exnex for improved performance
+* Ensure consistent sorting of this data to improve reproducibility of
+  output with respect to input data permutations
+* speedup Stan model which now skips data rows with no cases
+* correct blrm_exnex documentation to reflect correctly exchangability
+  model used for the interaction model
+
+December 9th, 2019 (0.5-7)
+
+* Improve numerical stability of log_inv_logit function, preventing
+  NaNs in the output of pp_data and resulting errors in summary()
+
+November 29th, 2019 (0.5-6)
+
+* Support summary.blrm_trial(...) syntax passing into summary.blrmfit()
+
+November 22nd, 2019 (0.5-5)
+
+* Fixed Roxygen for posterior_predict
+
 November 18th, 2019 (0.5-4)
 
 * fix vignette documentation
