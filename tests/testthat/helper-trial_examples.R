@@ -160,5 +160,27 @@ examples <- list(
       dose_ref  = 1,
       dose_unit = "ngogn"
     )
+  ),
+  
+  multi_drug_single_group = list(
+    histdata = tibble::tibble(
+      group_id = "single_group",
+      A = 1,
+      B = 1,
+      C = 1,
+      num_patients = 3,
+      num_toxicities = 0
+    ),
+    dose_info = tibble::tibble(
+      group_id = "single_group",
+      A = 1,
+      B = 1,
+      C = 1
+    ),
+    drug_info = tibble::tibble(
+      drug_name = c("A", "B", "C"),
+      dose_ref  = 1,
+      dose_unit = "ngogn"
+    )    
   )
 )

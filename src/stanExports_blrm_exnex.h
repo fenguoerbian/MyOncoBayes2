@@ -2593,9 +2593,10 @@ public:
                 current_statement_begin__ = 637;
                 if (as_bool((primitive_value(logical_eq(cardinality_vector(stan::model::rvalue(X_inter, stan::model::cons_list(stan::model::index_omni(), stan::model::cons_list(stan::model::index_uni(1), stan::model::nil_index_list())), "X_inter"), pstream__), 1)) && primitive_value(logical_eq(get_base1(X_inter, 1, 1, "X_inter", 1), 1.0))))) {
                     current_statement_begin__ = 638;
-                    std::stringstream errmsg_stream__;
-                    errmsg_stream__ << "Interaction design matrix must not have an intercept.";
-                    throw std::domain_error(errmsg_stream__.str());
+                    if (pstream__) {
+                        stan_print(pstream__,"INFO: Interaction design matrix appears to have an intercept, which is unexpected.");
+                        *pstream__ << std::endl;
+                    }
                 }
             }
             current_statement_begin__ = 642;
@@ -4170,7 +4171,7 @@ public:
                     current_statement_begin__ = 939;
                     stan::model::assign(beta_group, 
                                 stan::model::cons_list(stan::model::index_uni(g), stan::model::cons_list(stan::model::index_uni(j), stan::model::nil_index_list())), 
-                                get_base1(get_base1(beta, (g + (logical_eq(get_base1(mix_beta_config, j, "mix_beta_config", 1), 1) ? 0 : num_comp )), "beta", 1), j, "beta", 2), 
+                                get_base1(get_base1(beta, (g + (logical_eq(get_base1(mix_beta_config, j, "mix_beta_config", 1), 1) ? 0 : num_groups )), "beta", 1), j, "beta", 2), 
                                 "assigning variable beta_group");
                 }
                 }
@@ -4201,7 +4202,7 @@ public:
                     current_statement_begin__ = 951;
                     stan::model::assign(eta_group, 
                                 stan::model::cons_list(stan::model::index_uni(g), stan::model::cons_list(stan::model::index_uni(j), stan::model::nil_index_list())), 
-                                get_base1(get_base1(eta, (g + (logical_eq(get_base1(mix_eta_config, j, "mix_eta_config", 1), 1) ? 0 : num_inter )), "eta", 1), j, "eta", 2), 
+                                get_base1(get_base1(eta, (g + (logical_eq(get_base1(mix_eta_config, j, "mix_eta_config", 1), 1) ? 0 : num_groups )), "eta", 1), j, "eta", 2), 
                                 "assigning variable eta_group");
                 }
                 }

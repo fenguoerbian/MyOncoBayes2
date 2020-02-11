@@ -35,7 +35,6 @@ if(FALSE) {
 source("sbc_example_models.R")
 base_data  <- list(models = example_models)
 
-
 addProblem("base",
            data = base_data,
            fun = simulate_fake,
@@ -63,16 +62,39 @@ summarizeExperiments()
 
 if(FALSE) {
   ## used for debugging
-  job1 <- testJob(7)
-  job1
-  job2 <- testJob(6)
-  job3 <- testJob(11)
+    job1 <- testJob(2)
+    job1
+
+    names(job1)
+
+    job1$rank
+
+
+    job1_def <- makeJob(2)
+    job1_def$pars
+
+    res  <- fit_exnex(base_data, job1_def, job1_def$instance)
+
+
+    dim(job1_def$instance$draw$draw_beta)
+    job1_def$instance$draw$draw_beta[1,1,,]
+
+    summary(job1$fit$stanfit)
+
+    names(job1)
+
+    fit  <- job1$fit
+
+    job2 <- testJob(6)
+    job3 <- testJob(11)
+
     job <- makeJob(1)
+
     attributes(job)
     names(job)
-    example_model("combo2")
-    sp  <- sample_prior(example_models$combo2_EXNEX)
-    sp  <- sample_prior(example_models$log2bayes_EXNEX)
+
+    options(mc.cores=2)
+
     out <- fit_exnex(data = base_data, job = job, instance = job$instance )
 }
 

@@ -236,7 +236,7 @@ transformed data {
 
   if(num_inter > 0)
     if(cardinality_vector(X_inter[:,1]) == 1 && X_inter[1,1] == 1.0)
-      reject("Interaction design matrix must not have an intercept.");
+      print("INFO: Interaction design matrix appears to have an intercept, which is unexpected.");
 
   // NOTE: Non-centered parametrization is hard-coded
 
@@ -537,7 +537,7 @@ generated quantities {
         } else {
           beta_EX_prob[g,j] = 1.0;
         }
-        beta_group[g,j] = beta[g + (mix_beta_config[j] == 1 ? 0 : num_comp),j];
+        beta_group[g,j] = beta[g + (mix_beta_config[j] == 1 ? 0 : num_groups),j];
       }
     }
     {
@@ -549,7 +549,7 @@ generated quantities {
         } else {
           eta_EX_prob[g,j] = 1.0;
         }
-        eta_group[g,j] = eta[g + (mix_eta_config[j] == 1 ? 0 : num_inter),j];
+        eta_group[g,j] = eta[g + (mix_eta_config[j] == 1 ? 0 : num_groups),j];
       }
     }
   }

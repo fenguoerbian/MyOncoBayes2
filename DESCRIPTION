@@ -9,8 +9,8 @@ Description: Bayesian logistic regression model with optional
   drugs. Please refer to Neuenschwander et al. (2008)
   <doi:10.1002/sim.3230> and Neuenschwander et al. (2016)
   <doi:10.1080/19466315.2016.1174149> for details on the methodology.
-Version: 0.5-8
-Date: 2019-12-12
+Version: 0.6-0
+Date: 2020-02-11
 Authors@R: c(person("Novartis", "Pharma AG", role = "cph")
             ,person("Sebastian", "Weber", email="sebastian.weber@novartis.com", role=c("aut", "cre"))
             ,person("Andrew", "Bean", email="andrew.bean@novartis.com", role="aut")
@@ -32,8 +32,8 @@ VignetteBuilder: knitr
 Biarch: true
 SystemRequirements: GNU make, pandoc (>= 1.12.3), pandoc-citeproc
 Encoding: UTF-8
-RoxygenNote: 6.1.1
-Packaged: 2019-12-12 14:13:40 UTC; 
+RoxygenNote: 7.0.2
+Packaged: 2020-02-11 13:11:58 UTC; 
 Author: Novartis Pharma AG [cph],
   Sebastian Weber [aut, cre],
   Andrew Bean [aut],
@@ -42,4 +42,4 @@ Author: Novartis Pharma AG [cph],
     configure.win)
 Maintainer: Sebastian Weber <sebastian.weber@novartis.com>
 Repository: CRAN
-Date/Publication: 2019-12-12 14:50:02 UTC
+Date/Publication: 2020-02-11 13:50:02 UTC

@@ -822,6 +822,42 @@ set_prior <- function(trial, mu_sd_inter = 0.5)
   )
 }
 
+set_prior_EXNEX <- function(trial, mu_sd_inter = 0.5) 
+{
+  dims <- summary(trial, "dimensionality")
+  
+  update(
+    trial,
+    # Prior mean and sd on mu_{alpha_i}, mu_{beta_i}
+    prior_EX_mu_mean_comp  = matrix(c(logit(0.10), 0), nrow = dims$num_components, ncol = 2, TRUE),
+    prior_EX_mu_sd_comp    = matrix(c(2, 1), nrow = dims$num_components, ncol = 2, TRUE),
+    
+    # Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}} 
+    prior_EX_tau_mean_comp = do.call("abind", c(
+      replicate(dims$num_strata, matrix(c(0, 0), nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
+      list(along = 0))
+    ),
+    prior_EX_tau_sd_comp = do.call("abind", c(
+      replicate(dims$num_strata, matrix(0, nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
+      list(along = 0))
+    ),
+    
+    # Prior mean and sd on mu_{eta}
+    prior_EX_mu_mean_inter  = rep(0,   dims$num_interaction_terms),
+    prior_EX_mu_sd_inter    = rep(mu_sd_inter, dims$num_interaction_terms), 
+    prior_EX_tau_mean_inter = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
+    prior_EX_tau_sd_inter   = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
+    
+    prior_is_EXNEX_comp = rep(TRUE, dims$num_components),
+    prior_EX_prob_comp = matrix(0.8, nrow = dims$num_groups, ncol = dims$num_components),
+    
+    prior_is_EXNEX_inter = rep(TRUE, dims$num_interaction_terms),
+    prior_EX_prob_inter = matrix(0.8, nrow = dims$num_groups, ncol = dims$num_interaction_terms),
+    
+    prior_tau_dist = 0
+  )
+}
+
 check_data_sorting <- function(example) {
   with(example, {
     trial <- blrm_trial(histdata, dose_info, drug_info)
@@ -845,3 +881,15 @@ test_that(".blrm_trial_merge_data sorts data",
           check_data_sorting(examples$single_agent))
 test_that(".blrm_trial_merge_data sorts data",
           check_data_sorting(examples$single_drug_with_strata))
+
+# Test for corner cases -----------------------------------------------------------------------
+check_trial_with_EXNEX_prior <- function(example) {
+  with(example, {
+    trial <- blrm_trial(histdata, dose_info, drug_info)
+    print(trial)
+    trial <- set_prior_EXNEX(trial)
+  })
+}
+
+test_that("Try EXNEX with one group, but multiple components / interactions",
+          check_trial_with_EXNEX_prior(examples$multi_drug_single_group))

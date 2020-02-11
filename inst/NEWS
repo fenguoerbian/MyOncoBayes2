@@ -1,3 +1,11 @@
+February 11th, 2020 (0.6-0)
+
+* Fix issue with model outputs when EXNEX is being used. We recommend
+  all users to upgrade to this version. The SBC runs now include
+  checks for the per-group estimates to avoid a regression of the bug.
+* Correct printing of prior information wrt. to summaries of number of
+  strata and groups.
+
 December 12th, 2019 (0.5-8)
 
 * Merge data with same group and dosing in blrm_trial before passing

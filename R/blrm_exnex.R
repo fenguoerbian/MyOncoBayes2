@@ -720,11 +720,15 @@ print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
 
     cat("\nGroups per stratum:\n")
     si  <- levels(x$strata_fct)[x$group_strata$strata_index]
-    ds <- as.data.frame(table(si))
+    ds <- as.data.frame(table(si), stringsAsFactors = FALSE)
+    names(ds) <- c("Stratum", "Groups")
+    ds$Stratum <- factor(ds$Stratum, levels=levels(x$strata_fct))
+    ds <- ds[order(ds$Stratum, ds$Groups), ]
+    
     totals_stratum  <- totals  %>%
         group_by(Stratum) %>%
         summarise(n_total=sum(n_total))
-    names(ds) <- c("Stratum", "Groups")
+    
     ds  <- left_join(ds, totals_stratum, by="Stratum")
     print(ds)
 

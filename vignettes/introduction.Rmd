@@ -441,7 +441,7 @@ final_summ_stats <- cbind(newdata, summ) %>%
 ```
 
 
-```{r, fig.height = 4 * 1.62, fig.width=4}
+```{r, fig.height = 4, fig.width=1.62 * 4}
 
 ggplot(final_summ_stats,
        aes(x=factor(drug_B), colour=EWOC)) +
