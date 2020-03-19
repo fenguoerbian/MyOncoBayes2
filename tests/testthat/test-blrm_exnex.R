@@ -229,7 +229,7 @@ test_that("update.blrmfit grows the data set", {
                                         drug_A=c(8, 8),
                                         drug_B=c(800, 900),
                                         drug_C=c(10, 20),
-                                        num_patients=10, num_toxicities=2)
+                                        num_patients=10, num_toxicities=2, stringsAsFactors = TRUE)
 
     ## this one will fail due to a factor levels mismatch
     expect_error(new_blrmfit_3 <- with(combo2_new, update(blrmfit, add_data=new_codata)),
@@ -243,7 +243,7 @@ test_that("update.blrmfit grows the data set", {
     ## Test that adding dummy data does not change results in the other rows
     set.seed(123144)
     combo2_new_with_dummy <- combo2
-    combo2_new_with_dummy$new_codata <- add_row(combo2_new_with_dummy$new_codata, group_id = "IIT", drug_A = 1, drug_B = 1, drug_C = 1, num_patients = 0, num_toxicities = 0)
+    combo2_new_with_dummy$new_codata <- add_row(combo2_new_with_dummy$new_codata, group_id = factor("IIT"), drug_A = 1, drug_B = 1, drug_C = 1, num_patients = 0, num_toxicities = 0)
 
     new_blrmfit_3_with_dummy <- with(combo2_new_with_dummy, update(blrmfit, add_data=new_codata))
     expect_equal(nrow(summary(new_blrmfit_3)) + 1, nrow(summary(new_blrmfit_3_with_dummy)))
@@ -255,13 +255,13 @@ test_that("update.blrmfit grows the data set", {
     log_prob_group <- rstan::log_prob(new_blrmfit_3$stanfit, theta_uconst, gradient=FALSE)
     log_prob_group_and_dummy  <- rstan::log_prob(new_blrmfit_3_with_dummy$stanfit, theta_uconst, gradient=FALSE)
     expect_equal(log_prob_group, log_prob_group_and_dummy)
-    
-    
+
+
     ## Same for empty group
     set.seed(123144)
     new_blrmfit_with_empty_group <- with(combo2_new, update(blrmfit, data=blrmfit$data))
     set.seed(123144)
-    new_blrmfit_with_empty_group_and_dummy <- with(combo2_new, update(blrmfit, data=add_row(blrmfit$data, group_id = "IIT", drug_A = 1, drug_B = 1, num_patients = 0, num_toxicities = 0)))
+    new_blrmfit_with_empty_group_and_dummy <- with(combo2_new, update(blrmfit, data=add_row(blrmfit$data, group_id = factor("IIT"), drug_A = 1, drug_B = 1, num_patients = 0, num_toxicities = 0)))
     expect_equal(nrow(summary(new_blrmfit_with_empty_group)) + 1, nrow(summary(new_blrmfit_with_empty_group_and_dummy)))
     ##summary(new_blrmfit_with_empty_group) - summary(new_blrmfit_with_empty_group_and_dummy)[1:nrow(summary(new_blrmfit_with_empty_group)),]
     ## change level order and test
@@ -297,7 +297,7 @@ test_that("update.blrmfit grows the data set", {
 
 test_that("update.blrmfit does regular updating", {
     single_agent_new  <- single_agent
-    single_agent_new$only_cohort_SA <- data.frame(group_id="trial_A", num_patients=4, num_toxicities=2, drug_A=50)
+    single_agent_new$only_cohort_SA <- data.frame(group_id="trial_A", num_patients=4, num_toxicities=2, drug_A=50, stringsAsFactors = TRUE)
     single_agent_new$only_blrmfit_1 <- with(single_agent_new, update(blrmfit, data=only_cohort_SA))
     expect_true(nrow(summary(single_agent_new$only_blrmfit_1)) == 1)
 })

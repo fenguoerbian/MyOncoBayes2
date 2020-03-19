@@ -303,7 +303,7 @@ final_summ_stats <- cbind(newdata, summ) %>%
 #  final_summ_stats <- cbind(newdata, summ) %>%
 #      mutate(EWOC=1*`(0.33,1]`<=0.25)
 
-## ---- fig.height = 4, fig.width=1.62 * 4---------------------------------
+## ---- fig.height = 1.05 * 4, fig.width=1.62 * 4--------------------------
 
 ggplot(final_summ_stats,
        aes(x=factor(drug_B), colour=EWOC)) +

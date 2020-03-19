@@ -1,3 +1,18 @@
+March 18th, 2020 (0.6-3)
+
+* 2nd attempt to work around issues found by clang sanitizer in Stan model.
+
+March 9th, 2020 (0.6-2)
+
+* Work around issues found by clang sanitizer in Stan model.
+
+March 4th, 2020 (0.6-1)
+
+* Fix issue with upcoming R 4.0 which changes stringsAsFactors default
+  to FALSE
+* Fix for upcoming tibble 3.0 upgrade which changes conventions of
+  growing factors within tibbles
+
 February 11th, 2020 (0.6-0)
 
 * Fix issue with model outputs when EXNEX is being used. We recommend
