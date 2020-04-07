@@ -1,3 +1,8 @@
+April 7th, 2020 (0.6-4)
+
+* Add Operation Qualification script (run-oq.R in inst/extra)
+* Add saturating interaction model (blrm_formula_saturating) and associated tests
+
 March 18th, 2020 (0.6-3)
 
 * 2nd attempt to work around issues found by clang sanitizer in Stan model.

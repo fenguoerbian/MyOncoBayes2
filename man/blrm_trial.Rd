@@ -49,7 +49,8 @@ for all interaction parameters}
 exchangeability for the interaction parameters}
 
 \item{formula_generator}{formula generation function (see for
-example \code{blrm_formula_linear}). The formula generator
+example \code{blrm_formula_linear} or 
+\code{blrm_formula_saturating}). The formula generator
 defines the employed interaction model.}
 
 \item{interval_prob}{defines the interval probabilities reported in

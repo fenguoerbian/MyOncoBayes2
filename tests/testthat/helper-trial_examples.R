@@ -115,7 +115,8 @@ examples <- list(
     drug_info = tibble::tibble(
       drug_name = paste0("drug", 1:3),
       dose_ref  = 10 ^ c(0, 2, 3),
-      dose_unit = c("ngogn", "potrzebie", "blintz")
+      dose_unit = c("ngogn", "potrzebie", "blintz"),
+      reference_p_dlt = 0.1
     )
   ),
 

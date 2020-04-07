@@ -1,7 +1,6 @@
 
 context("blrm_trial tests")
 
-
 set.seed(123144)
 
 eps <- 1E-4
@@ -351,10 +350,10 @@ test_that("prior_summary calls blrmfita after setting up simplified prior",
 
 
 # Test an example with update, adding data --------------------------------
-check_blrm_trial_update <- function(example)
+check_blrm_trial_update <- function(example, formula_generator)
 {
   with(example, {
-    trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE)
+    trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE, formula_generator = formula_generator)
 
     new_data <- filter(summary(trial, "dose_info"), dose_id == 1)
     new_data$num_patients <- 6
@@ -403,7 +402,8 @@ check_blrm_trial_update <- function(example)
 }
 
 test_that("update function for blrm_trial adds data with add_data= and replaces data with data= as expected",
-          check_blrm_trial_update(examples$single_agent))
+          check_blrm_trial_update(examples$single_agent, blrm_formula_linear))
+
 
 
 # Test EWOC criterion -----------------------------------------------------
@@ -662,16 +662,16 @@ test_that("update prevents inconsistent dose combo to dose_id mapping and warns 
 
 
 # Test the three ways of specifying a prior -----------------------------------------------------
-check_simplified_prior <- function(example) {
+check_simplified_prior <- function(example, formula_generator) {
   with(example, {
-    trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE)
+    trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE, formula_generator = formula_generator)
     expect_tibble(summary(trial, "data_prediction"))
   })
 }
 
-check_full_prior_with_update <- function(example) {
+check_full_prior_with_update <- function(example, formula_generator) {
   with(example, {
-    trial <- blrm_trial(histdata, dose_info, drug_info)
+    trial <- blrm_trial(histdata, dose_info, drug_info, formula_generator = formula_generator)
     
     dims <- summary(trial, "dimensionality")
     
@@ -720,7 +720,7 @@ check_full_prior_with_update <- function(example) {
   })
 }
 
-check_full_prior_direct <- function() {
+check_full_prior_direct <- function(formula_generator) {
   with(examples$single_agent, {
     dims <- list(
       num_components = 1,
@@ -766,7 +766,8 @@ check_full_prior_direct <- function() {
       prior_is_EXNEX_inter = prior_is_EXNEX_inter,
       prior_EX_prob_inter = prior_EX_prob_inter,
       
-      prior_tau_dist = prior_tau_dist
+      prior_tau_dist = prior_tau_dist,
+      formula_generator = formula_generator
     )
     
     expect_tibble(summary(trial, "data_prediction"))
@@ -775,14 +776,35 @@ check_full_prior_direct <- function() {
 
 
 test_that("simplified prior specification enables prediction",
-          check_simplified_prior(examples$single_agent))
+          check_simplified_prior(examples$single_agent, blrm_formula_linear))
 
 
 test_that("Full prior specification with update() enables prediction",
-          check_full_prior_with_update(examples$single_agent))
+          check_full_prior_with_update(examples$single_agent, blrm_formula_linear))
 
 test_that("Full prior specification with blrm_trial() enables prediction",
-          check_full_prior_direct())
+          check_full_prior_direct(blrm_formula_linear))
+
+
+# Test with saturating model ------------------------------------------------------------------
+
+test_that("simplified prior specification enables prediction (single-agent, saturating interaction model)",
+          check_simplified_prior(examples$single_agent, blrm_formula_saturating))
+
+test_that("simplified prior specification enables prediction (combo2, saturating interaction model)",
+          check_simplified_prior(examples$combo2, blrm_formula_saturating))
+
+test_that("simplified prior specification enables prediction (combo3, saturating interaction model)",
+          check_simplified_prior(examples$combo3, blrm_formula_saturating))
+
+
+test_that("Full prior specification with update() enables prediction (saturating interaction model)",
+          check_full_prior_with_update(examples$single_agent, blrm_formula_saturating))
+
+test_that("Full prior specification with blrm_trial() enables prediction (saturating interaction model)",
+          check_full_prior_direct(blrm_formula_saturating))
+test_that("update function for blrm_trial adds data with add_data= and replaces data with data= as expected (saturating interaction model)",
+          check_blrm_trial_update(examples$single_agent, blrm_formula_saturating))
 
 
 # Test sorting in .blrm_trial_merge_data ------------------------------------------------------
@@ -881,6 +903,7 @@ test_that(".blrm_trial_merge_data sorts data",
           check_data_sorting(examples$single_agent))
 test_that(".blrm_trial_merge_data sorts data",
           check_data_sorting(examples$single_drug_with_strata))
+
 
 # Test for corner cases -----------------------------------------------------------------------
 check_trial_with_EXNEX_prior <- function(example) {
