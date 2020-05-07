@@ -3,7 +3,7 @@ library(OncoBayes2)
 library(knitr)
 library(ggplot2)
 
-theme_set(theme_bw())
+theme_set(bayesplot::bayesplot_theme_get())
 
 knitr::opts_chunk$set(
   fig.width = 1.62*4,
@@ -28,7 +28,6 @@ levels(hist_combo2$group_id)
 ## ---- eval = FALSE-------------------------------------------------------
 #  
 #  ## Load involved packages
-#  library(RBesT)  ## defines logit function
 #  library(dplyr)  ## for mutate
 #  library(tidyr)  ## defines expand_grid
 #  
@@ -106,7 +105,6 @@ levels(hist_combo2$group_id)
 #  )
 
 ## ---- include = FALSE----------------------------------------------------
-library(RBesT)  ## defines logit function
 library(dplyr)  ## for mutate
 library(tidyr)  ## defines expand_grid
 

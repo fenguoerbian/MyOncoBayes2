@@ -67,7 +67,6 @@ Below is the syntax for specifying this fully exchangeable model in
 ## Please use 4 chains and 100x more warmup & iter in practice
 .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
 
-library(RBesT)
 dref <- c(300, 960)
 
 num_comp <- 2 # two investigational drugs

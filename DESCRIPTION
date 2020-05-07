@@ -9,8 +9,8 @@ Description: Bayesian logistic regression model with optional
   drugs. Please refer to Neuenschwander et al. (2008)
   <doi:10.1002/sim.3230> and Neuenschwander et al. (2016)
   <doi:10.1080/19466315.2016.1174149> for details on the methodology.
-Version: 0.6-4
-Date: 2020-04-07
+Version: 0.6-5
+Date: 2020-05-07
 Authors@R: c(person("Novartis", "Pharma AG", role = "cph")
             ,person("Sebastian", "Weber", email="sebastian.weber@novartis.com", role=c("aut", "cre"))
             ,person("Lukas A.", "Widmer", email="lukas_andreas.widmer@novartis.com", role="aut")
@@ -18,11 +18,10 @@ Authors@R: c(person("Novartis", "Pharma AG", role = "cph")
             ,person("Trustees of", "Columbia University", role="cph", comment="R/stanmodels.R, configure, configure.win")
 	    )
 Depends: R (>= 3.4.0), Rcpp (>= 0.12.0), methods
-Imports: assertthat (>= 0.2.1), checkmate, Formula, rstan (>= 2.18.1),
+Imports: assertthat (>= 0.2.1), checkmate, Formula, rstan (>= 2.19.3),
         rstantools (>= 2.0.0), bayesplot (>= 1.4.0), ggplot2 (>=
-        2.2.1), dplyr (>= 0.8.0), tibble, tidyr (>= 1.0.0), abind,
-        RBesT
-LinkingTo: StanHeaders (>= 2.18.0), rstan (>= 2.18.1), BH (>= 1.66.0),
+        2.2.1), dplyr (>= 0.8.0), tibble, tidyr (>= 1.0.0), abind
+LinkingTo: StanHeaders (>= 2.19.2), rstan (>= 2.19.3), BH (>= 1.72.0),
         Rcpp (>= 0.12.0), RcppEigen (>= 0.3.3.3.0)
 License: GPL (>= 3)
 LazyData: true
@@ -32,8 +31,8 @@ VignetteBuilder: knitr
 Biarch: true
 SystemRequirements: GNU make, pandoc (>= 1.12.3), pandoc-citeproc
 Encoding: UTF-8
-RoxygenNote: 7.0.2
-Packaged: 2020-04-07 15:53:48 UTC; 
+RoxygenNote: 7.1.0
+Packaged: 2020-05-07 14:18:38 UTC; 
 Author: Novartis Pharma AG [cph],
   Sebastian Weber [aut, cre],
   Lukas A. Widmer [aut],
@@ -42,4 +41,4 @@ Author: Novartis Pharma AG [cph],
     configure.win)
 Maintainer: Sebastian Weber <sebastian.weber@novartis.com>
 Repository: CRAN
-Date/Publication: 2020-04-07 16:30:02 UTC
+Date/Publication: 2020-05-07 14:50:02 UTC

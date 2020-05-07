@@ -4,9 +4,12 @@
 \alias{summary.blrm_trial}
 \title{Summarise trial}
 \usage{
-\method{summary}{blrm_trial}(object, summarize = c("blrmfit",
-  "blrm_exnex_call", "dose_info", "dose_prediction", "data",
-  "data_prediction", "dimensionality"), ...)
+\method{summary}{blrm_trial}(
+  object,
+  summarize = c("blrmfit", "blrm_exnex_call", "dose_info", "dose_prediction", "data",
+    "data_prediction", "dimensionality"),
+  ...
+)
 }
 \arguments{
 \item{object}{\code{\link{blrm_trial}} object}

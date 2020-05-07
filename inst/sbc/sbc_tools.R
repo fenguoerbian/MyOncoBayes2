@@ -4,7 +4,6 @@
 library(devtools)
 devtools::load_all("../..")
 library(rstan)
-library(RBesT)
 library(mvtnorm)
 library(checkmate) # only needed inside blrm_exnex
 library(Formula) # only needed inside blrm_exnex
@@ -13,6 +12,8 @@ library(dplyr)
 library(tidyr)
 library(assertthat)
 source("lkj.R")
+
+assert_that(Sys.getenv("CMDSTAN") != "", msg="CMDSTAN environment variable must be set.")
 
 options(OncoBayes2.abbreviate.min = 0)
 
@@ -241,6 +242,51 @@ simulate_fake <- function(data, job, model, ...) {
 
 }
 
+extract_draws <- function(sims, draw) lapply(sims, asub, idx=draw, dim=1, drop=FALSE)
+
+extract_draw <- function(sims, draw) {
+    assert_that(length(draw) == 1)
+    lapply(lapply(sims, asub, idx=draw, dim=1, drop=FALSE), adrop, drop=1, one.d.array=TRUE)
+}
+
+restore_draw_dims <- function(standata, draw) {
+    num_comp <- standata$num_comp
+    num_inter <- standata$num_inter
+    num_strata <- standata$num_strata
+    num_groups <- standata$num_groups
+
+    draw$mu_log_beta <- array(draw$mu_log_beta, c(num_comp,2))
+    draw$tau_log_beta_raw <- array(draw$tau_log_beta_raw, c(num_strata,num_comp,2))
+    draw$L_corr_log_beta <- array(draw$L_corr_log_beta, c(num_comp,2,2))
+    draw$log_beta_raw <- array(draw$log_beta_raw, c(2*num_groups, num_comp, 2))
+
+    if(num_inter != 0) {
+        draw$eta_raw <- array(draw$eta_raw, c(2*num_groups, num_inter))
+        draw$mu_eta <- array(draw$mu_eta, c(num_inter))
+        draw$tau_eta_raw <- array(draw$tau_eta_raw, c(num_strata,num_inter))
+        draw$L_corr_eta <- matrix(draw$L_corr_eta, num_inter, num_inter)
+    } else {
+        draw$eta_raw <- array(0, c(2*num_groups, num_inter))
+        draw$mu_eta <- array(0, c(num_inter))
+        draw$tau_eta_raw <- array(0, c(num_strata,num_inter))
+        draw$L_corr_eta <- matrix(1, num_inter, num_inter)
+    }
+
+    draw
+}
+
+#' extracts from a given fit the mass matrix, stepsize and a draw from
+#' the typical set. The warmup info from multiple chains is being
+#' averaged together to obtain less noisy estimates.
+learn_warmup_info <- function(standata, stanfit) {
+    gmean <- function(x) exp(mean(log(x)))
+    draw  <- extract_draw(rstan::extract(stanfit)[1:8], 1)
+    warmup_info  <- extract_warmup_info(stanfit)
+    warmup_info$stepsize  <- gmean(warmup_info$stepsize)
+    warmup_info$inv_metric  <- apply(warmup_info$inv_metric, 1, gmean)
+    c(warmup_info, list(draw=restore_draw_dims(standata, draw)))
+}
+
 #'
 #'
 #' Procedure to fit each fake data set using our fitting
@@ -263,22 +309,46 @@ fit_exnex <- function(data, job, instance, ..., save_fit=FALSE) {
     sim_data <- model$base_fit$data
     sim_data$num_toxicities <- yrep
 
+    blrm_args <- model$blrm_args
+
+    have_warmup_info  <- c("warmup_info") %in% names(model)
+
+    if(have_warmup_info) {
+        ## use a randomly selected warmup info from the ones provided
+        fit_warmup_info <- sample(model$warmup_info, 1)[[1]]
+        blrm_args <- model$blrm_args_with_warmup_info
+        blrm_args$init  <- rep(list(fit_warmup_info$draw), blrm_args$chains)
+        blrm_args$control <- modifyList(blrm_args$control,
+                                        list(##adapt_inv_metric=fit_warmup_info$inv_metric,
+                                             stepsize=fit_warmup_info$stepsize)
+                                        )
+    }
+
     fit <- update(model$base_fit,
                   data = sim_data,
-                  iter = model$blrm_args$iter,
-                  warmup = model$blrm_args$warmup
+                  init = blrm_args$init,
+                  iter = blrm_args$iter,
+                  warmup = blrm_args$warmup,
+                  chains = blrm_args$chains,
+                  control = blrm_args$control,
+                  verbose=TRUE
                   )
 
-    ## TODO: make divergent transitions easily accessible
     sampler_params <- rstan::get_sampler_params(fit$stanfit, inc_warmup=FALSE)
     n_divergent <- sum(sapply(sampler_params, function(x) sum(x[,'divergent__'])) )
 
-    params <- c("mu_log_beta", "tau_log_beta", "beta_group", "mu_eta", "tau_eta", "eta_group")
+    ##params <- c("mu_log_beta", "tau_log_beta", "beta_group", "mu_eta", "tau_eta", "eta_group")
+    params <- c("mu_log_beta", "tau_log_beta", "beta_group")
+    if(fit$has_inter)
+        params <- c(params, "mu_eta", "tau_eta", "eta_group")
     fit_sum <- rstan::summary(fit$stanfit)$summary
-    min_Neff <- ceiling(min(fit_sum[apply(sapply(params, grepl, x = rownames(fit_sum)), 1, any),
-                                    "n_eff"], na.rm=TRUE))
+    samp_diags <- fit_sum[apply(sapply(params, grepl, x = rownames(fit_sum)), 1, any), c("n_eff", "Rhat")]
+    min_Neff <- ceiling(min(samp_diags[, "n_eff"], na.rm=TRUE))
+    max_Rhat <- max(samp_diags[, "Rhat"], na.rm=TRUE)
 
     post <- rstan::extract(fit$stanfit, pars = params, inc_warmup = FALSE)
+
+    lp_ess  <- as.numeric(rstan::monitor(as.array(fit$stanfit, pars="lp__"), print=FALSE)[1, c("Bulk_ESS", "Tail_ESS")])
 
     post_thin <- lapply(post, function(A) {
         assert_that(dim(A)[1] > 1023)
@@ -326,13 +396,39 @@ fit_exnex <- function(data, job, instance, ..., save_fit=FALSE) {
 
     res <- list(rank = rank_wide,
                 min_Neff = min_Neff,
-                n_divergent = n_divergent)
+                n_divergent = n_divergent,
+                max_Rhat=max_Rhat,
+                lp_ess_bulk = lp_ess[1],
+                lp_ess_tail = lp_ess[2]
+                )
 
     if(save_fit)
         res$fit  <- fit
 
+    if(!have_warmup_info) {
+        res <- c(res, learn_warmup_info(fit$standata, fit$stanfit))
+    }
+
     return(res)
 }
+
+
+extract_warmup_info <- function(fit) {
+    info  <- sapply(get_adaptation_info(fit), strsplit, "\n")
+    ex_stepsize <- function(chain_info) {
+        stepsize_line <- which(grepl("Step size", chain_info))
+        as.numeric(strsplit(chain_info[stepsize_line], " = ")[[1]][2])
+    }
+    ex_mass <- function(chain_info) {
+        metric_line <- which(grepl("inverse mass matrix", chain_info)) + 1
+        as.numeric(strsplit(sub("^#", "", chain_info[metric_line]), ", ")[[1]])
+    }
+    stepsize <- sapply(info, ex_stepsize)
+    inv_metric <- do.call(cbind, lapply(info, ex_mass))
+    colnames(inv_metric) <- names(stepsize) <- paste0("chain_", 1:length(info))
+    list(stepsize=stepsize, inv_metric=inv_metric)
+}
+
 
 
 # AB: not currently using this function from rbest SBC...
@@ -364,12 +460,12 @@ auto_submit <- function(jobs, registry, resources=list(), max_num_tries = 10) {
   while (remaining_tries > 0 && !all_jobs_finished) {
     remaining_tries <- remaining_tries - 1
 
-    print(paste("Submitting jobs at ", Sys.time()))
+    message("Submitting jobs at ", Sys.time())
     # Once things run fine let's submit this work to the cluster.
     submitJobs(all_unfinished_jobs, resources=resources)
     # Wait for results.
     waitForJobs()
-    print(paste("Finished waiting for jobs at ", Sys.time()))
+    message("Finished waiting for jobs at ", Sys.time())
 
     # Check status:
     print(getStatus())
@@ -381,29 +477,29 @@ auto_submit <- function(jobs, registry, resources=list(), max_num_tries = 10) {
       ##browser()
       ##invisible(readline(prompt="Press [enter] to continue"))
 
-      print(paste0("Some jobs did not complete. Please check the batchtools registry ", registry$file.dir))
+      message("Some jobs did not complete. Please check the batchtools registry ", registry$file.dir)
       all_unfinished_jobs <- inner_join(not_done_jobs, all_unfinished_jobs)
 
       if (num_unfinished_jobs == nrow(all_unfinished_jobs) &&  nrow(all_unfinished_jobs) > 0.25 * num_all_jobs)
       {
         # Unfinished job count did not change -> retrying will probably not help. Abort!
-        cat("Error: unfinished job count is not decreasing. Aborting job retries.")
+        warning("Error: unfinished job count is not decreasing. Aborting job retries.")
         remaining_tries <- 0
       }
 
       if (num_unfinished_jobs == nrow(jobs))
       {
         # All jobs errored -> retrying will probably not help. Abort!
-        cat("Error: all jobs errored. Aborting job retries.")
+        warning("Error: all jobs errored. Aborting job retries.")
         remaining_tries <- 0
       }
 
       num_unfinished_jobs <- nrow(all_unfinished_jobs)
-      print(paste0("Trying to resubmit jobs. Remaining tries: ", remaining_tries, " / ", max_num_tries))
+      message("Trying to resubmit jobs. Remaining tries: ", remaining_tries, " / ", max_num_tries)
     } else {
       all_jobs_finished <- TRUE
     }
   }
 
-  all_jobs_finished
+  invisible(all_jobs_finished)
 }

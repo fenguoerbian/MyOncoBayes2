@@ -7,5 +7,4 @@
 .onAttach <- function(...) {
     ver <- utils::packageVersion("OncoBayes2")
     packageStartupMessage("This is OncoBayes2 version ", ver)
-    ggplot2::theme_set(bayesplot::theme_default())
 }

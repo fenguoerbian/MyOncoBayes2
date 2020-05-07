@@ -4,7 +4,9 @@
 \name{dose_info_combo2}
 \alias{dose_info_combo2}
 \title{Dataset: trial dose information for a dual-agent combination study}
-\format{An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 33 rows and 4 columns.}
+\format{
+An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 33 rows and 4 columns.
+}
 \usage{
 dose_info_combo2
 }
@@ -26,9 +28,10 @@ explored in the dual-agent example trial.
 }
 }
 \seealso{
-Other blrm_trial combo2 example: \code{\link{blrm_trial}},
-  \code{\link{drug_info_combo2}},
-  \code{\link{example-combo2_trial}}
+Other blrm_trial combo2 example: 
+\code{\link{blrm_trial}()},
+\code{\link{drug_info_combo2}},
+\code{\link{example-combo2_trial}}
 }
 \concept{blrm_trial combo2 example}
 \keyword{datasets}

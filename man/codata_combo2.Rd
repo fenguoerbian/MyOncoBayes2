@@ -4,7 +4,8 @@
 \name{codata_combo2}
 \alias{codata_combo2}
 \title{Dataset: historical and concurrent data on a two-way combination}
-\format{A data frame with 20 rows and 5 variables:
+\format{
+A data frame with 20 rows and 5 variables:
 \describe{
   \item{group_id}{study}
   \item{drug_A}{dose of Drug A}
@@ -12,7 +13,8 @@
   \item{num_patients}{number of patients}
   \item{num_toxicities}{number of DLTs}
   \item{cohort_time}{cohort number of patients}
-}}
+}
+}
 \usage{
 codata_combo2
 }
@@ -31,7 +33,6 @@ agent studies, prior to the initiation of \code{trial_AB} and \code{IIT}.
 ## Please use 4 chains and 100x more warmup & iter in practice
 .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
 
-library(RBesT)
 dref <- c(300, 960)
 
 num_comp <- 2 # two investigational drugs

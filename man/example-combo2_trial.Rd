@@ -27,7 +27,6 @@ To run this example, use \code{example_model("combo2_trial")}. See
 library(tibble)
 library(dplyr)
 library(tidyr)
-library(RBesT)
 
 # Combo2 example using blrm_trial functionality
 
@@ -125,8 +124,9 @@ options(.user_mc_options)
 
 }
 \seealso{
-Other blrm_trial combo2 example: \code{\link{blrm_trial}},
-  \code{\link{dose_info_combo2}},
-  \code{\link{drug_info_combo2}}
+Other blrm_trial combo2 example: 
+\code{\link{blrm_trial}()},
+\code{\link{dose_info_combo2}},
+\code{\link{drug_info_combo2}}
 }
 \concept{blrm_trial combo2 example}

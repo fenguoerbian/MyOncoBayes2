@@ -3,7 +3,6 @@
 \docType{package}
 \name{OncoBayes2}
 \alias{OncoBayes2}
-\alias{OncoBayes2-package}
 \title{OncoBayes2}
 \description{
 Bayesian logistic regression model with optional

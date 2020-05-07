@@ -5,13 +5,28 @@
 \alias{print.blrmfit}
 \title{Bayesian Logistic Regression Model for N-compounds with EXNEX}
 \usage{
-blrm_exnex(formula, data, prior_EX_mu_mean_comp, prior_EX_mu_sd_comp,
-  prior_EX_tau_mean_comp, prior_EX_tau_sd_comp, prior_EX_corr_eta_comp,
-  prior_EX_mu_mean_inter, prior_EX_mu_sd_inter, prior_EX_tau_mean_inter,
-  prior_EX_tau_sd_inter, prior_EX_corr_eta_inter, prior_is_EXNEX_inter,
-  prior_is_EXNEX_comp, prior_EX_prob_comp, prior_EX_prob_inter,
-  prior_NEX_mu_mean_comp, prior_NEX_mu_sd_comp, prior_NEX_mu_mean_inter,
-  prior_NEX_mu_sd_inter, prior_tau_dist,
+blrm_exnex(
+  formula,
+  data,
+  prior_EX_mu_mean_comp,
+  prior_EX_mu_sd_comp,
+  prior_EX_tau_mean_comp,
+  prior_EX_tau_sd_comp,
+  prior_EX_corr_eta_comp,
+  prior_EX_mu_mean_inter,
+  prior_EX_mu_sd_inter,
+  prior_EX_tau_mean_inter,
+  prior_EX_tau_sd_inter,
+  prior_EX_corr_eta_inter,
+  prior_is_EXNEX_inter,
+  prior_is_EXNEX_comp,
+  prior_EX_prob_comp,
+  prior_EX_prob_inter,
+  prior_NEX_mu_mean_comp,
+  prior_NEX_mu_sd_comp,
+  prior_NEX_mu_mean_inter,
+  prior_NEX_mu_sd_inter,
+  prior_tau_dist,
   iter = getOption("OncoBayes2.MC.iter", 2000),
   warmup = getOption("OncoBayes2.MC.warmup", 1000),
   thin = getOption("OncoBayes2.MC.thin", 1),
@@ -19,7 +34,9 @@ blrm_exnex(formula, data, prior_EX_mu_mean_comp, prior_EX_mu_sd_comp,
   chains = getOption("OncoBayes2.MC.chains", 4),
   cores = getOption("mc.cores", 1L),
   control = getOption("OncoBayes2.MC.control", list()),
-  prior_PD = FALSE, verbose = FALSE)
+  prior_PD = FALSE,
+  verbose = FALSE
+)
 
 \method{print}{blrmfit}(x, ..., prob = 0.95, digits = 2)
 }

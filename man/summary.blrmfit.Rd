@@ -4,8 +4,7 @@
 \alias{summary.blrmfit}
 \title{Summarise model results}
 \usage{
-\method{summary}{blrmfit}(object, newdata, transform = TRUE,
-  prob = 0.95, interval_prob, ...)
+\method{summary}{blrmfit}(object, newdata, transform = TRUE, prob = 0.95, interval_prob, ...)
 }
 \arguments{
 \item{object}{fitted model object}

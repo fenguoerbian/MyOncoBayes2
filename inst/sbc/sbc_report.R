@@ -133,8 +133,6 @@ plot_binned <- function(cal_df) {
 B <- calibration$B
 S <- calibration$S
 
-
-
 bins_all <- calibration$data %>%
   tidyr::gather(key = "param", value = "count", - model, -bin) %>%
   mutate(partype = sapply(strsplit(param, "[[]"), '[', 1),
@@ -142,13 +140,16 @@ bins_all <- calibration$data %>%
 
 
 cal_split <- split(bins_all, bins_all$group)
-# attach(cal_split)
-# TODO
 
 pl_split <- lapply(cal_split, function(cal_df) plot_binned(cal_df))
 
 
 #' # SBC results
+#'
+#' ## Sampler Diagnostics Overview
+#'
+kable(calibration$sampler_diagnostics)
+
 #'
 #' ## Model 1: Single-agent logistic regression
 #'

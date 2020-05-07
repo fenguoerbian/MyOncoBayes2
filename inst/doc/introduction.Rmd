@@ -2,19 +2,19 @@
 title: "Guiding Oncology Dose-Escalation Trials"
 author: "Andrew Bean, Sebastian Weber"
 date: "`r Sys.Date()`"
-output: html_vignette
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Guiding Oncology Dose-Escalation Trials}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 ---
-<!--
-%\VignetteEngine{knitr::rmarkdown}
-%\VignetteIndexEntry{Guiding Oncology Dose-Escalation Trials}
--->
 
 ```{r, include=FALSE}
 library(OncoBayes2)
 library(knitr)
 library(ggplot2)
 
-theme_set(theme_bw())
+theme_set(bayesplot::bayesplot_theme_get())
 
 knitr::opts_chunk$set(
   fig.width = 1.62*4,
@@ -84,7 +84,6 @@ for the drug components.
 ```{r, eval = FALSE}
 
 ## Load involved packages
-library(RBesT)  ## defines logit function
 library(dplyr)  ## for mutate
 library(tidyr)  ## defines expand_grid
 
@@ -164,7 +163,6 @@ blrmfit <- blrm_exnex(
 
 
 ```{r, include = FALSE}
-library(RBesT)  ## defines logit function
 library(dplyr)  ## for mutate
 library(tidyr)  ## defines expand_grid
 

@@ -4,7 +4,8 @@
 \name{hist_combo3}
 \alias{hist_combo3}
 \title{Dataset: historical and concurrent data on a three-way combination}
-\format{A data frame with 18 rows and 7 variables:
+\format{
+A data frame with 18 rows and 7 variables:
 \describe{
   \item{group_id}{study}
   \item{drug_A}{dose of Drug A}
@@ -13,7 +14,8 @@
   \item{num_patients}{number of patients}
   \item{num_toxicities}{number of DLTs}
   \item{stratum}{stratum for \code{group_id}'s used for differential discounting}
-}}
+}
+}
 \usage{
 hist_combo3
 }
@@ -34,7 +36,6 @@ alternate-dose data.
 
 ## example combo3
 
-library(RBesT)
 library(abind)
 
 dref <- c(500, 500, 1000)

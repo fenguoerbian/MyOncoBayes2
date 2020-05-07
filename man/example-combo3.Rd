@@ -86,7 +86,6 @@ Below is the syntax for specifying this model in \code{blrm_exnex}.
 
 ## example combo3
 
-library(RBesT)
 library(abind)
 
 dref <- c(500, 500, 1000)

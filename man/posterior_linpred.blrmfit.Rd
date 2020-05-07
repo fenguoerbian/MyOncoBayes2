@@ -5,8 +5,7 @@
 \alias{posterior_linpred}
 \title{Posterior of linear predictor}
 \usage{
-\method{posterior_linpred}{blrmfit}(object, transform = FALSE, newdata,
-  draws, ...)
+\method{posterior_linpred}{blrmfit}(object, transform = FALSE, newdata, draws, ...)
 }
 \arguments{
 \item{object}{fitted model object}

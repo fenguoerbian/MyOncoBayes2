@@ -1,3 +1,9 @@
+May 7th, 2020 (0.6-5)
+
+* Drop RBesT dependency
+* Avoid setting the ggplot2 theme upon package load
+* Enhance SBC runs to monitor and report sampler diagnostics
+
 April 7th, 2020 (0.6-4)
 
 * Add Operation Qualification script (run-oq.R in inst/extra)

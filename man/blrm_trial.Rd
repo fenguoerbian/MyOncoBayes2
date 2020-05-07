@@ -5,12 +5,21 @@
 \alias{print.blrm_trial}
 \title{Dose-Escalation Trials guided by Bayesian Logistic Regression Model}
 \usage{
-blrm_trial(data, dose_info, drug_info, simplified_prior = FALSE,
-  EXNEX_comp = TRUE, EX_prob_comp_hist = 1, EX_prob_comp_new = 0.8,
-  EXNEX_inter = FALSE, EX_prob_inter = 0.8,
-  formula_generator = blrm_formula_linear, interval_prob = c(0, 0.16,
-  0.33, 1), interval_max_mass = c(prob_underdose = 1, prob_target = 1,
-  prob_overdose = 0.25), ...)
+blrm_trial(
+  data,
+  dose_info,
+  drug_info,
+  simplified_prior = FALSE,
+  EXNEX_comp = TRUE,
+  EX_prob_comp_hist = 1,
+  EX_prob_comp_new = 0.8,
+  EXNEX_inter = FALSE,
+  EX_prob_inter = 0.8,
+  formula_generator = blrm_formula_linear,
+  interval_prob = c(0, 0.16, 0.33, 1),
+  interval_max_mass = c(prob_underdose = 1, prob_target = 1, prob_overdose = 0.25),
+  ...
+)
 
 \method{print}{blrm_trial}(x, ...)
 }
@@ -247,8 +256,9 @@ Neuenschwander, B., Roychoudhury, S., & Schmidli, H.
  Biopharmaceutical Research}, 8(3), 345-354.
 }
 \seealso{
-Other blrm_trial combo2 example: \code{\link{dose_info_combo2}},
-  \code{\link{drug_info_combo2}},
-  \code{\link{example-combo2_trial}}
+Other blrm_trial combo2 example: 
+\code{\link{dose_info_combo2}},
+\code{\link{drug_info_combo2}},
+\code{\link{example-combo2_trial}}
 }
 \concept{blrm_trial combo2 example}

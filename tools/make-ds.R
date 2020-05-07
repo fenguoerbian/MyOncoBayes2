@@ -88,7 +88,6 @@ library(devtools)
 library(dplyr)
 library(tibble)
 library(tidyr)
-library(RBesT)
 
 make_ds()
 make_internal_ds()

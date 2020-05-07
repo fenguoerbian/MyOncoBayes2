@@ -296,7 +296,6 @@
 #' @return The function returns a S3 object of type
 #'     \code{blrmfit}.
 #'
-#' @seealso \code{\link{example-single-agent}}, \code{\link{example-combo2}, \code{\link{example-combo3}}
 #'
 #' @template ref-mac
 #' @template ref-exnex
@@ -615,8 +614,6 @@ blrm_exnex <- function(formula,
 
     control_sampling <- modifyList(list(adapt_delta=0.99, stepsize=0.1), control)
 
-    exclude_pars <- c("tau_log_beta_raw", "tau_eta_raw")
-
     stan_msg <- capture.output(stanfit <- rstan::sampling(stanmodels$blrm_exnex,
                                                           data=stan_data,
                                                           warmup=warmup,
@@ -628,8 +625,6 @@ blrm_exnex <- function(formula,
                                                           control=control_sampling,
                                                           algorithm = "NUTS",
                                                           open_progress=FALSE,
-                                                          pars=exclude_pars,
-                                                          include=FALSE,
                                                           save_warmup=TRUE
                                                           ))
     if(attributes(stanfit)$mode != 0)
@@ -724,11 +719,11 @@ print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
     names(ds) <- c("Stratum", "Groups")
     ds$Stratum <- factor(ds$Stratum, levels=levels(x$strata_fct))
     ds <- ds[order(ds$Stratum, ds$Groups), ]
-    
+
     totals_stratum  <- totals  %>%
         group_by(Stratum) %>%
         summarise(n_total=sum(n_total))
-    
+
     ds  <- left_join(ds, totals_stratum, by="Stratum")
     print(ds)
 

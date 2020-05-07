@@ -4,13 +4,15 @@
 \name{hist_SA}
 \alias{hist_SA}
 \title{Single-agent example}
-\format{A data frame with 5 rows and 4 variables:
+\format{
+A data frame with 5 rows and 4 variables:
 \describe{
   \item{group_id}{study}
   \item{drug_A}{dose}
   \item{num_patients}{number of patients}
   \item{num_toxicities}{number of events}
-}}
+}
+}
 \usage{
 hist_SA
 }
@@ -24,8 +26,6 @@ and to determine its MTD."
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
 .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
-
-library(RBesT)
 
 ## Example from Neuenschwander, B., et al. (2009). Stats in Medicine
 

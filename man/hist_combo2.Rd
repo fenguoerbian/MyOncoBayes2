@@ -4,7 +4,8 @@
 \name{hist_combo2}
 \alias{hist_combo2}
 \title{Dataset: historical data on two single-agents to inform a combination study}
-\format{A tibble with 11 rows and 5 variables:
+\format{
+A tibble with 11 rows and 5 variables:
 \describe{
   \item{group_id}{study}
   \item{drug_A}{dose of Drug A}
@@ -12,7 +13,8 @@
   \item{num_patients}{number of patients}
   \item{num_toxicities}{number of DLTs}
   \item{cohort_time}{cohort number of patients}
-}}
+}
+}
 \usage{
 hist_combo2
 }
