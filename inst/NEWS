@@ -1,3 +1,15 @@
+May 7th, 2021 (0.7-0)
+
+* Catch data specification errors for wrongly nested groups/strata
+* BLRM trials now also print toxicity probability intervals and the EWOC setting
+* The blrm_formula_linear and blrm_formula_saturating interaction model formula 
+  generators can now be customized to generate specific interactions using the
+  specific_interaction_terms argument.
+* Add predictive summaries to summary method.
+* Switch predictive outputs to be based on averaging sampling density. This avoids
+  the need for additional sampling for predictive summaries.
+* Add plotting methods for blrmfit and blrm_trial objects.
+
 May 7th, 2020 (0.6-5)
 
 * Drop RBesT dependency

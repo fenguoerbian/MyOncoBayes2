@@ -55,7 +55,11 @@ check_trial_summary  <- function(example) {
 
     expect_list(summary(trial, summarize="dimensionality"))
     expect_tibble(summary(trial, summarize="data"))
+    expect_tibble(summary(trial, summarize="drug_info"))
     expect_tibble(summary(trial, summarize="dose_info"))
+    
+    expect_numeric(summary(trial, summarize="interval_prob"))
+    expect_numeric(summary(trial, summarize="interval_max_mass"))
   })
 }
 
@@ -65,12 +69,27 @@ check_trial_with_prior_summary  <- function(example) {
 
     expect_list(summary(trial, summarize="dimensionality"))
     expect_tibble(summary(trial, summarize="data"))
+    expect_tibble(summary(trial, summarize="drug_info"))
     expect_tibble(summary(trial, summarize="dose_info"))
 
     expect_data_frame(summary(trial, summarize="blrmfit"))
     expect_class(summary(trial, summarize="blrm_exnex_call"), "call")
     expect_tibble(summary(trial, summarize="data_prediction"))
     expect_tibble(summary(trial, summarize="dose_prediction"))
+    expect_numeric(summary(trial, summarize="interval_prob"))
+    expect_numeric(summary(trial, summarize="interval_max_mass"))
+    
+    newdata_summary <- summary(trial, summarize="newdata_prediction", newdata = histdata)
+    expect_tibble(newdata_summary)
+    expect(nrow(histdata) == nrow(newdata_summary))
+    
+    # num_patients and num_toxicities should not be required columns in newdata
+    newdata <- summary(trial, "dose_info") %>%
+      slice(1:(nrow(.) - 1))
+    newdata_summary <- summary(trial, summarize="newdata_prediction", newdata = newdata)
+    expect_tibble(newdata_summary)
+    expect(nrow(newdata) == nrow(newdata_summary))
+    
   })
 }
 
@@ -145,6 +164,35 @@ check_character_group_id  <- function(example) {
   })
 }
 
+## check behavior when one is a factor, the other are characters
+check_character_factor_group_id  <- function(example) {
+  with(example, {
+    levs <- unique(c(histdata$group_id, dose_info$group_id))
+    
+    histdata_fct <- mutate(histdata, group_id = factor(group_id, levels=levs))
+    dose_info_fct <- mutate(dose_info, group_id = factor(group_id, levels=levs))
+    
+    expect_warning(
+      blrm_trial(histdata, dose_info_fct, drug_info)
+    )
+    
+    trial_dose_info_fct <- blrm_trial(histdata, dose_info_fct, drug_info)
+    expect_equal(levels(summary(trial_dose_info_fct, summarize="data")$group_id),      levels(dose_info_fct$group_id))
+    expect_equal(levels(summary(trial_dose_info_fct, summarize="dose_info")$group_id), levels(dose_info_fct$group_id))
+    
+    expect_warning(
+      blrm_trial(histdata_fct, dose_info, drug_info)
+    )
+    
+    trial_histdata_fct <- blrm_trial(histdata_fct, dose_info, drug_info)
+    expect_equal(levels(summary(trial_histdata_fct, summarize="data")$group_id),      levels(histdata_fct$group_id))
+    expect_equal(levels(summary(trial_histdata_fct, summarize="dose_info")$group_id), levels(histdata_fct$group_id))
+    
+    expect_error(blrm_trial(mutate(histdata, group_id = "this group_id does not exist in the dose_info_fct group_id factor"), dose_info_fct, drug_info))
+    expect_error(blrm_trial(histdata_fct, mutate(dose_info, group_id = "this group_id does not exist in the histdata_fct group_id factor"), drug_info))
+  })
+}
+
 ## check behavior when histdata contains unobserved factor levels
 check_factor_group_id_unobserved  <- function(example){
   with(example, {
@@ -170,8 +218,11 @@ test_that("blrm_trial errors if inconsistent factor levels for group_id are inpu
 test_that("blrm_trial does not reorder group_id factor levels from input group_id's",
           check_factor_group_id_reorder(examples$combo2))
 
-test_that("blrm_trial handles group_id's as expected when they are input as characters",
+test_that("blrm_trial handles group_id as expected when they are input as characters",
           check_character_group_id(examples$combo2))
+
+test_that("blrm_trial handles group_id as expected when one of dose_info / histdata is a factor, the other characters",
+          check_character_factor_group_id(examples$combo2))
 
 test_that("blrm_trial does not drop unobserved factor levels from input group_id's",
           check_factor_group_id_unobserved(examples$combo3))
@@ -245,6 +296,31 @@ check_character_stratum_id  <- function(example){
   })
 }
 
+## check behavior when one is a factor, the other are characters
+check_character_factor_stratum_id  <- function(example) {
+  with(example, {
+    levs <- unique(c(histdata$stratum_id, dose_info$stratum_id))
+    
+    histdata_fct <- mutate(histdata, stratum_id = factor(stratum_id, levels=levs))
+    dose_info_fct <- mutate(dose_info, stratum_id = factor(stratum_id, levels=levs))
+    
+    expect_warning(blrm_trial(histdata, dose_info_fct, drug_info))
+    
+    trial_dose_info_fct <- blrm_trial(histdata, dose_info_fct, drug_info)
+    expect_equal(levels(summary(trial_dose_info_fct, summarize="data")$stratum_id), levels(dose_info_fct$stratum_id))
+    expect_equal(levels(summary(trial_dose_info_fct, summarize="dose_info")$stratum_id), levels(dose_info_fct$stratum_id))
+    
+    expect_warning(blrm_trial(histdata_fct, dose_info, drug_info))
+    
+    trial_histdata_fct <- blrm_trial(histdata_fct, dose_info, drug_info)
+    expect_equal(levels(summary(trial_histdata_fct, summarize="data")$stratum_id), levels(histdata_fct$stratum_id))
+    expect_equal(levels(summary(trial_histdata_fct, summarize="dose_info")$stratum_id), levels(histdata_fct$stratum_id))
+    
+    expect_error(blrm_trial(mutate(histdata, stratum_id = "this stratum_id does not exist in the dose_info_fct stratum_id factor"), dose_info_fct, drug_info))
+    expect_error(blrm_trial(histdata_fct, mutate(dose_info, stratum_id = "this stratum_id does not exist in the histdata_fct stratum_id factor"), drug_info))
+  })
+}
+
 ## check behavior when histdata contains unobserved factor levels
 check_factor_stratum_id_unobserved  <- function(example){
   with(example, {
@@ -261,6 +337,34 @@ check_factor_stratum_id_unobserved  <- function(example){
   })
 }
 
+check_for_group_being_in_multiple_strata <- function() {
+  hist_data <- tibble(
+    group_id = as.factor(c(rep("trial_a",2),rep("trial_b",3), rep("trial_c",1))),
+    stratum_id = as.factor(c(rep("reg1",2),rep("reg2",2), "reg3", rep("reg1",1))),
+    drug = c(20*5, 30*5, 20*14, 30*14, 45*7, 10),
+    num_toxicities = c(0, 1, 1, 0, 1, 0),
+    num_patients = c(2, 6, 3, 4, 9, 29)
+  )
+  
+  dose_info <- tibble(
+    group_id = as.factor(c(rep("trial_a",2),rep("trial_b",2), rep("trial_c",1))),
+    stratum_id = as.factor(c(rep("reg1",2),rep("reg2",1), "reg3", rep("reg1",1))),
+    drug = c(20*5, 30*5, 20*14, 30*14, 45*7)
+  )
+  
+  drug_info = tibble::tibble(
+    drug_name = "drug",
+    dose_ref  = 1,
+    dose_unit = "ngogn",
+    reference_p_dlt = 0.1
+  )
+  
+  expect_error(
+    trial <- blrm_trial(hist_data, dose_info, drug_info), 
+    "^Inconsistent.*"
+  )
+}
+
 
 test_that("blrm_trial accepts stratum_id factor levels",
           check_stratum_factor_accepted(examples$single_drug_with_strata))
@@ -274,8 +378,14 @@ test_that("blrm_trial does not reorder stratum_id factor levels from input strat
 test_that("blrm_trial handles stratum_ids as expected when they are input as characters",
           check_character_stratum_id(examples$single_drug_with_strata))
 
+test_that("blrm_trial handles stratum_ids as expected when one of dose_info / histdata is a factor, the other characters",
+          check_character_factor_stratum_id(examples$single_drug_with_strata))
+
 test_that("blrm_trial does not drop unobserved factor levels from input stratum_ids",
           check_factor_stratum_id_unobserved(examples$single_drug_with_strata))
+
+test_that("blrm_trial does not accept groups that are in multiple strata",
+          check_for_group_being_in_multiple_strata())
 
 # Check bind_rows_0  ------------------------------------------------------
 check_bind_rows_0 <- function() {
@@ -599,13 +709,33 @@ check_update_group_stratum_id_consistency <- function(example) {
   })
 }
 
+check_update_additional_column <- function(example) {
+  with(example, {
+    dose_info_foo <- mutate(dose_info, foo = "bar")
+    histdata_foo <- mutate(histdata, foo = "bar")
+    setup <- blrm_trial(histdata_foo, dose_info_foo, drug_info, simplified_prior = TRUE)
+    
+    result_colnames <- colnames(summary(setup, "dose_prediction"))
+    expect("foo" %in% result_colnames, failure_message = "Additional column shall be present in result")
+    expect(!("foo.x" %in% result_colnames), failure_message = "Additional column shall not be duplicated")
+    
+    trial <- update(setup, add_data=histdata_foo)
+    
+    result_colnames <- colnames(summary(trial, "dose_prediction"))
+    expect("foo" %in% result_colnames, failure_message = "Additional column shall be present in result after update")
+    expect(!("foo.x" %in% result_colnames), failure_message = "Additional column shall not be duplicated  after update")
+    
+  })
+}
+
 test_that("update() resolves string factors for group_id, stratum_id correctly",
           check_update_group_stratum_id_char(examples$single_agent))
 
 test_that("update() errors on inconsistent factors for group_id, stratum_id",
           check_update_group_stratum_id_consistency(examples$single_agent))
 
-
+test_that("update() allows user defined-columns",
+          check_update_additional_column(examples$single_agent))
 
 # Test dose_id and dose_info for consistency, if provided ---------------------------------
 
@@ -666,6 +796,13 @@ check_simplified_prior <- function(example, formula_generator) {
   with(example, {
     trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE, formula_generator = formula_generator)
     expect_tibble(summary(trial, "data_prediction"))
+  })
+}
+
+check_simplified_prior_no_hist_data <- function(example, formula_generator) {
+  with(example, {
+    trial <- blrm_trial(data = NULL, dose_info = dose_info, drug_info = drug_info, simplified_prior = TRUE, formula_generator = formula_generator)
+    expect_tibble(summary(trial, "dose_prediction"))
   })
 }
 
@@ -779,6 +916,10 @@ test_that("simplified prior specification enables prediction",
           check_simplified_prior(examples$single_agent, blrm_formula_linear))
 
 
+test_that("simplified prior specification enables prediction with NULL hist data",
+          check_simplified_prior_no_hist_data(examples$single_agent, blrm_formula_linear))
+
+
 test_that("Full prior specification with update() enables prediction",
           check_full_prior_with_update(examples$single_agent, blrm_formula_linear))
 
@@ -806,6 +947,114 @@ test_that("Full prior specification with blrm_trial() enables prediction (satura
 test_that("update function for blrm_trial adds data with add_data= and replaces data with data= as expected (saturating interaction model)",
           check_blrm_trial_update(examples$single_agent, blrm_formula_saturating))
 
+
+# Test custom interaction terms with saturating model -------------------------
+test_that("simplified prior specification works with custom saturating model (combo2)",
+          check_simplified_prior(
+            examples$combo2, 
+            function(ref_doses) {
+              blrm_formula_saturating(
+                ref_doses, 
+                specific_interaction_terms = list(c("drug1", "drug2"))
+              )
+            }
+          )
+        )
+
+test_that("simplified prior specification works with custom saturating model (combo3)",
+          check_simplified_prior(
+            examples$combo3, 
+            function(ref_doses) {
+              blrm_formula_saturating(
+                ref_doses, 
+                specific_interaction_terms = list(c("drug1", "drug2"))
+              )
+            }
+          )
+        )
+
+
+test_that("zero length specific_interaction_terms should lead to an error with saturating model",
+          with(examples$combo3, {
+            custom_formula_generator <- function(ref_doses) {
+              blrm_formula_saturating(
+                ref_doses, 
+                specific_interaction_terms = list(character())
+              )
+            }
+            expect_error(blrm_trial(histdata, dose_info, drug_info,
+                                    formula_generator = custom_formula_generator))
+          })
+)
+
+test_that("Duplicated specific_interaction_terms should lead to an error with saturating model",
+          with(examples$combo3, {
+            custom_formula_generator <- function(ref_doses) {
+              blrm_formula_linear(
+                ref_doses, 
+                specific_interaction_terms = list(c("drug1", "drug2"),
+                                                  c("drug1", "drug2"))
+              )
+            }
+            expect_error(blrm_trial(histdata, dose_info, drug_info,
+                                    formula_generator = custom_formula_generator))
+          })
+)
+
+
+
+# Test custom interaction terms with linear model -------------------------
+test_that("simplified prior specification works with custom linear model (combo2)",
+          check_simplified_prior(
+            examples$combo2, 
+            function(ref_doses) {
+              blrm_formula_linear(
+                ref_doses, 
+                specific_interaction_terms = list(c("drug1", "drug2"))
+              )
+            }
+          )
+)
+
+test_that("simplified prior specification works with custom linear model (combo3)",
+          check_simplified_prior(
+            examples$combo3, 
+            function(ref_doses) {
+              blrm_formula_linear(
+                ref_doses, 
+                specific_interaction_terms = list(c("drug1", "drug2"))
+              )
+            }
+          )
+)
+
+
+test_that("zero length specific_interaction_terms should lead to an error with linear model",
+          with(examples$combo3, {
+            custom_formula_generator <- function(ref_doses) {
+              blrm_formula_linear(
+                ref_doses, 
+                specific_interaction_terms = list(character())
+              )
+            }
+            expect_error(blrm_trial(histdata, dose_info, drug_info,
+                                    formula_generator = custom_formula_generator))
+          })
+)
+
+test_that("Duplicated specific_interaction_terms should lead to an error with linear model",
+          with(examples$combo3, {
+            custom_formula_generator <- function(ref_doses) {
+              blrm_formula_linear(
+                ref_doses, 
+                specific_interaction_terms = list(c("drug1", "drug2"),
+                                                  c("drug1", "drug2"))
+              )
+            }
+            expect_error(blrm_trial(histdata, dose_info, drug_info,
+                                    formula_generator = custom_formula_generator))
+          })
+)
 
 # Test sorting in .blrm_trial_merge_data ------------------------------------------------------
 set_prior <- function(trial, mu_sd_inter = 0.5) 
@@ -916,3 +1165,100 @@ check_trial_with_EXNEX_prior <- function(example) {
 
 test_that("Try EXNEX with one group, but multiple components / interactions",
           check_trial_with_EXNEX_prior(examples$multi_drug_single_group))
+
+check_trial_with_duplicate_dose_ids <- function(example) {
+  with(example, {
+    dose_info$dose_id <- 1
+    histdata$dose_id <- 1 
+    
+    expect_error(blrm_trial(histdata, dose_info, drug_info), ".*inconsistent.*")
+  })
+}
+
+test_that("Ensure duplicate dose_ids fail when instantiating a trial",
+          check_trial_with_duplicate_dose_ids(examples$single_agent))
+
+
+check_trial_with_duplication_through_additional_column <- function(example) {
+  with(example, {
+    expect_error(blrm_trial(histdata, bind_rows(dose_info, dose_info), drug_info), ".*must contain unique entries.*")
+    
+    dose_info_2 <- bind_rows(
+      mutate(dose_info, foo = "a"),
+      mutate(dose_info, foo = "b")
+    )
+    
+    expect_error(blrm_trial(histdata, dose_info_2, drug_info), ".*must contain unique entries.*")
+  })
+}
+
+test_that("Ensure duplicate dose / group / stratum fails when instantiating a trial",
+          check_trial_with_duplication_through_additional_column(examples$single_agent))
+
+
+check_trial_update_with_duplicate_dose_ids <- function(example) {
+  with(example, {
+    trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE)
+    
+    # At least two unique rows of data must be present in the example
+    assert_that(nrow(unique(dplyr::select(histdata, -num_patients, -num_toxicities))) >= 2)
+    
+    # Overwrite dose_id
+    histdata_2 <- histdata
+    histdata_2$dose_id <- 1
+
+    expect_error(update(trial, add_data = histdata_2), ".*inconsistent.*")
+  })
+}
+
+test_that("Ensure duplicate dose_ids fail when updating a trial",
+          check_trial_update_with_duplicate_dose_ids(examples$single_agent))
+
+
+check_trial_update_with_mismatching_additional_columns <- function(example) {
+  with(example, {
+    # Test without dose_id
+    dose_info_foo <- mutate(dose_info, foo = "foo")
+    trial <- blrm_trial(histdata, dose_info_foo, drug_info, simplified_prior = TRUE)
+    
+    foo_cohort <- mutate(
+      dose_info_foo[1, ],
+      num_patients = 10,
+      num_toxicities = 1
+    )
+    
+    trial <- update(trial, add_data = foo_cohort)
+    
+    bar_cohort <- mutate(
+      foo_cohort,
+      foo = "bar"
+    )
+    
+    expect_error(update(trial, add_data = bar_cohort), ".*does not uniquely resolve.*")
+    
+    # Test with dose_id
+    trial <- blrm_trial(histdata, dose_info_foo, drug_info, simplified_prior = TRUE)
+
+    dose_info_foo_with_dose_id <- summary(trial, "dose_info")
+    
+    foo_cohort <- mutate(
+      dose_info_foo_with_dose_id[1, ],
+      num_patients = 10,
+      num_toxicities = 1
+    )
+    
+    trial <- update(trial, add_data = foo_cohort)
+    
+    bar_cohort <- mutate(
+      foo_cohort,
+      foo = "bar"
+    )
+    
+    expect_error(update(trial, add_data = bar_cohort), ".*dose_id inconsistent with dose combinations.*")
+    
+  })
+}
+
+test_that("Ensure trial update with mismatching additional columns fails",
+          check_trial_update_with_mismatching_additional_columns(examples$single_agent))
+

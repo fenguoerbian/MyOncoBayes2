@@ -24,8 +24,8 @@ reg <- makeExperimentRegistry(
     ## our worker functions and package loading
     source="sbc_tools.R")
 
-## resources of each job: Less than 55min, 2000MB RAM and 2 cores
-job_resources <- list(walltime=55, memory=2000, ncpus=2, max.concurrent.jobs=250)
+## resources of each job: Less than 55min, 2000MB RAM and 1 core
+job_resources <- list(walltime=55, memory=2000, ncpus=1, max.concurrent.jobs=500)
 
 if(FALSE) {
   ## for debugging here
@@ -77,7 +77,8 @@ summarizeExperiments()
 #'
 #' Number of jobs per chunk
 #'
-chunk_size <- 60
+## chunk_size <- 60 ## OK with 2 cores per chain
+chunk_size <- 30
 
 ids_warmup <- unwrap(getJobPars())
 
@@ -97,7 +98,7 @@ auto_submit(ids_warmup, reg, job_resources)
 #'
 warmup_info  <- reduceResultsList(
     fun=function(run) {
-        run[c("stepsize", "inv_metric", "draw")]
+        run[c("stepsize", "inv_metric", "draws")]
     }
 )
 
@@ -166,6 +167,7 @@ sampler_diagnostics <- calibration_data %>%
               total_divergent=sum(n_divergent),
               min_ess=min(min_Neff),
               max_Rhat=max(max_Rhat),
+              total_large_Rhat=sum(max_Rhat > 1.2),
               min_lp_ess_bulk=min(lp_ess_bulk),
               min_lp_ess_tail=min(lp_ess_tail))
 

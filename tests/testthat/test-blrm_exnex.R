@@ -2,9 +2,10 @@
 context("blrm_exnex tests")
 
 
-set.seed(123144)
+set.seed(12144)
 
 eps <- 1E-4
+eps_low <- 0.02
 
 ## reference runs
 single_agent  <- run_example("single_agent")
@@ -25,6 +26,8 @@ check_model_basic  <- function(fit, envir) {
   expect_equal(sum(is.na(ss)), 0)
   ss2  <- summary(fit, interval_prob=c(0,1))
   expect_equal(sum((ss2[,"(0,1]"] - 1)<eps), nrow(data))
+  ss3  <- summary(fit, interval_prob=c(-1,100), predictive=TRUE, transform=FALSE)
+  expect_equal(sum((ss3[,"(-1,100]"] - 1)<eps), nrow(data))
 
   ## check that the median and 50% interval prob align
   s_med  <- ss[,"50%"]
@@ -81,6 +84,19 @@ test_that("interval probabilites are consistent", {
   expect_equal(sum((s_low[,"(0,0.9]"] - 1)<eps), nrow(sens_low))
   expect_equal(sum((s_low[,"(0.9,1]"])<eps), nrow(sens_low))
 
+  s_low_L  <- summary(sens_fit_low, interval_prob=c(-100,4,100), transform=FALSE)
+  expect_equal(sum((s_low_L[,"(-100,4]"] - 1)<eps), nrow(sens_low))
+  expect_equal(sum((s_low_L[,"(4,100]"])<eps), nrow(sens_low))
+
+
+  s_low_pp_resp  <- summary(sens_fit_low, interval_prob=c(-1,0.9,1), transform=TRUE, predictive=TRUE)
+  expect_equal(sum((s_low_pp_resp[,"(-1,0.9]"] - 1)<eps), nrow(sens_low))
+  expect_equal(sum((s_low_pp_resp[,"(0.9,1]"])<eps), nrow(sens_low))
+
+  s_low_pp_count  <- summary(sens_fit_low, interval_prob=c(-1,5,100), transform=FALSE, predictive=TRUE)
+  expect_equal(sum((s_low_pp_count[,"(-1,5]"] - 1)<eps), nrow(sens_low))
+  expect_equal(sum((s_low_pp_count[,"(5,100]"])<eps), nrow(sens_low))
+
   sens_high <- hist_combo2 %>%
     mutate(num_toxicities=num_patients)
   combo2_sens$sens_high <- sens_high
@@ -88,8 +104,44 @@ test_that("interval probabilites are consistent", {
   s_high  <- summary(sens_fit_high, interval_prob=c(0,0.1,1))
   expect_equal(sum((s_high[,"(0.1,1]"] - 1)<eps), nrow(sens_low))
   expect_equal(sum((s_high[,"(0,0.1]"])<eps), nrow(sens_low))
+
+  s_high_L  <- summary(sens_fit_high, interval_prob=c(-100,0,100), transform=FALSE)
+  expect_equal(sum((s_high_L[,"(-100,0]"])<eps), nrow(sens_high))
+  expect_equal(sum((s_high_L[,"(0,100]"]-1)<eps), nrow(sens_high))
+
+
+  s_high_pp_resp  <- summary(sens_fit_high, interval_prob=c(-1,0.1,1), transform=TRUE, predictive=TRUE)
+  expect_equal(sum((s_high_pp_resp[,"(-1,0.1]"])<eps_low), nrow(sens_high))
+  expect_equal(sum((s_high_pp_resp[,"(0.1,1]"] - 1)<eps_low), nrow(sens_high))
+
+  s_high_pp_count  <- summary(sens_fit_high, interval_prob=c(-1,0,100), transform=FALSE, predictive=TRUE)
+  expect_equal(sum((s_high_pp_count[,"(-1,0]"])<eps_low), nrow(sens_high))
+  expect_equal(sum((s_high_pp_count[,"(0,100]"] - 1)<eps_low), nrow(sens_high))
 })
 
+test_that("predictive interval probabilites are correct", {
+    skip_on_cran()
+    ## as we use a semi-analytic scheme to get more accurate posterior
+    ## predictive summaries, we test here against a simulation based
+    ## approach
+    fit  <- with(single_agent, update(blrmfit, iter=11000, warmup=1000, chains=1))
+    ndata <- transform(fit$data, num_patients=50)
+    s_pp <- summary(fit, newdata=ndata, prob=0.5, interval_prob=c(-1,1), predictive=TRUE, transform=TRUE)
+    post <- posterior_predict(fit, newdata=ndata)/50
+    nr <- nrow(s_pp)
+    expect_equal(sum( abs( colMeans(post) - s_pp[,"mean"] ) < eps_low ), nr)
+    ## expect_equal(sum( ( apply(post, 2, sd) - s_pp[,"sd"] ) < eps_low ), nr) ## rather unstable estimates...skip
+    expect_equal(sum( abs( apply(post, 2, quantile, probs=0.5, type=3) - s_pp[,"50%"] ) < eps_low ), nr)
+    expect_equal(sum( abs( apply(post, 2, quantile, probs=0.25, type=3) - s_pp[,"25%"] ) < eps_low ), nr)
+    expect_equal(sum( abs( apply(post, 2, quantile, probs=0.75, type=3) - s_pp[,"75%"] ) < eps_low ), nr)
+    expect_equal(sum( abs( apply(post, 2, function(x) mean(x <= 1)) - s_pp[,"(-1,1]"] ) < eps_low ), nr)
+
+    num <- single_agent$blrmfit$data$num_patients
+    test <- sweep(predictive_interval(single_agent$blrmfit, prob=0.5), 1, num, "/")
+    pp <- sweep(posterior_predict(single_agent$blrmfit), 2, num, "/")
+    ref <- t(apply(pp, 2, quantile, c(0.25, 0.75), type=3))
+    expect_equal(sum(abs(test - ref)), 0)
+})
 
 ## TODO: Add proper runs which are compared against published results,
 ## e.g. from the book chapter
@@ -211,6 +263,46 @@ test_that("blrm_exnex accepts single-stratum data sets with general prior defini
 
     expect_true(nrow(summary(blrmfit)) == nrow(hist_SA_alt))
 
+})
+
+test_that("blrm_exnex rejects wrongly nested stratum/group combinations in data sets", {
+
+    hist_data <- tibble(
+        group_id = as.factor(c(rep("trial_a",2),rep("trial_b",3), rep("trial_c",1))),
+        stratum_id = as.factor(c(rep("reg1",2),rep("reg2",2), "reg3", rep("reg1",1))),
+        drug = c(20*5, 30*5, 20*14, 30*14, 45*7, 0),
+        num_toxicities = c(0, 1, 1, 0, 1, 0),
+        num_patients = c(2, 6, 3, 4, 9, 29)
+    )
+
+    num_comp <-  1
+    num_strata <-  nlevels(hist_data$stratum_id)
+    num_groups <-  nlevels(hist_data$group_id)
+
+    expect_error(blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                              1 + I(log(drug)) |
+                              0 | stratum_id/group_id,
+                          data=hist_data,
+                          prior_EX_mu_mean_comp = matrix(c(logit(0.20), 0), # (E(mu_alpha), E(mu_beta))
+                                                         nrow = num_comp,
+                                                         ncol = 2,
+                                                         byrow = TRUE),
+                          prior_EX_mu_sd_comp = matrix(c(2, 1), # (sd(mu_alpha), sd(mu_beta))
+                                                       nrow = num_comp,
+                                                       ncol = 2,
+                                                       byrow = TRUE),
+                          prior_EX_tau_mean_comp=abind(matrix(log( c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE), #level 1 reg1
+                                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),#level 2 reg2
+                                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),#level 3 reg3
+                                                       along=0),
+                          prior_EX_tau_sd_comp=abind(matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     along=0),
+                          prior_is_EXNEX_comp = rep(FALSE, num_comp),
+                          prior_EX_prob_comp=matrix(1, nrow = num_groups, ncol = num_comp),
+                          prior_tau_dist=1
+                          ), "^Inconsistent.*")
 })
 
 

@@ -36,8 +36,8 @@
 #' @useDynLib OncoBayes2, .registration = TRUE
 #' @import methods
 #' @importFrom rstan sampling get_sampler_params summary stanc_builder
-#' @importFrom utils capture.output modifyList combn
-#' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms model.matrix.default setNames update update.default .getXlevels as.formula na.fail qlogis
+#' @importFrom utils capture.output modifyList combn head
+#' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms model.matrix.default setNames update update.default .getXlevels as.formula na.fail qlogis dbinom
 #' @import methods
 #' @import assertthat
 #' @import checkmate
@@ -46,7 +46,11 @@
 #' @import rstantools
 #' @import dplyr
 #' @import tidyr
+#' @import ggplot2
 #' @importFrom tibble as_tibble
+#' @importFrom tidyselect vars_select_helpers vars_select
+#' @importFrom rlang env_bury
+#' @importFrom scales number_format extended_breaks
 #' @import abind
 #' @export posterior_linpred posterior_predict posterior_interval
 #' @export predictive_interval prior_summary nsamples

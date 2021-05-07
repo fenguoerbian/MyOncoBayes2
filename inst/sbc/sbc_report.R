@@ -3,6 +3,8 @@
 #' author: ""
 #' date: "`r date()`"
 #' output: html_vignette
+#' params:
+#'   include_plots: FALSE
 #' ---
 #'
 #+ include=FALSE
@@ -80,6 +82,11 @@ md5sum("calibration.rds")
 
 calibration <- readRDS("calibration.rds")
 
+
+include_plots <- TRUE
+if("params" %in% ls())
+    include_plots <- params$include_plots
+
 # The summary function we use here scales down the $L+1=1024$ bins to
 # smaller number of rank bins. This improves the number of counts
 # expected per rank bin ($S/(L+1)$) and is thus more robust in terms
@@ -89,44 +96,47 @@ calibration <- readRDS("calibration.rds")
 
 plot_binned <- function(cal_df) {
 
-  if(!all(cal_df$count == 0)){
+    pl <- NULL
 
-    S <- calibration$S
-    B <- calibration$B
+    if(!include_plots)
+        return(pl)
+    
+    if(!all(cal_df$count == 0)) {
+        
+        S <- calibration$S
+        B <- calibration$B
+        
+        c95 <- qbinom(c(0.025, 0.5, 0.975), S, 1 / B)
+        
+        dd <- cal_df %>%
+            arrange(param, bin) %>%
+                group_by(param) %>%
+                    mutate(ecdf = cumsum(count) / S, ecdf_ref = (bin + 1) / B) %>%
+                        filter(!all(ecdf == 0))
+        
+        nparam <- length(unique(dd$param))
+        if(unique(dd$partype) %in% c("mu_eta", "tau_eta")){
+            nc <- nparam
+        } else{
+            nc <- 2
+        }
+        
+        nr <- max(1, ceiling(nparam / nc))
 
-    c95 <- qbinom(c(0.025, 0.5, 0.975), S, 1 / B)
-
-    dd <- cal_df %>%
-      arrange(param, bin) %>%
-      group_by(param) %>%
-      mutate(ecdf = cumsum(count) / S, ecdf_ref = (bin + 1) / B) %>%
-      filter(!all(ecdf == 0))
-
-    nparam <- length(unique(dd$param))
-    if(unique(dd$partype) %in% c("mu_eta", "tau_eta")){
-      nc <- nparam
-    } else{
-      nc <- 2
+        pl <- list()
+        pl[["hist"]] <- ggplot(dd, aes(bin, count)) +
+            facet_wrap(~ param, nrow = nr, ncol = nc) +
+                geom_col() +
+                    geom_hline(yintercept=c95[c(1,3)], linetype=I(2)) +
+                        geom_hline(yintercept=c95[c(2)], linetype=I(3))
+        pl[["ecdf_diff"]] <- ggplot(dd, aes(bin, ecdf-ecdf_ref)) +
+            facet_wrap(~ param, nrow = nr, ncol = nc) +
+                geom_step() +
+                    geom_hline(yintercept=0, linetype=I(3))
+        pl
     }
 
-    nr <- max(1, ceiling(nparam / nc))
-
-    pl <- list()
-    pl[["hist"]] <- ggplot(dd, aes(bin, count)) +
-      facet_wrap(~ param, nrow = nr, ncol = nc) +
-      geom_col() +
-      geom_hline(yintercept=c95[c(1,3)], linetype=I(2)) +
-      geom_hline(yintercept=c95[c(2)], linetype=I(3))
-    pl[["ecdf_diff"]] <- ggplot(dd, aes(bin, ecdf-ecdf_ref)) +
-      facet_wrap(~ param, nrow = nr, ncol = nc) +
-      geom_step() +
-      geom_hline(yintercept=0, linetype=I(3))
-    pl
-  } else{
-    NULL
-  }
-
-
+    return(pl)
 }
 
 
@@ -148,151 +158,7 @@ pl_split <- lapply(cal_split, function(cal_df) plot_binned(cal_df))
 #'
 #' ## Sampler Diagnostics Overview
 #'
-kable(calibration$sampler_diagnostics)
-
-#'
-#' ## Model 1: Single-agent logistic regression
-#'
-#' ### Component intercept/slopes
-#'
-#' #### Means
-#'
-print(pl_split$log2bayes_EXNEX.mu_log_beta$hist)
-print(pl_split$log2bayes_EXNEX.mu_log_beta$ecdf_diff)
-#'
-#' #### Standard deviations (tau's)
-#'
-print(pl_split$log2bayes_EXNEX.tau_log_beta$hist)
-print(pl_split$log2bayes_EXNEX.tau_log_beta$ecdf_diff)
-#'
-#' ### Component intercept/slopes: group estimates
-#'
-#'
-#' #### Group estimates components
-#'
-print(pl_split$log2bayes_EXNEX.beta_group$hist)
-print(pl_split$log2bayes_EXNEX.beta_group$ecdf_diff)
-
-#'
-#' ## Model 2: Double combination, fully exchangeable
-#'
-#' ### Component intercept/slopes: exchangeable mixture component
-#'
-#' #### Means
-#'
-print(pl_split$combo2_EX.mu_log_beta$hist)
-print(pl_split$combo2_EX.mu_log_beta$ecdf_diff)
-#'
-#' #### Standard deviations (tau's)
-#'
-print(pl_split$combo2_EX.tau_log_beta$hist)
-print(pl_split$combo2_EX.tau_log_beta$ecdf_diff)
-#'
-#' ### Interaction parameters (from exchangeable part)
-#'
-#' #### Mean
-#'
-print(pl_split$combo2_EX.mu_eta$hist)
-print(pl_split$combo2_EX.mu_eta$ecdf_diff)
-#'
-#' #### Standard deviation
-#'
-print(pl_split$combo2_EX.tau_eta$hist)
-print(pl_split$combo2_EX.tau_eta$ecdf_diff)
-#'
-#' ### Component intercept/slopes: group estimates
-#'
-#' #### Group estimates components
-#'
-print(pl_split$combo2_EX.beta_group$hist)
-print(pl_split$combo2_EX.beta_group$ecdf_diff)
-#'
-#' #### Group estimates interaction(s)
-#'
-print(pl_split$combo2_EX.eta_group$hist)
-print(pl_split$combo2_EX.eta_group$ecdf_diff)
-
-#'
-#'
-#' ## Model 3: Double combination, EXchangeable/NonEXchangeable model
-#'
-#' ### Component intercept/slopes: exchangeable mixture component
-#'
-#' #### Means
-#'
-print(pl_split$combo2_EXNEX.mu_log_beta$hist)
-print(pl_split$combo2_EXNEX.mu_log_beta$ecdf_diff)
-#'
-#' ### Standard deviations (tau's)
-#'
-print(pl_split$combo2_EXNEX.mu_log_beta$hist)
-print(pl_split$combo2_EXNEX.mu_log_beta$ecdf_diff)
-#'
-#' ### Interaction parameters (from exchangeable part)
-#'
-#' #### Mean
-#'
-print(pl_split$combo2_EXNEX.mu_eta$hist)
-print(pl_split$combo2_EXNEX.mu_eta$ecdf_diff)
-#'
-#' ### Standard deviation (tau)
-#'
-print(pl_split$combo2_EXNEX.tau_eta$hist)
-print(pl_split$combo2_EXNEX.tau_eta$ecdf_diff)
-#'
-#' ### Component intercept/slopes: group estimates
-#'
-#'
-#' #### Group estimates components
-#'
-print(pl_split$combo2_EXNEX.beta_group$hist)
-print(pl_split$combo2_EXNEX.beta_group$ecdf_diff)
-#'
-#' #### Group estimates interaction(s)
-#'
-print(pl_split$combo2_EXNEX.eta_group$hist)
-print(pl_split$combo2_EXNEX.eta_group$ecdf_diff)
-
-#'
-#' ## Model 4: Triple combination, EX/NEX model
-#'
-#' ### Component intercept/slopes: exchangeable mixture component
-#'
-#' #### Means
-#'
-print(pl_split$combo3_EXNEX.mu_log_beta$hist)
-print(pl_split$combo3_EXNEX.mu_log_beta$ecdf_diff)
-#'
-#' ### Standard deviations (tau's)
-#'
-print(pl_split$combo3_EXNEX.mu_log_beta$hist)
-print(pl_split$combo3_EXNEX.mu_log_beta$ecdf_diff)
-#'
-#' ### Interaction parameters (means from exchangeable part)
-#'
-#' #### Mean
-#'
-print(pl_split$combo3_EXNEX.mu_eta$hist)
-print(pl_split$combo3_EXNEX.mu_eta$ecdf_diff)
-#'
-#' ### Standard deviation (tau)
-#'
-print(pl_split$combo3_EXNEX.tau_eta$hist)
-print(pl_split$combo3_EXNEX.tau_eta$ecdf_diff)
-#'
-#' ### Component intercept/slopes: group estimates
-#'
-#'
-#' #### Group estimates components
-#'
-print(pl_split$combo3_EXNEX.beta_group$hist)
-print(pl_split$combo3_EXNEX.beta_group$ecdf_diff)
-#'
-#' #### Group estimates interaction(s)
-#'
-print(pl_split$combo3_EXNEX.eta_group$hist)
-print(pl_split$combo3_EXNEX.eta_group$ecdf_diff)
-
+kable(calibration$sampler_diagnostics, digits=3)
 
 chisq  <- bins_all %>%
   arrange(model, partype, param, bin) %>%
@@ -303,7 +169,9 @@ chisq  <- bins_all %>%
   rename(df = parameter) %>%
   ungroup()
 
-
+#'
+#' Large Rhat is defined as exceeding $1.2$.
+#' 
 
 #'
 #' ## $\chi^2$ Statistic, Model 1: Single-agent logistic regression
@@ -330,6 +198,8 @@ kable(chisq %>% filter(model == "combo2_EXNEX") %>% select(-model, -partype), di
 
 kable(chisq %>% filter(model == "combo3_EXNEX") %>% select(-model, -partype), digits=3)
 
+#+ results="asis", include=include_plots, eval=include_plots
+spin_child("sbc_report_plots.R")
 
 #'
 #' ## Session Info

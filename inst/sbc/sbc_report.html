@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content />
+
+
+<title>Simulation based calibration for OncoBayes2</title>
+
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#header {
+text-align: center;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Simulation based calibration for OncoBayes2</h1>
+<h4 class="date">Fri May 7 18:58:59 2021</h4>
+
+
+
+<p>This report documents the results of a simulation based calibration (SBC) run for <code>OncoBayes2</code>. TODO</p>
+<p>The calibration data presented here has been generated at and with the <code>OncoBayes</code> git version as:</p>
+<pre><code>## Created:  2021-05-07 09:46:51 UTC
+## git hash: 20b6ac288f3269d4c5137140e97e454552bd75d0
+## MD5:      d2152012b4939338ed237dc96e2df7c2</code></pre>
+<p>The MD5 hash of the calibration data file presented here must match the above listed MD5:</p>
+<pre><code>##                    calibration.rds 
+## &quot;d2152012b4939338ed237dc96e2df7c2&quot;</code></pre>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Simulation based calibration (SBC) is a necessary condition which must be met for any Bayesian analysis with proper priors. The details are presented in Talts, et. al (see <a href="https://arxiv.org/abs/1804.06788" class="uri">https://arxiv.org/abs/1804.06788</a>).</p>
+<p>Self-consistency of any Bayesian analysis with a proper prior:</p>
+<p><span class="math display">\[ p(\theta) = \iint \mbox{d}\tilde{y} \, \mbox{d}\tilde{\theta} \, p(\theta|\tilde{y}) \, p(\tilde{y}|\tilde{\theta}) \, p(\tilde{\theta}) \]</span> <span class="math display">\[ \Leftrightarrow p(\theta) = \iint \mbox{d}\tilde{y} \, \mbox{d}\tilde{\theta} \, p(\theta,\tilde{y},\tilde{\theta}) \]</span></p>
+<p>SBC procedure:</p>
+<p>Repeat <span class="math inline">\(s=1, ..., S\)</span> times:</p>
+<ol style="list-style-type: decimal">
+<li><p>Sample from the prior <span class="math display">\[\tilde{\theta} \sim p(\theta)\]</span></p></li>
+<li><p>Sample fake data <span class="math display">\[\tilde{y} \sim p(y|\tilde{\theta})\]</span></p></li>
+<li><p>Obtain <span class="math inline">\(L\)</span> posterior samples <span class="math display">\[\{\theta_1, ..., \theta_L\} \sim p(\tilde{\theta}|\tilde{y})\]</span></p></li>
+<li><p>Calculate the <em>rank</em> <span class="math inline">\(r_s\)</span> of the prior draw <span class="math inline">\(\tilde{\theta}\)</span> wrt to the posterior sample <span class="math inline">\(\{\theta_1, ..., \theta_L\} \sim p(\tilde{\theta}|\tilde{y})\)</span> which falls into the range <span class="math inline">\([0,L]\)</span> out of the possible <span class="math inline">\(L+1\)</span> ranks. The rank is calculated as <span class="math display">\[r_s = \sum_{l=1}^L \mathbb{I}[ \theta_l &lt; \tilde{\theta}]\]</span></p></li>
+</ol>
+<p>The <span class="math inline">\(S\)</span> ranks then form a uniform <span class="math inline">\(0-1\)</span> density and the count in each bin has a binomial distribution with probability of <span class="math display">\[p(r \in \mbox{Any Bin}) =\frac{(L+1)}{S}.\]</span></p>
+<div id="model-description-todo" class="section level2">
+<h2>Model description TODO</h2>
+<p>The fake data simulation function returns … TODO. Please refer to the <code>sbc_tools.R</code> and <code>make_reference_rankhist.R</code> R programs for the implementation details.</p>
+<p>The reference runs are created with <span class="math inline">\(L=1023\)</span> posterior draws for each replication and a total of <span class="math inline">\(S=10^4\)</span> replications are run per case. For the evaluation here the results are reduced to <span class="math inline">\(B=L&#39;+1=64\)</span> bins to ensure a sufficiently large sample size per bin.</p>
+</div>
+</div>
+<div id="sbc-results" class="section level1">
+<h1>SBC results</h1>
+<div id="sampler-diagnostics-overview" class="section level2">
+<h2>Sampler Diagnostics Overview</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">model</th>
+<th align="left">problem</th>
+<th align="right">N</th>
+<th align="right">total_divergent</th>
+<th align="right">min_ess</th>
+<th align="right">max_Rhat</th>
+<th align="right">total_large_Rhat</th>
+<th align="right">min_lp_ess_bulk</th>
+<th align="right">min_lp_ess_tail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">combo2_EX</td>
+<td align="left">base</td>
+<td align="right">9950</td>
+<td align="right">0</td>
+<td align="right">362</td>
+<td align="right">1.012</td>
+<td align="right">0</td>
+<td align="right">67</td>
+<td align="right">159</td>
+</tr>
+<tr class="even">
+<td align="left">combo2_EX</td>
+<td align="left">warmup_base</td>
+<td align="right">50</td>
+<td align="right">0</td>
+<td align="right">739</td>
+<td align="right">1.004</td>
+<td align="right">0</td>
+<td align="right">247</td>
+<td align="right">256</td>
+</tr>
+<tr class="odd">
+<td align="left">combo2_EXNEX</td>
+<td align="left">base</td>
+<td align="right">9950</td>
+<td align="right">0</td>
+<td align="right">22</td>
+<td align="right">1.058</td>
+<td align="right">0</td>
+<td align="right">100</td>
+<td align="right">237</td>
+</tr>
+<tr class="even">
+<td align="left">combo2_EXNEX</td>
+<td align="left">warmup_base</td>
+<td align="right">50</td>
+<td align="right">0</td>
+<td align="right">146</td>
+<td align="right">1.011</td>
+<td align="right">0</td>
+<td align="right">226</td>
+<td align="right">245</td>
+</tr>
+<tr class="odd">
+<td align="left">combo3_EXNEX</td>
+<td align="left">base</td>
+<td align="right">9950</td>
+<td align="right">0</td>
+<td align="right">39</td>
+<td align="right">1.048</td>
+<td align="right">0</td>
+<td align="right">140</td>
+<td align="right">177</td>
+</tr>
+<tr class="even">
+<td align="left">combo3_EXNEX</td>
+<td align="left">warmup_base</td>
+<td align="right">50</td>
+<td align="right">0</td>
+<td align="right">250</td>
+<td align="right">1.024</td>
+<td align="right">0</td>
+<td align="right">258</td>
+<td align="right">403</td>
+</tr>
+<tr class="odd">
+<td align="left">log2bayes_EXNEX</td>
+<td align="left">base</td>
+<td align="right">9950</td>
+<td align="right">0</td>
+<td align="right">4</td>
+<td align="right">2.362</td>
+<td align="right">1</td>
+<td align="right">33</td>
+<td align="right">233</td>
+</tr>
+<tr class="even">
+<td align="left">log2bayes_EXNEX</td>
+<td align="left">warmup_base</td>
+<td align="right">50</td>
+<td align="right">0</td>
+<td align="right">54</td>
+<td align="right">1.027</td>
+<td align="right">0</td>
+<td align="right">280</td>
+<td align="right">391</td>
+</tr>
+</tbody>
+</table>
+<p>Large Rhat is defined as exceeding <span class="math inline">\(1.2\)</span>.</p>
+</div>
+<div id="chi2-statistic-model-1-single-agent-logistic-regression" class="section level2">
+<h2><span class="math inline">\(\chi^2\)</span> Statistic, Model 1: Single-agent logistic regression</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">param</th>
+<th align="right">statistic</th>
+<th align="right">df</th>
+<th align="right">p.value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
+<td align="right">30.726</td>
+<td align="right">31</td>
+<td align="right">0.480</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
+<td align="right">34.733</td>
+<td align="right">31</td>
+<td align="right">0.295</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
+<td align="right">24.205</td>
+<td align="right">31</td>
+<td align="right">0.802</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
+<td align="right">39.450</td>
+<td align="right">31</td>
+<td align="right">0.142</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
+<td align="right">21.837</td>
+<td align="right">31</td>
+<td align="right">0.888</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
+<td align="right">30.310</td>
+<td align="right">31</td>
+<td align="right">0.501</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
+<td align="right">21.914</td>
+<td align="right">31</td>
+<td align="right">0.886</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
+<td align="right">32.781</td>
+<td align="right">31</td>
+<td align="right">0.380</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
+<td align="right">32.486</td>
+<td align="right">31</td>
+<td align="right">0.393</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
+<td align="right">42.918</td>
+<td align="right">31</td>
+<td align="right">0.075</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="chi2-statistic-model-2-double-combination-fully-exchangeable" class="section level2">
+<h2><span class="math inline">\(\chi^2\)</span> Statistic, Model 2: Double combination, fully exchangeable</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">param</th>
+<th align="right">statistic</th>
+<th align="right">df</th>
+<th align="right">p.value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
+<td align="right">26.554</td>
+<td align="right">31</td>
+<td align="right">0.694</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
+<td align="right">30.336</td>
+<td align="right">31</td>
+<td align="right">0.500</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_B/1)),intercept]</td>
+<td align="right">27.507</td>
+<td align="right">31</td>
+<td align="right">0.646</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_B/1)),log_slope]</td>
+<td align="right">36.173</td>
+<td align="right">31</td>
+<td align="right">0.240</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
+<td align="right">29.818</td>
+<td align="right">31</td>
+<td align="right">0.527</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
+<td align="right">23.411</td>
+<td align="right">31</td>
+<td align="right">0.834</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_B/1)),intercept]</td>
+<td align="right">44.211</td>
+<td align="right">31</td>
+<td align="right">0.058</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
+<td align="right">39.462</td>
+<td align="right">31</td>
+<td align="right">0.142</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
+<td align="right">36.838</td>
+<td align="right">31</td>
+<td align="right">0.217</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
+<td align="right">37.517</td>
+<td align="right">31</td>
+<td align="right">0.195</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
+<td align="right">37.069</td>
+<td align="right">31</td>
+<td align="right">0.209</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_B/1)),log_slope]</td>
+<td align="right">34.426</td>
+<td align="right">31</td>
+<td align="right">0.307</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[A,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">30.323</td>
+<td align="right">31</td>
+<td align="right">0.501</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[B,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">47.136</td>
+<td align="right">31</td>
+<td align="right">0.032</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[C,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">41.933</td>
+<td align="right">31</td>
+<td align="right">0.091</td>
+</tr>
+<tr class="even">
+<td align="left">mu_eta[I(drug_A/1 * drug_B/1)]</td>
+<td align="right">28.998</td>
+<td align="right">31</td>
+<td align="right">0.569</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
+<td align="right">39.053</td>
+<td align="right">31</td>
+<td align="right">0.152</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
+<td align="right">24.448</td>
+<td align="right">31</td>
+<td align="right">0.792</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_B/1)),intercept]</td>
+<td align="right">40.915</td>
+<td align="right">31</td>
+<td align="right">0.110</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_B/1)),log_slope]</td>
+<td align="right">30.803</td>
+<td align="right">31</td>
+<td align="right">0.476</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">34.784</td>
+<td align="right">31</td>
+<td align="right">0.292</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
+<td align="right">34.643</td>
+<td align="right">31</td>
+<td align="right">0.298</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
+<td align="right">24.390</td>
+<td align="right">31</td>
+<td align="right">0.794</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),intercept]</td>
+<td align="right">20.653</td>
+<td align="right">31</td>
+<td align="right">0.921</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),log_slope]</td>
+<td align="right">24.314</td>
+<td align="right">31</td>
+<td align="right">0.798</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="chi2-statistic-model-3-double-combination-exchangeablenonexchangeable-model" class="section level2">
+<h2><span class="math inline">\(\chi^2\)</span> Statistic, Model 3: Double combination, EXchangeable/NonEXchangeable model</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">param</th>
+<th align="right">statistic</th>
+<th align="right">df</th>
+<th align="right">p.value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
+<td align="right">27.680</td>
+<td align="right">31</td>
+<td align="right">0.638</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
+<td align="right">28.947</td>
+<td align="right">31</td>
+<td align="right">0.572</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_B/1)),intercept]</td>
+<td align="right">29.498</td>
+<td align="right">31</td>
+<td align="right">0.543</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_B/1)),log_slope]</td>
+<td align="right">30.586</td>
+<td align="right">31</td>
+<td align="right">0.487</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
+<td align="right">46.650</td>
+<td align="right">31</td>
+<td align="right">0.035</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
+<td align="right">36.410</td>
+<td align="right">31</td>
+<td align="right">0.231</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_B/1)),intercept]</td>
+<td align="right">31.046</td>
+<td align="right">31</td>
+<td align="right">0.464</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
+<td align="right">40.256</td>
+<td align="right">31</td>
+<td align="right">0.123</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
+<td align="right">35.629</td>
+<td align="right">31</td>
+<td align="right">0.260</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
+<td align="right">28.576</td>
+<td align="right">31</td>
+<td align="right">0.591</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
+<td align="right">23.987</td>
+<td align="right">31</td>
+<td align="right">0.811</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_B/1)),log_slope]</td>
+<td align="right">36.141</td>
+<td align="right">31</td>
+<td align="right">0.241</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[A,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">31.757</td>
+<td align="right">31</td>
+<td align="right">0.429</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[B,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">32.915</td>
+<td align="right">31</td>
+<td align="right">0.373</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[C,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">34.701</td>
+<td align="right">31</td>
+<td align="right">0.296</td>
+</tr>
+<tr class="even">
+<td align="left">mu_eta[I(drug_A/1 * drug_B/1)]</td>
+<td align="right">32.762</td>
+<td align="right">31</td>
+<td align="right">0.381</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
+<td align="right">37.466</td>
+<td align="right">31</td>
+<td align="right">0.197</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
+<td align="right">30.150</td>
+<td align="right">31</td>
+<td align="right">0.510</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_B/1)),intercept]</td>
+<td align="right">46.938</td>
+<td align="right">31</td>
+<td align="right">0.033</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_B/1)),log_slope]</td>
+<td align="right">44.506</td>
+<td align="right">31</td>
+<td align="right">0.055</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">44.858</td>
+<td align="right">31</td>
+<td align="right">0.051</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
+<td align="right">32.237</td>
+<td align="right">31</td>
+<td align="right">0.405</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
+<td align="right">28.909</td>
+<td align="right">31</td>
+<td align="right">0.574</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),intercept]</td>
+<td align="right">26.406</td>
+<td align="right">31</td>
+<td align="right">0.702</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),log_slope]</td>
+<td align="right">18.502</td>
+<td align="right">31</td>
+<td align="right">0.963</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="chi2-statistic-model-4-triple-combination-exnex-model" class="section level2">
+<h2><span class="math inline">\(\chi^2\)</span> Statistic, Model 4: Triple combination, EX/NEX model</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">param</th>
+<th align="right">statistic</th>
+<th align="right">df</th>
+<th align="right">p.value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
+<td align="right">31.718</td>
+<td align="right">31</td>
+<td align="right">0.430</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
+<td align="right">24.653</td>
+<td align="right">31</td>
+<td align="right">0.783</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_B/1)),intercept]</td>
+<td align="right">25.587</td>
+<td align="right">31</td>
+<td align="right">0.741</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_B/1)),log_slope]</td>
+<td align="right">28.813</td>
+<td align="right">31</td>
+<td align="right">0.579</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[A,I(log(drug_C/1)),intercept]</td>
+<td align="right">24.026</td>
+<td align="right">31</td>
+<td align="right">0.809</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_C/1)),log_slope]</td>
+<td align="right">21.894</td>
+<td align="right">31</td>
+<td align="right">0.886</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
+<td align="right">29.402</td>
+<td align="right">31</td>
+<td align="right">0.548</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
+<td align="right">26.016</td>
+<td align="right">31</td>
+<td align="right">0.721</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_B/1)),intercept]</td>
+<td align="right">19.840</td>
+<td align="right">31</td>
+<td align="right">0.939</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
+<td align="right">37.350</td>
+<td align="right">31</td>
+<td align="right">0.200</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_C/1)),intercept]</td>
+<td align="right">55.750</td>
+<td align="right">31</td>
+<td align="right">0.004</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_C/1)),log_slope]</td>
+<td align="right">28.090</td>
+<td align="right">31</td>
+<td align="right">0.617</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
+<td align="right">42.208</td>
+<td align="right">31</td>
+<td align="right">0.086</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
+<td align="right">28.710</td>
+<td align="right">31</td>
+<td align="right">0.584</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
+<td align="right">27.578</td>
+<td align="right">31</td>
+<td align="right">0.643</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_B/1)),log_slope]</td>
+<td align="right">32.256</td>
+<td align="right">31</td>
+<td align="right">0.404</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_C/1)),intercept]</td>
+<td align="right">43.763</td>
+<td align="right">31</td>
+<td align="right">0.064</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_C/1)),log_slope]</td>
+<td align="right">31.162</td>
+<td align="right">31</td>
+<td align="right">0.458</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[A,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">30.643</td>
+<td align="right">31</td>
+<td align="right">0.484</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[A,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">35.334</td>
+<td align="right">31</td>
+<td align="right">0.271</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[A,I(drug_A/1 * drug_C/1)]</td>
+<td align="right">40.979</td>
+<td align="right">31</td>
+<td align="right">0.108</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[A,I(drug_B/1 * drug_C/1)]</td>
+<td align="right">35.968</td>
+<td align="right">31</td>
+<td align="right">0.247</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[B,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">36.218</td>
+<td align="right">31</td>
+<td align="right">0.238</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[B,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">30.816</td>
+<td align="right">31</td>
+<td align="right">0.476</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[B,I(drug_A/1 * drug_C/1)]</td>
+<td align="right">40.653</td>
+<td align="right">31</td>
+<td align="right">0.115</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[B,I(drug_B/1 * drug_C/1)]</td>
+<td align="right">28.666</td>
+<td align="right">31</td>
+<td align="right">0.587</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[C,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">29.926</td>
+<td align="right">31</td>
+<td align="right">0.521</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[C,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">48.019</td>
+<td align="right">31</td>
+<td align="right">0.026</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[C,I(drug_A/1 * drug_C/1)]</td>
+<td align="right">22.592</td>
+<td align="right">31</td>
+<td align="right">0.864</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[C,I(drug_B/1 * drug_C/1)]</td>
+<td align="right">39.027</td>
+<td align="right">31</td>
+<td align="right">0.152</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_eta[I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">33.990</td>
+<td align="right">31</td>
+<td align="right">0.326</td>
+</tr>
+<tr class="even">
+<td align="left">mu_eta[I(drug_A/1 * drug_B/1)]</td>
+<td align="right">40.090</td>
+<td align="right">31</td>
+<td align="right">0.127</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_eta[I(drug_A/1 * drug_C/1)]</td>
+<td align="right">35.846</td>
+<td align="right">31</td>
+<td align="right">0.251</td>
+</tr>
+<tr class="even">
+<td align="left">mu_eta[I(drug_B/1 * drug_C/1)]</td>
+<td align="right">42.989</td>
+<td align="right">31</td>
+<td align="right">0.074</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
+<td align="right">27.942</td>
+<td align="right">31</td>
+<td align="right">0.624</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
+<td align="right">25.082</td>
+<td align="right">31</td>
+<td align="right">0.764</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_B/1)),intercept]</td>
+<td align="right">37.408</td>
+<td align="right">31</td>
+<td align="right">0.198</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_B/1)),log_slope]</td>
+<td align="right">39.002</td>
+<td align="right">31</td>
+<td align="right">0.153</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_C/1)),intercept]</td>
+<td align="right">32.013</td>
+<td align="right">31</td>
+<td align="right">0.416</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_C/1)),log_slope]</td>
+<td align="right">18.195</td>
+<td align="right">31</td>
+<td align="right">0.967</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">28.358</td>
+<td align="right">31</td>
+<td align="right">0.603</td>
+</tr>
+<tr class="even">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">19.437</td>
+<td align="right">31</td>
+<td align="right">0.947</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_C/1)]</td>
+<td align="right">34.694</td>
+<td align="right">31</td>
+<td align="right">0.296</td>
+</tr>
+<tr class="even">
+<td align="left">tau_eta[STRAT,I(drug_B/1 * drug_C/1)]</td>
+<td align="right">28.998</td>
+<td align="right">31</td>
+<td align="right">0.569</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
+<td align="right">15.949</td>
+<td align="right">31</td>
+<td align="right">0.988</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
+<td align="right">25.453</td>
+<td align="right">31</td>
+<td align="right">0.747</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),intercept]</td>
+<td align="right">29.843</td>
+<td align="right">31</td>
+<td align="right">0.525</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),log_slope]</td>
+<td align="right">38.758</td>
+<td align="right">31</td>
+<td align="right">0.159</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_log_beta[STRAT,I(log(drug_C/1)),intercept]</td>
+<td align="right">18.944</td>
+<td align="right">31</td>
+<td align="right">0.956</td>
+</tr>
+<tr class="even">
+<td align="left">tau_log_beta[STRAT,I(log(drug_C/1)),log_slope]</td>
+<td align="right">36.691</td>
+<td align="right">31</td>
+<td align="right">0.222</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="session-info" class="section level2">
+<h2>Session Info</h2>
+<pre><code>## R version 3.6.1 (2019-07-05)
+## Platform: x86_64-pc-linux-gnu (64-bit)
+## Running under: Ubuntu 16.04.6 LTS
+## 
+## Matrix products: default
+## BLAS:   /usr/lib/libblas/libblas.so.3.6.0
+## LAPACK: /usr/lib/lapack/liblapack.so.3.6.0
+## 
+## locale:
+## [1] C
+## 
+## attached base packages:
+## [1] tools     stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
+## 
+## other attached packages:
+##  [1] mvtnorm_1.0-11     tibble_2.1.3       rstan_2.19.3      
+##  [4] StanHeaders_2.19.2 abind_1.4-5        Formula_1.2-3     
+##  [7] checkmate_1.9.4    OncoBayes2_0.7-0   testthat_2.2.1    
+## [10] Rcpp_1.0.2         devtools_2.2.1     usethis_1.5.1     
+## [13] ggplot2_3.2.1      broom_0.5.2        tidyr_1.0.0       
+## [16] dplyr_0.8.3        assertthat_0.2.1   knitr_1.25        
+## [19] rmarkdown_1.16    
+## 
+## loaded via a namespace (and not attached):
+##  [1] lattice_0.20-38    prettyunits_1.0.2  ps_1.3.0          
+##  [4] zeallot_0.1.0      rprojroot_1.3-2    digest_0.6.21     
+##  [7] plyr_1.8.4         R6_2.4.0           ggridges_0.5.1    
+## [10] backports_1.1.5    stats4_3.6.1       evaluate_0.14     
+## [13] highr_0.8          pillar_1.4.2       rlang_0.4.0       
+## [16] lazyeval_0.2.2     rstudioapi_0.10    callr_3.3.2       
+## [19] desc_1.2.0         stringr_1.4.0      loo_2.1.0         
+## [22] munsell_0.5.0      compiler_3.6.1     xfun_0.10         
+## [25] pkgconfig_2.0.3    pkgbuild_1.0.6     rstantools_2.0.0  
+## [28] htmltools_0.4.0    tidyselect_0.2.5   gridExtra_2.3     
+## [31] codetools_0.2-16   matrixStats_0.55.0 crayon_1.3.4      
+## [34] withr_2.1.2        grid_3.6.1         nlme_3.1-141      
+## [37] gtable_0.3.0       lifecycle_0.1.0    magrittr_1.5      
+## [40] scales_1.0.0       cli_1.1.0          stringi_1.4.3     
+## [43] fs_1.3.1           remotes_2.1.0      ellipsis_0.3.0    
+## [46] generics_0.0.2     vctrs_0.2.0        glue_1.3.1        
+## [49] purrr_0.3.3        processx_3.4.1     pkgload_1.0.2     
+## [52] parallel_3.6.1     yaml_2.2.0         inline_0.3.15     
+## [55] colorspace_1.4-1   sessioninfo_1.1.1  bayesplot_1.7.0   
+## [58] memoise_1.1.0</code></pre>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

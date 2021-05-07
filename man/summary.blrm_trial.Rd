@@ -6,8 +6,9 @@
 \usage{
 \method{summary}{blrm_trial}(
   object,
-  summarize = c("blrmfit", "blrm_exnex_call", "dose_info", "dose_prediction", "data",
-    "data_prediction", "dimensionality"),
+  summarize = c("blrmfit", "blrm_exnex_call", "data", "drug_info", "dose_info",
+    "dose_prediction", "data_prediction", "newdata_prediction", "dimensionality",
+    "interval_prob", "interval_max_mass"),
   ...
 )
 }
@@ -18,11 +19,18 @@
 \itemize{
   \item{}{\code{blrmfit}: summary of the underlying blrmfit object with further arguments ...}
   \item{}{\code{blrm_exnex_call}: blrm_exnex call used to create the \code{blrmfit} object}
+  \item{}{\code{drug_info}: drug_info for the trial, contains drugs, reference doses and units}
   \item{}{\code{dose_info}: dose_info that were defined}
   \item{}{\code{dose_prediction} prediction for the defined dose_info}
   \item{}{\code{data}: data that were observed}
   \item{}{\code{data_prediction}: prediction for the observed data}
-  \item{}{\code{dimensionality}: numeric vector with entries "num_components", "num_interaction_terms", "num_groups", "num_strata" }
+  \item{}{\code{newdata_prediction}: prediction for data provided with the newdata= argument}
+  \item{}{\code{dimensionality}: numeric vector with entries "num_components",
+    "num_interaction_terms", "num_groups", "num_strata"}
+  \item{}{\code{interval_prob}: interval probabilities reported in the standard outputs}
+  \item{}{\code{interval_max_mass}: named vector defining for each interval of the
+    \code{interval_prob} vector a maxmimal admissable
+    probability mass for a given dose level}
 }}
 
 \item{...}{further arguments for summary.blrmfit}

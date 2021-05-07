@@ -463,6 +463,10 @@ blrm_exnex <- function(formula,
     num_strata <- nlevels(strata_fct)
     assert_that(NROW(strata_index) == num_obs)
 
+    ## ensure correct nesting of groups into strata such that any
+    ## group is in only in one stratum at most
+    .validate_group_stratum_nesting(group_index, strata_index)
+
     ## obtain group => stratum map ordered by group id
     group_strata <- data.frame(group_index=1:num_groups) %>%
         left_join(unique(data.frame(group_index=group_index, strata_index=strata_index)), by="group_index")
@@ -840,3 +844,15 @@ model.matrix.blrmfit <- function(object, ...) {
 }
 
 
+#' Test if each group is assigned to exactly 1 stratum. Error
+#' otherwise.
+#' @param group_def groups of data
+#' @param strata_def assigned stratum to group
+#' @keyword internal
+.validate_group_stratum_nesting <- function(group_def, strata_def) {
+    group_id <- strata_id  <- NULL
+    strata_per_group <- data.frame(group_id=group_def, strata_id=strata_def) %>%
+        group_by(group_id) %>%
+        summarize(num_strata=length(unique(strata_id)))
+    assert_that(all(strata_per_group$num_strata == 1), msg="Inconsistent nesting of groups into strata. Any group must belong to a single stratum.")
+}

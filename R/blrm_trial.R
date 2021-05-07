@@ -42,7 +42,7 @@
 #'     exchangeability for the interaction parameters
 #'
 #' @param formula_generator formula generation function (see for
-#'     example \code{blrm_formula_linear} or 
+#'     example \code{blrm_formula_linear} or
 #'     \code{blrm_formula_saturating}). The formula generator
 #'     defines the employed interaction model.
 #'
@@ -229,8 +229,7 @@ blrm_trial <- function(
   trial <- list()
 
   # Prevent factor nonsense - enforce tibbles
-  assert_tibble(data)
-  assert_tibble(dose_info)
+  # assert_tibble(dose_info)
   assert_tibble(drug_info)
 
   assert_names(colnames(drug_info), must.include = c("drug_name", "dose_ref", "dose_unit"))
@@ -244,7 +243,63 @@ blrm_trial <- function(
   trial$dose_units <- drug_info$dose_unit
   trial$drug_info <- drug_info
 
+
+  # Check dose_info
+  dose_info <- .sanitize_dose_info(trial, dose_info)
+  # if (!has_name(dose_info, "stratum_id")) {
+  #   message("No stratum defined - assigning all groups to single stratum \"all\"")
+  #   dose_info[["stratum_id"]] <- "all"
+  # }
+  #
+  # assert_that(has_name(dose_info, "stratum_id"))
+  # assert_that(has_name(dose_info, "group_id"))
+  # assert_that(!has_name(dose_info, "num_patients"))
+  # assert_that(!has_name(dose_info, "num_toxicities"))
+  #
+  # # dose_info must have columns that correspond to drug name
+  # # Note: all() is needed for assertthat 0.2.0 compatibility
+  # assert_that(all(has_name(dose_info, trial$drug_info$drug_name)), msg="dose_info must use same drug names as specified in drug_info")
+  #
+  # if (!has_name(dose_info, "dose_id")) {
+  #   # warning("dose_info do not contain \"dose_id\" - adding \"dose_id\" column")
+  #   dose_info <- tibble::rowid_to_column(dose_info, "dose_id")
+  # }
+
   # Check data at t = 0
+  if (is.null(data)) {
+    list_args <- list()
+
+    if (is.factor(dose_info[["stratum_id"]])) {
+      list_args[["stratum_id"]] <- dose_info[["stratum_id"]][0]
+    } else {
+      list_args[["stratum_id"]] <- factor(dose_info[["stratum_id"]])[0]
+    }
+
+    if (is.factor(dose_info[["group_id"]])) {
+      list_args[["group_id"]] <- dose_info[["group_id"]][0]
+    } else {
+      list_args[["group_id"]] <- factor(dose_info[["group_id"]])[0]
+    }
+
+
+    list_args[["num_patients"]] <- numeric(0)
+    list_args[["num_toxicities"]] <- numeric(0)
+
+
+    for (drug_name in drug_info$drug_name)
+    {
+      list_args[[drug_name]] = numeric(0)
+    }
+
+    list_args[["cohort_time"]] <- numeric(0)
+
+    list_args[["dose_id"]] <- integer(0)*NA ## Make sure dose_id is an integer column
+
+    data <- do.call("tibble", args = list_args)
+  }
+
+  assert_tibble(data)
+
 
   # If no stratum is assigned, assign a single one
   if (!has_name(data, "stratum_id")) {
@@ -269,26 +324,6 @@ blrm_trial <- function(
     data$dose_id <- integer(1)*NA ## Make sure dose_id is an integer column
   }
 
-  # Check dose_info
-  if (!has_name(dose_info, "stratum_id")) {
-    message("No stratum defined - assigning all groups to single stratum \"all\"")
-    dose_info[["stratum_id"]] <- "all"
-  }
-
-  assert_that(has_name(dose_info, "stratum_id"))
-  assert_that(has_name(dose_info, "group_id"))
-  assert_that(!has_name(dose_info, "num_patients"))
-  assert_that(!has_name(dose_info, "num_toxicities"))
-
-  # dose_info must have columns that correspond to drug name
-  # Note: all() is needed for assertthat 0.2.0 compatibility
-  assert_that(all(has_name(dose_info, trial$drug_info$drug_name)), msg="dose_info must use same drug names as specified in drug_info")
-
-  if (!has_name(dose_info, "dose_id")) {
-    # warning("dose_info do not contain \"dose_id\" - adding \"dose_id\" column")
-    dose_info <- tibble::rowid_to_column(dose_info, "dose_id")
-  }
-
   # Define helper functions
   merge_to_factor_levels <- function(df_1, df_2, variable_name)
   {
@@ -300,14 +335,27 @@ blrm_trial <- function(
       )
       all_factor_levels <- levels(df_1[[variable_name]][0])
     } else {
-      all_level_df <- unique(
-        bind_rows(
-          select(df_1, variable_name),
-          select(df_2, variable_name)
+      if (is.factor(df_1[[variable_name]][0]) || is.factor(df_2[[variable_name]][0])){
+        warning(paste0('Merging character and factor definition for "', variable_name, '"'))
+        if (is.factor(df_1[[variable_name]][0]))  {
+          all_level_strings <- levels(df_1[[variable_name]][0])
+          assert_that(all(df_2[[variable_name]] %in% all_level_strings), msg=paste0('Missing levels in factor "', variable_name, '"'))
+        } else {
+          all_level_strings <- levels(df_2[[variable_name]][0])
+          assert_that(all(df_1[[variable_name]] %in% all_level_strings), msg=paste0('Missing levels in factor "', variable_name, '"'))
+        }
+
+        all_factor_levels <- factor(all_level_strings, levels=all_level_strings)
+      } else {
+        all_level_df <- unique(
+          bind_rows(
+            select(df_1, variable_name),
+            select(df_2, variable_name)
+          )
         )
-      )
-      all_level_strings <- all_level_df[[variable_name]]
-      all_factor_levels <- factor(all_level_strings, levels=all_level_strings)
+        all_level_strings <- all_level_df[[variable_name]]
+        all_factor_levels <- factor(all_level_strings, levels=all_level_strings)
+      }
     }
 
     all_factor_levels
@@ -333,12 +381,12 @@ blrm_trial <- function(
 
   # Assign data & dose_info
   trial$dose_info <- dose_info
-  trial$data <- data
   trial$group_to_stratum_mapping <- .create_group_to_stratum_mapping(
     dose_info = dose_info,
     data = data,
     drug_names = trial$drug_info$drug_name
   )
+  trial$data <- data
 
   # Save group and stratum factor levels
   trial$group_id_factor <- trial$data[["group_id"]][0]
@@ -377,6 +425,9 @@ blrm_trial <- function(
 
   trial <- structure(trial, class="blrm_trial")
 
+  # Check our data more carefully before returning the object
+  .blrm_trial_sanitize_data(trial, data)
+
   if (simplified_prior) {
     # Create simplified prior
     assert_that("reference_p_dlt" %in% colnames(trial$drug_info), msg='"reference_p_dlt" column is required for specifying simplified prior.')
@@ -404,7 +455,7 @@ blrm_trial <- function(
     }
   }
 
-  trial
+  return(trial)
 }
 
 #'
@@ -423,11 +474,66 @@ print.blrm_trial <- function(x, ...)
   cat("Number of historic groups:", x$num_groups_hist, "\n")
   cat("Number of trial arms     :", x$num_groups_current, "\n")
   cat("Generated formula        :\n", pretty_formula, "\n\n")
+
+
+
+  if (length(x$interval_max_mass) > 0)
+  {
+    cat("Toxicity intervals and EWOC requirements:\n")
+    cat("-----------------------------------------\n")
+
+    pad_to_num <- max(sapply(x$interval_prob, "nchar"))
+    if (is.null(x$interval_names)) {
+      for (i in seq_along(head(x$interval_prob, -1)))
+      {
+        cat(paste0(
+          " (",
+          format(x$interval_prob[i], justify="right", width=pad_to_num),
+          " - ",
+          format(x$interval_prob[i+1], justify="right", width=pad_to_num),
+          "] <= ",
+          x$interval_max_mass[i],
+          "\n"
+        ))
+      }
+    } else {
+      pad_to <- max(sapply(x$interval_names, "nchar"))
+      for (i in seq_along(head(x$interval_prob, -1)))
+      {
+        cat(paste0(
+          format(x$interval_names[i], justify="right", width=pad_to),
+          " (",
+          format(x$interval_prob[i], justify="right", width=pad_to_num),
+          " - ",
+          format(x$interval_prob[i+1], justify="right", width=pad_to_num),
+          "] <= ",
+          x$interval_max_mass[i],
+          "\n"
+        ))
+      }
+    }
+
+
+
+    cat("\n")
+  } else {
+    cat("Toxicity intervals not defined, EWOC is always true.\n\n")
+  }
+
+
+
+
+
   if (has_name(x, "blrmfit")) {
+    cat("blrmfit summary:\n")
+    cat(strrep('-', 80), "\n")
+
     print(x$blrmfit)
   } else {
     cat("BLRM prior undefined!\n")
   }
+
+
 }
 
 
@@ -466,25 +572,29 @@ print.blrm_trial <- function(x, ...)
 {
   .assert_is_blrm_trial_and_prior_is_set(trial)
   assert_tibble(newdata)
+  dots <- list(...)
 
-  if (length(trial$interval_prob) > 0)
-  {
-    trial_est <- summary(trial$blrmfit,
-                         newdata = newdata,
-                         interval_prob = trial$interval_prob,
-                         ...
-    )
-  } else {
-    trial_est <- summary(trial$blrmfit,
-                         newdata = newdata,
-                         ...
-    )
-  }
+  summary_call <- modifyList(list(object=trial$blrmfit, newdata=newdata), dots)
+  trial_est <- do.call(summary, summary_call)
 
+  ## For EWOC determiniation we must use the mean predictor and apply
+  ## a transformation to 0-1 scale
+  summary_call_ewoc <- modifyList(summary_call,
+                                  list(predictive=FALSE,
+                                       transform=TRUE))
+  if(length(trial$interval_prob) > 0)
+      summary_call_ewoc <- modifyList(summary_call_ewoc,
+                                      list(interval_prob=trial$interval_prob))
 
-  trial_est_ewoc <- .blrm_trial_compute_ewoc(trial, trial_est)
+  trial_ewoc_crit <- do.call(summary, summary_call_ewoc)
 
-  common_column_names <- intersect(colnames(trial_est_ewoc), colnames(newdata))
+  trial_est_ewoc <- .blrm_trial_compute_ewoc(trial, trial_ewoc_crit)
+
+  ewoc_cols <- setdiff(names(trial_est_ewoc), names(trial_est))
+
+  trial_est <- cbind(trial_est, trial_est_ewoc[ewoc_cols])
+
+  common_column_names <- unique(intersect(colnames(trial_est), colnames(newdata)))
   newdata_prediction <- newdata
 
   if (length(common_column_names) > 0)
@@ -492,7 +602,7 @@ print.blrm_trial <- function(x, ...)
     newdata_prediction <- select(newdata_prediction, -common_column_names)
   }
 
-  newdata_prediction <- cbind(newdata_prediction, trial_est_ewoc)
+  newdata_prediction <- cbind(newdata_prediction, trial_est)
 
   #
   ## Enrichment cohort predictive distribution - compute probability of P(>= 2 DLTs in cohort of size 10)
@@ -665,13 +775,19 @@ print.blrm_trial <- function(x, ...)
   arrange_at(summarized_data, c("group_id", "stratum_id", names(trial$ref_doses)))
 }
 
-.blrm_trial_sanitize_data <- function(trial, data)
+.blrm_trial_sanitize_data <- function(
+  trial,
+  data,
+  require_num_patients = TRUE,
+  require_num_toxicities = TRUE
+)
 {
-    .assert_is_blrm_trial(trial)
-    assert_tibble(data)
+  .assert_is_blrm_trial(trial)
 
-    ## make R CMD check happy
-    dose_id <- NULL
+  assert_tibble(data)
+
+  ## make R CMD check happy
+  dose_id <- NULL
 
   if (!has_name(data, "stratum_id")) {
     if (nlevels(trial$stratum_id_factor) == 1) {
@@ -698,8 +814,8 @@ print.blrm_trial <- function(x, ...)
   }
   assert_factor(data$group_id[0], levels=levels(trial$group_id_factor), n.levels=nlevels(trial$group_id_factor))
 
-  assert_that(has_name(data, "num_patients"))
-  assert_that(has_name(data, "num_toxicities"))
+  assert_that((!require_num_patients) || has_name(data, "num_patients"))
+  assert_that((!require_num_toxicities) || has_name(data, "num_toxicities"))
 
   ## Data must have columns that correspond to drug name
   ## Note: all() is needed for assertthat 0.2.0 compatibility
@@ -707,23 +823,38 @@ print.blrm_trial <- function(x, ...)
 
   ## Check that dose_id is consistent
   if(has_name(data, "dose_id")) {
-    data_consistent_with_dose_info <- inner_join(data, trial$dose_info, by=c("dose_id", "group_id", "stratum_id", trial$drug_info$drug_name))
+    colnames_for_join <- c("dose_id", "group_id", "stratum_id", trial$drug_info$drug_name)
+    data_consistent_with_dose_info <- inner_join(data, trial$dose_info, by=colnames_for_join)
     assert_that(nrow(filter(data, !is.na(dose_id))) == nrow(data_consistent_with_dose_info),
-                msg="dose_id inconsistent with dose combinations")
+                msg="dose_id inconsistent with dose combinations. dose_id must be a unique identifier for dose_combo / group_id / stratum_id!")
 
+    colnames_for_final_join <- unique(c(intersect(colnames(data), colnames(trial$dose_info)), c("dose_id", "group_id", "stratum_id", trial$drug_info$drug_name)))
+    data_consistent_with_dose_info_final <- inner_join(data, trial$dose_info, by=colnames_for_final_join)
+    assert_that(nrow(filter(data, !is.na(dose_id))) == nrow(data_consistent_with_dose_info_final),
+                msg="dose_id inconsistent with dose combinations. dose_id must be a unique identifier for dose_combo / group_id / stratum_id!")
     if (any(is.na(data$dose_id))) {
       warning("dose_id NA was provided - cannot check consistency of new data with pre-specified dose_info")
     }
   } else {
     ## If no dose_id is provided, resolve it
-    data_consistent_with_dose_info <- left_join(data, trial$dose_info, by=c("group_id", "stratum_id", trial$drug_info$drug_name))
-    if(any(is.na(data_consistent_with_dose_info$dose_id))) {
+    colnames_for_join <- c("group_id", "stratum_id", trial$drug_info$drug_name)
+    data_consistent_with_dose_info <- inner_join(data, trial$dose_info, by=colnames_for_join)
+
+    colnames_for_final_join <- unique(c(intersect(colnames(data), colnames(trial$dose_info)), colnames_for_join))
+    data_consistent_with_dose_info_all_cols <- inner_join(data, trial$dose_info, by=colnames_for_final_join)
+    assert_that(nrow(data_consistent_with_dose_info) == nrow(data_consistent_with_dose_info_all_cols),
+                msg="Data does not uniquely resolve in terms of dose_combo / group_id / stratum_id and user-defined additional columns!")
+
+    data_consistent_with_dose_info_final <- left_join(data, trial$dose_info, by=colnames_for_final_join)
+
+    if(any(is.na(data_consistent_with_dose_info_final$dose_id))) {
       warning("Data that was provided does not correspond to a pre-specified dose!")
     }
-    data <- data_consistent_with_dose_info
+
+    data <- data_consistent_with_dose_info_final
   }
 
-  data
+  return(data)
 }
 
 
@@ -746,6 +877,9 @@ print.blrm_trial <- function(x, ...)
 
   group_to_stratum_mapping <- mutate_at(group_to_stratum_mapping, vars(drug_names), function(x)(1))
 
+  # Ensure each group is only in (precisely) one stratum
+  with(group_to_stratum_mapping, .validate_group_stratum_nesting(group_id, stratum_id))
+
   group_to_stratum_mapping
 }
 
@@ -758,6 +892,41 @@ print.blrm_trial <- function(x, ...)
 .assert_is_blrm_trial <- function(object)
 {
   assert_class(object, "blrm_trial")
+}
+
+.sanitize_dose_info <- function(trial, dose_info)
+{
+  assert_tibble(dose_info)
+
+  if (!has_name(dose_info, "stratum_id")) {
+    message("No stratum defined - assigning all groups to single stratum \"all\"")
+    dose_info[["stratum_id"]] <- "all"
+  }
+
+  assert_that(has_name(dose_info, "stratum_id"))
+  assert_that(has_name(dose_info, "group_id"))
+  assert_that(!has_name(dose_info, "num_patients"))
+  assert_that(!has_name(dose_info, "num_toxicities"))
+
+  # dose_info must have columns that correspond to drug name
+  # Note: all() is needed for assertthat 0.2.0 compatibility
+  assert_that(all(has_name(dose_info, trial$drug_info$drug_name)), msg="dose_info must use same drug names as specified in drug_info")
+
+  if (!has_name(dose_info, "dose_id")) {
+    # warning("dose_info do not contain \"dose_id\" - adding \"dose_id\" column")
+    dose_info <- tibble::rowid_to_column(dose_info, "dose_id")
+  }
+
+  # dose_info must not have any duplications where group_id, stratum_id and all
+  # the doses are the same since dose_id cannot be resolved in such a case
+  unique_cols_required <- c("group_id", "stratum_id", trial$drug_info$drug_name)
+
+  dose_info_unique_cols_only <- select(dose_info, unique_cols_required)
+
+  assert_that(nrow(dose_info_unique_cols_only) == nrow(dose_info_unique_cols_only %>% unique()),
+              msg="dose_info must contain unique entries for dose_combo / group_id / stratum_id!")
+
+  return(dose_info)
 }
 
 

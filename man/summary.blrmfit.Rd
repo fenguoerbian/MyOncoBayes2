@@ -4,7 +4,15 @@
 \alias{summary.blrmfit}
 \title{Summarise model results}
 \usage{
-\method{summary}{blrmfit}(object, newdata, transform = TRUE, prob = 0.95, interval_prob, ...)
+\method{summary}{blrmfit}(
+  object,
+  newdata,
+  transform = !predictive,
+  prob = 0.95,
+  interval_prob,
+  predictive = FALSE,
+  ...
+)
 }
 \arguments{
 \item{object}{fitted model object}
@@ -23,6 +31,9 @@ widths can be specified.}
 
 \item{interval_prob}{optional vector of sorted quantiles for which
 the interval probabilities are calculated}
+
+\item{predictive}{logical indicates if the posterior predictive is
+being summarized. Defaults to \code{FALSE}.}
 
 \item{...}{not used in this function}
 }
@@ -45,6 +56,11 @@ The calculated posterior summaries are returned as a
 the specified vector of sorted quantiles. These summaries are
 calculated on the response scale by default and can be obtained on
 the link scale when setting \code{transform=FALSE}.
+
+When the results are requested for the predictive distribution with
+\code{predictive=TRUE}, then the link scale refers to the total
+counts while the transformed scale divides the (predictive) counts
+by the number of trials such that results are on the 0-1 scale.
 }
 \examples{
 ## Setting up dummy sampling for fast execution of example
@@ -56,6 +72,17 @@ example_model("single_agent")
 ## obtain underdosing (0-0.16), target dosing (0.16-0.33) and
 ## overdosing (0.33-1) probabilities
 summary(blrmfit, interval_prob=c(0,0.16,0.33,1))
+
+## obtain predictive distribution for respective cohorts and
+## calculate probability for no event, 1 event or >1 event
+## note that this does the calculation for the cohort sizes
+## as put into the data-set
+summary(blrmfit, interval_prob=c(-1,0,1,10), predictive=TRUE)
+
+## to obtain the predictive for a cohort-size of 6 for all patients
+## in the data-set one would need to use the newdata argument, e.g.
+summary(blrmfit, newdata=transform(hist_SA, num_patients=6),
+                 interval_prob=c(-1,0,1,10), predictive=TRUE)
 
 ## Recover user set sampling defaults
 options(.user_mc_options)

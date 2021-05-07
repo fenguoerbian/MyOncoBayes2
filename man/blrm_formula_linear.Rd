@@ -4,12 +4,18 @@
 \alias{blrm_formula_linear}
 \title{Build a BLRM formula with linear interaction term in logit-space}
 \usage{
-blrm_formula_linear(ref_doses, max_interaction_level = 2)
+blrm_formula_linear(
+  ref_doses,
+  max_interaction_level = 2,
+  specific_interaction_terms = NULL
+)
 }
 \arguments{
 \item{ref_doses}{Numeric vector of reference doses with names corresponding to drug names}
 
 \item{max_interaction_level}{Highest interaction order to consider [1 - Inf]. Default: 2}
+
+\item{specific_interaction_terms}{List of custom interaction terms to generate (e.g. list(c("drug1", "drug2"), c("drug1", "drug3"))). Default: NULL}
 }
 \value{
 The function returns an object of class \code{blrm_formula}.

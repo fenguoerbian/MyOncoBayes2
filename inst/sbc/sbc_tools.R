@@ -13,8 +13,6 @@ library(tidyr)
 library(assertthat)
 source("lkj.R")
 
-assert_that(Sys.getenv("CMDSTAN") != "", msg="CMDSTAN environment variable must be set.")
-
 options(OncoBayes2.abbreviate.min = 0)
 
 ## Sample prior
@@ -280,11 +278,13 @@ restore_draw_dims <- function(standata, draw) {
 #' averaged together to obtain less noisy estimates.
 learn_warmup_info <- function(standata, stanfit) {
     gmean <- function(x) exp(mean(log(x)))
-    draw  <- extract_draw(rstan::extract(stanfit)[1:8], 1)
+    post <- rstan::extract(stanfit)[1:8]
+    S <- NROW(post[[1]])
+    draws  <- lapply(seq(1,S,length=10), extract_draw, sims=post)
     warmup_info  <- extract_warmup_info(stanfit)
     warmup_info$stepsize  <- gmean(warmup_info$stepsize)
     warmup_info$inv_metric  <- apply(warmup_info$inv_metric, 1, gmean)
-    c(warmup_info, list(draw=restore_draw_dims(standata, draw)))
+    c(warmup_info, list(draws=lapply(draws, restore_draw_dims, standata=standata)))
 }
 
 #'
@@ -317,10 +317,10 @@ fit_exnex <- function(data, job, instance, ..., save_fit=FALSE) {
         ## use a randomly selected warmup info from the ones provided
         fit_warmup_info <- sample(model$warmup_info, 1)[[1]]
         blrm_args <- model$blrm_args_with_warmup_info
-        blrm_args$init  <- rep(list(fit_warmup_info$draw), blrm_args$chains)
+        blrm_args$init  <- sample(fit_warmup_info$draws, blrm_args$chains)
         blrm_args$control <- modifyList(blrm_args$control,
                                         list(##adapt_inv_metric=fit_warmup_info$inv_metric,
-                                             stepsize=fit_warmup_info$stepsize)
+                                             stepsize=3*fit_warmup_info$stepsize)
                                         )
     }
 
@@ -337,7 +337,6 @@ fit_exnex <- function(data, job, instance, ..., save_fit=FALSE) {
     sampler_params <- rstan::get_sampler_params(fit$stanfit, inc_warmup=FALSE)
     n_divergent <- sum(sapply(sampler_params, function(x) sum(x[,'divergent__'])) )
 
-    ##params <- c("mu_log_beta", "tau_log_beta", "beta_group", "mu_eta", "tau_eta", "eta_group")
     params <- c("mu_log_beta", "tau_log_beta", "beta_group")
     if(fit$has_inter)
         params <- c(params, "mu_eta", "tau_eta", "eta_group")

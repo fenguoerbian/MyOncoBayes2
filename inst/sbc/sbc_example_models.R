@@ -47,7 +47,7 @@ example_designs <- list(
       stratum_id = "STRAT",
       group_id = LETTERS[1:3],
       drug_A = c(0.0625, 0.125, 0.25, 0.5, 1),
-      num_patients = 3
+      num_patients = 5
     ) %>% arrange(stratum_id, group_id, drug_A),
     dref = c(1)
   )
@@ -90,7 +90,7 @@ example_models <- lapply(
 
           prior_EX_mu_mean_comp = matrix(c(logit(1/3), 0), nrow=num_comp, ncol=2, TRUE),
           prior_EX_mu_sd_comp = matrix(c(1, 0.5), nrow=num_comp, ncol=2, TRUE),
-          prior_EX_tau_mean_comp = matrix(log(  c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),
+          prior_EX_tau_mean_comp = matrix(log(  c(0.25, 0.125) / 2.0), nrow=num_comp, ncol=2, TRUE),
           prior_EX_tau_sd_comp = matrix(log(2)/1.96, nrow=num_comp, ncol=2, TRUE),
           prior_EX_mu_mean_inter = rep(0, num_inter),
           prior_EX_mu_sd_inter = rep(log(2)/1.96, num_inter),
@@ -110,6 +110,7 @@ example_models <- lapply(
           iter = 1000 + 1000,
           warmup = 1000,
           control = list(
+              stepsize=0.5,
               adapt_init_buffer=75,
               adapt_window=25,
               adapt_term_buffer=2*50 ## run twice as normal terminal window
@@ -117,7 +118,7 @@ example_models <- lapply(
           ##iter = 150,
           ##warmup = 50,
           thin = 1,
-          init = 0.5,
+          init = 1.0,
           chains = 2,
           ##cores = 1, ## control via mc.cores option
           prior_PD = FALSE
@@ -132,7 +133,7 @@ example_models <- lapply(
       ## inverse metric is being provided
       blrm_args_with_warmup_info  <- modifyList(blrm_args,
                                                 list(warmup=1000, iter=1000+1000,
-                                                     init=NULL, ## will be given
+                                                     init=NULL,
                                                      control=list(
                                                          adapt_init_buffer=75,  ## make sure we are really in the typical set
                                                          adapt_window=25,       ## default

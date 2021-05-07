@@ -8,6 +8,7 @@ install -d inst/doc
 
 ## create SBC report
 "${R_HOME}/bin/R" --slave -e "library(rmarkdown); setwd('inst/sbc/'); rmarkdown::render('sbc_report.R')"
+"${R_HOME}/bin/R" --slave -e "library(rmarkdown); setwd('inst/sbc/'); rmarkdown::render('sbc_report.R', output_file='sbc_report_full.html', params=list(include_plots=TRUE))"
 
 ## make PDF small
 "${R_HOME}/bin/R" --vanilla --slave -e "library(tools); tools::compactPDF('inst/doc/OncoBayes2.pdf')"

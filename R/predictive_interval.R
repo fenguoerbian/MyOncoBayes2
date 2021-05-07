@@ -28,8 +28,12 @@
 #' @aliases predictive_interval
 #' @export
 predictive_interval.blrmfit <- function(object, prob=0.95, newdata, ...) {
-    yrep <- posterior_predict(object, newdata=newdata)
-    rstantools::predictive_interval(yrep, prob=prob)
+    ##yrep <- posterior_predict(object, newdata=newdata)
+    ##rstantools::predictive_interval(yrep, prob=prob)
+    assert_number(prob, lower=0, upper=1, finite=TRUE)
+    s <- summary(object, newdata=newdata, prob=prob, predictive=TRUE, transform=FALSE)
+    cp  <- c(0.5- prob/2, 0.5+ prob/2)
+    as.matrix(s[,c(3,5)])
 }
 
 #' @method predictive_interval blrm_trial

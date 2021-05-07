@@ -7,6 +7,8 @@
 #' @template args-prob
 #' @param interval_prob optional vector of sorted quantiles for which
 #'     the interval probabilities are calculated
+#' @param predictive logical indicates if the posterior predictive is
+#'     being summarized. Defaults to \code{FALSE}.
 #' @template args-transform
 #' @param ... not used in this function
 #'
@@ -16,6 +18,11 @@
 #' the specified vector of sorted quantiles. These summaries are
 #' calculated on the response scale by default and can be obtained on
 #' the link scale when setting \code{transform=FALSE}.
+#'
+#' When the results are requested for the predictive distribution with
+#' \code{predictive=TRUE}, then the link scale refers to the total
+#' counts while the transformed scale divides the (predictive) counts
+#' by the number of trials such that results are on the 0-1 scale.
 #'
 #' @return Returns a \code{data.frame} of the key summaries of the
 #'     posterior mean, standard deviation, central probability
@@ -33,54 +40,133 @@
 #' ## overdosing (0.33-1) probabilities
 #' summary(blrmfit, interval_prob=c(0,0.16,0.33,1))
 #'
+#' ## obtain predictive distribution for respective cohorts and
+#' ## calculate probability for no event, 1 event or >1 event
+#' ## note that this does the calculation for the cohort sizes
+#' ## as put into the data-set
+#' summary(blrmfit, interval_prob=c(-1,0,1,10), predictive=TRUE)
+#'
+#' ## to obtain the predictive for a cohort-size of 6 for all patients
+#' ## in the data-set one would need to use the newdata argument, e.g.
+#' summary(blrmfit, newdata=transform(hist_SA, num_patients=6),
+#'                  interval_prob=c(-1,0,1,10), predictive=TRUE)
+#'
 #' @template stop-example
 #'
 #' @method summary blrmfit
 #' @export
-summary.blrmfit <- function(object, newdata, transform=TRUE, prob=0.95, interval_prob, ...) {
+summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, interval_prob, predictive=FALSE, ...) {
     assert_numeric(prob, lower=0, upper=1, finite=TRUE, any.missing=FALSE, min.len=1)
 
     data <- object$data
     if(!missing(newdata))
         data <- newdata
-
     rn <- rownames(data)
-    post_logit <- posterior_linpred(object, transform=transform, newdata=data)
-    colnames(post_logit) <- 1:nrow(data)
-
-    post_logit <- as_tibble(post_logit) %>%
-        gather(id, value, convert=TRUE)
-
-    ## dummy definitions to silence R CMD check
-    . <- value <- Var1 <- Freq <- NULL
+    nr <- nrow(data)
 
     probs <- sort(unique(c(0.5, 0.5- prob/2, 0.5+ prob/2)))
-    qsummaries <- lapply(probs, function(p) function(x) quantile(x, probs=p)) %>%
-      setNames(paste0(100 * probs, "%"))
 
-    out_sum <- post_logit %>%
-        group_by(id) %>%
-        summarise_all(c(list(mean=mean, sd=sd), qsummaries)) %>%
-        arrange(id) %>%
-        ungroup()
+    ## use the SAS defintion for quantiles whenever the output are
+    ## discrete as for the predictive which is type 7. Type 3 is the
+    ## default in R which gives non-integer outputs for integer only
+    ## data.
+    quantile_type <- ifelse(predictive, 7, 3)
 
-    if(!missing(interval_prob)) {
-        assert_numeric(interval_prob, any.missing=FALSE, sorted=TRUE)
+    if(predictive) {
+        sizes <- pp_binomial_trials(object, newdata=data)
+
+        post_prob <- posterior_linpred(object, transform=TRUE, newdata=data)
+
+        ## integrate binomial sampling density per outcome and then
+        ## summarize the obtained predictive p(y)
+
+        draws <- nrow(post_prob)
+        max_size <- max(sizes)
+        pred_lpmf <- matrix(-Inf, nrow=max_size+1, ncol=nr)
+        pred_pmf <- matrix(0, nrow=max_size+1, ncol=nr)
+        pred_cpmf <- matrix(1.0, nrow=max_size+1, ncol=nr)
+        for(r in 1:nr) {
+            ## create matrix of outcomes x draws of prob
+            outcomes_row <- 0:sizes[r]
+            nor <- length(outcomes_row)
+            Pr <- matrix(post_prob[,r], nrow=nor, ncol=draws, byrow=TRUE)
+            pred_lpmf[1:nor,r] <- apply(dbinom(outcomes_row, sizes[r], prob=Pr, log=TRUE), 1, log_mean_exp)
+            ## normalize to sum-to-one per column
+            pred_lpmf[1:nor,r] <- pred_lpmf[1:nor,r] - log_sum_exp(pred_lpmf[1:nor,r])
+            pred_pmf[,r] <- exp(pred_lpmf[,r])
+            pred_cpmf[1:nor,r] <- cumsum(pred_pmf[1:nor,r])
+            ## ensure that largest number is truly 1.0
+            pred_cpmf[,r]  <- pmin(pred_cpmf[,r], 1.0)
+        }
+
+        outcomes <- 0:max_size
+        all_outcomes <- matrix(outcomes, nrow=max_size+1, ncol=nr)
+
+        if(transform) {
+            ## transform outcomes to 0-1 scaled response rates
+            all_outcomes <- sweep(all_outcomes, 2, sizes, "/")
+            if(any(sizes == 0))
+                warning("Data rows ", paste(which(sizes == 0), collapse=", "), " contain trials of size 0.")
+        }
+
+        m <- colSums(all_outcomes * pred_pmf)
+        s <- sqrt(colSums(sweep(all_outcomes, 2, m)^2 * pred_pmf))
+
+        quants <- matrix(NA, nrow=nr, ncol=length(probs))
+        for(r in 1:nr) {
+            quants[r,]  <- findInterval(probs, pred_cpmf[1:(sizes[r]+1),r])
+        }
         if(transform)
-            assert_numeric(interval_prob, lower=0, upper=1, finite=TRUE)
-        out_interval <- post_logit %>%
-            group_by(id) %>%
-            mutate(value=cut(value, breaks=c(-Inf, interval_prob, Inf))) %>%
-            do(as.data.frame(prop.table(table(.$value)))) %>%
-            spread(Var1, Freq)
-        out_interval <- out_interval[-c(2,ncol(out_interval))]
-        out_sum <- out_interval %>%
-            right_join(y=out_sum, by="id") %>%
-            select(unique(c(names(out_sum), names(out_interval))))
+            quants <- sweep(quants, 1, sizes, "/")
+
+        out_sum <- cbind(data.frame(mean=m, sd=s), quants)
+
+        if(!missing(interval_prob)) {
+            if(transform) {
+                assert_numeric(interval_prob, lower=-1, upper=1, any.missing=FALSE, sorted=TRUE, finite=TRUE)
+            } else {
+                assert_integerish(interval_prob, any.missing=FALSE, sorted=TRUE)
+            }
+
+            nip <- length(interval_prob)
+            out_interval <- matrix(NA, nrow=nr, ncol=nip+1)
+            for(r in 1:nr) {
+                all_outcomes_r <- all_outcomes[1:(sizes[r]+1),r]
+                outcome_idx <- findInterval(c(-Inf, interval_prob, Inf), all_outcomes_r)
+                cpmf <- c(0,pred_cpmf[,r])
+                out_interval[r,] <- diff(cpmf[outcome_idx+1])
+            }
+            out_interval <- out_interval[,-c(1,nip+1),drop=FALSE]
+            colnames(out_interval) <- paste0("(", interval_prob[1:(nip-1)], ",", interval_prob[2:nip], "]")
+            out_sum <- cbind(out_sum, as.data.frame(out_interval))
+        }
+
+    } else {
+        post <- posterior_linpred(object, transform=transform, newdata=data)
+
+        out_sum <- as.data.frame(t(apply(post, 2, function(l) {
+            if(all(is.na(l)))
+                return(rep(NA, times=2+length(probs)))
+            c(mean=mean(l), sd=sd(l), quantile(l, probs=probs, type=quantile_type))
+        })))
+
+        if(!missing(interval_prob)) {
+            if(transform) {
+                ## negative values are admissable as we otherwise cannot
+                ## include 0
+                assert_numeric(interval_prob, lower=-1, upper=1, any.missing=FALSE, sorted=TRUE, finite=TRUE)
+            } else {
+                assert_numeric(interval_prob, any.missing=FALSE, sorted=TRUE, finite=TRUE)
+            }
+
+            out_interval <- as.data.frame(t(apply(post, 2, function(l) .proportions(table(cut(l, breaks=c(-Inf, interval_prob, Inf)))))))
+            out_interval <- out_interval[,-c(1,ncol(out_interval)), drop=FALSE]
+            out_sum <- cbind(out_sum, out_interval)
+        }
     }
 
-    out_sum$id <- NULL
-    out_sum <- as.data.frame(out_sum)
+    names(out_sum)[1:(2+length(probs))] <- c("mean", "sd", paste0(100 * probs, "%"))
+
     rownames(out_sum) <- rn
     out_sum
 }
@@ -93,11 +179,18 @@ summary.blrmfit <- function(object, newdata, transform=TRUE, prob=0.95, interval
 #' \itemize{
 #'   \item{}{\code{blrmfit}: summary of the underlying blrmfit object with further arguments ...}
 #'   \item{}{\code{blrm_exnex_call}: blrm_exnex call used to create the \code{blrmfit} object}
+#'   \item{}{\code{drug_info}: drug_info for the trial, contains drugs, reference doses and units}
 #'   \item{}{\code{dose_info}: dose_info that were defined}
 #'   \item{}{\code{dose_prediction} prediction for the defined dose_info}
 #'   \item{}{\code{data}: data that were observed}
 #'   \item{}{\code{data_prediction}: prediction for the observed data}
-#'   \item{}{\code{dimensionality}: numeric vector with entries "num_components", "num_interaction_terms", "num_groups", "num_strata" }
+#'   \item{}{\code{newdata_prediction}: prediction for data provided with the newdata= argument}
+#'   \item{}{\code{dimensionality}: numeric vector with entries "num_components",
+#'     "num_interaction_terms", "num_groups", "num_strata"}
+#'   \item{}{\code{interval_prob}: interval probabilities reported in the standard outputs}
+#'   \item{}{\code{interval_max_mass}: named vector defining for each interval of the
+#'     \code{interval_prob} vector a maxmimal admissable
+#'     probability mass for a given dose level}
 #' }
 #' @param ... further arguments for summary.blrmfit
 #'
@@ -118,22 +211,99 @@ summary.blrmfit <- function(object, newdata, transform=TRUE, prob=0.95, interval
 #'
 #' @method summary blrm_trial
 #' @export
-summary.blrm_trial <- function (object, summarize=c("blrmfit", "blrm_exnex_call", "dose_info", "dose_prediction", "data", "data_prediction", "dimensionality"), ...) {
-  summarize <- match.arg(summarize)
+summary.blrm_trial <- function(
+  object,
+  summarize = c(
+    "blrmfit",
+    "blrm_exnex_call",
+    "data",
+    "drug_info",
+    "dose_info",
+    "dose_prediction",
+    "data_prediction",
+    "newdata_prediction",
+    "dimensionality",
+    "interval_prob",
+    "interval_max_mass"
+  ),
+  ...
+)
+{
+  args <- list(...)
+  if (missing(summarize)) {
+    if ("newdata" %in% names(args)) {
+      summarize <- "newdata_prediction"
+    } else {
+      summarize <- "data_prediction"
+    }
+  } else {
+    summarize <- match.arg(summarize)
+  }
 
-  if (summarize %in% c("blrmfit", "blrm_exnex_call", "dose_prediction", "data_prediction")) {
+
+
+  if (summarize %in% c("blrmfit", "blrm_exnex_call", "dose_prediction", "data_prediction", "newdata_prediction")) {
     .assert_is_blrm_trial_and_prior_is_set(object)
   } else {
     .assert_is_blrm_trial(object)
   }
 
+  newdata_predict <- function() {
+    args[["newdata"]] <- .blrm_trial_sanitize_data(trial=object, data=args[["newdata"]], require_num_patients = FALSE, require_num_toxicities = FALSE)
+
+    args_without_newdata <- args
+    args_without_newdata[["newdata"]] <- NULL
+    do.call(".blrm_trial_predict", c(list(object, args[["newdata"]]), args_without_newdata))
+  }
+
   switch(summarize,
-         blrmfit = summary(object$blrmfit, ...),
-         blrm_exnex_call = object$blrmfit$call,
-         dose_info = object$dose_info,
-         dose_prediction = .blrm_trial_predict(object, object$dose_info, ...),
-         data = object$data,
-         data_prediction = .blrm_trial_predict(object, object$data, ...),
-         dimensionality = object[c("num_components", "num_interaction_terms", "num_groups", "num_strata")])
+    blrmfit = summary(object$blrmfit, ...),
+    blrm_exnex_call = object$blrmfit$call,
+    drug_info = object$drug_info,
+    dose_info = object$dose_info,
+    dose_prediction = .blrm_trial_predict(object, object$dose_info, ...),
+    data = object$data,
+    data_prediction = .blrm_trial_predict(object, object$data, ...),
+    newdata_prediction = newdata_predict(),
+    dimensionality = object[c("num_components", "num_interaction_terms", "num_groups", "num_strata")],
+    interval_prob = object$interval_prob,
+    interval_max_mass = object$interval_max_mass
+  )
 }
 
+
+#' Backport from R 4
+#' @param x object to summarise
+#' @param margin margin over which to marginalize
+#' @keyword internal
+.marginSums <- function (x, margin = NULL)
+{
+    if (!is.array(x))
+        if (is.numeric(x))
+            dim(x) <- length(x)
+        else stop("'x' is not an array")
+    if (length(margin)) {
+        z <- apply(x, margin, sum)
+        if (!is.array(z)) {
+            if (is.character(margin))
+                margin <- match(margin, names(dimnames(x)))
+            dim(z) <- dim(x)[margin]
+            dimnames(z) <- dimnames(x)[margin]
+        }
+        class(z) <- oldClass(x)
+        z
+    }
+    else sum(x)
+}
+
+
+#' Backport from R 4
+#' @param x object to summarise
+#' @param margin margin over which to marginalize
+#' @keyword internal
+.proportions <- function (x, margin = NULL)
+{
+    if (length(margin))
+        sweep(x, margin, .marginSums(x, margin), "/", check.margin = FALSE)
+    else x/sum(x)
+}
