@@ -13,20 +13,21 @@
 #' \code{HistAgent1} and \code{HistAgent2}, historical data is available on each
 #' of the treatments as single-agents, as well as two of the two-way
 #' combinations. However, due to a difference in treatment schedule between the
-#' \code{Combo} study and the historical studies, a stratification (through \code{stratum})
+#' \code{Combo} study and the historical studies, a stratification (through \code{stratum_id})
 #' is made between the groups to allow differential discounting of the
 #' alternate-schedule data. The association is as below.
 #'
 #' \tabular{cc}{
-#'  group_id (j):  \tab stratum (s_j): \cr
+#'  group_id (j):  \tab stratum_id (s_j): \cr
 #'  Combo (1)      \tab BID (1)         \cr
 #'  HistAgent1 (2) \tab QD (2)          \cr
 #'  HistAgent2 (3) \tab QD (2)
 #' }
 #'
-#' For additional robustness, EXNEX priors are used for all group-level
-#' treatment component and interaction parameters, to limit the amount of
-#' borrowing in case of significant heterogeneity across groups.
+#' For additional robustness, EXNEX priors are used for all
+#' group-level treatment components while not for the interaction
+#' parameters. This is to limit the amount of borrowing in case of
+#' significant heterogeneity across groups.
 #'
 #' The complete model is as follows. As a function of doses \eqn{d_1,d_2,d_3}, the
 #' DLT rate in group \eqn{j} is, for \eqn{j = 1,\ldots,3},
@@ -66,16 +67,17 @@
 #' For all interaction parameters \eqn{\eta_{j}^{(12)}}, \eqn{\eta_{j}^{(13)}},
 #' \eqn{\eta_{j}^{(23)}}, and \eqn{\eta_{j}^{(123)}} (\eqn{j = 1,2,3}), the following
 #' prior is assumed:
-#' \deqn{\eta_{j}^{(\cdot)} \sim p_{\eta j}^{(\cdot)} \mbox{N}(\mu_{\eta}^{(\cdot)},{\tau_{\eta s_j}^{(\cdot)}}^2) + (1-p_{\eta j}^{(\cdot)}) \mbox{N}(m_{\eta j}^{(\cdot)}, {s_{\eta j}^{(\cdot)}}^2).}
-#' The exchangeability weights are \eqn{p_{\eta j}^{(\cdot)} = 0.9} for all interaction
-#' parameters and all groups. Here, for each \eqn{\mu_{\eta}^{(12)}}, \eqn{\mu_{\eta}^{(13)}},
+#' \deqn{\eta_{j}^{(\cdot)} \sim  \mbox{N}(\mu_{\eta}^{(\cdot)},{\tau_{\eta s_j}^{(\cdot)}}^2).}
+#' The exchangeability weights are \eqn{p_{\eta j}^{(\cdot)} = 0.9} for all
+#' parameters with EXNEX. Here, for each \eqn{\mu_{\eta}^{(12)}}, \eqn{\mu_{\eta}^{(13)}},
 #' \eqn{\mu_{\eta}^{(23)}}, and \eqn{\mu_{\eta}^{(123)}}, we take
 #' \deqn{\mu_{\eta}^{(\cdot)} \sim \mbox{N}(0, 1/2),}
 #' and for each \eqn{\tau_{\eta s}^{(12)}}, \eqn{\tau_{\eta s}^{(13)}},
 #' \eqn{\tau_{\eta s}^{(23)}}, and \eqn{\tau_{\eta s}^{(123)}},
 #' \deqn{\tau_{\eta s}^{(\cdot)} \sim \mbox{Log-Normal}(\log(0.25), (\log 2 / 1.96)^2),}
-#' for both strata \eqn{s = 1,2}. Furthermore, \eqn{m_{\eta j}^{(\cdot)} = 0} and
-#' \eqn{{s_{\eta j}^{(\cdot)}}^2 = 1/2}, uniformly across all indices.
+#' for both strata \eqn{s = 1,2}.
+# Furthermore, \eqn{m_{\eta j}^{(\cdot)} = 0} and
+# \eqn{{s_{\eta j}^{(\cdot)}}^2 = 1/2}, uniformly across all indices.
 #'
 #' Below is the syntax for specifying this model in \code{blrm_exnex}.
 #'

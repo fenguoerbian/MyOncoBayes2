@@ -12,6 +12,9 @@ suppressPackageStartupMessages(library(dplyr))
 check_basic  <- function(example){
   expect_class(blrm_trial(example$histdata, example$dose_info, example$drug_info),
               "blrm_trial")
+  
+  # No warning should be produced
+  expect_failure(expect_warning(blrm_trial(example$histdata, example$dose_info, example$drug_info), regexp = "does not correspond to a pre-specified dose"))
 }
 
 test_that("blrm_trial runs for a basic single-agent example",
@@ -89,6 +92,15 @@ check_trial_with_prior_summary  <- function(example) {
     newdata_summary <- summary(trial, summarize="newdata_prediction", newdata = newdata)
     expect_tibble(newdata_summary)
     expect(nrow(newdata) == nrow(newdata_summary))
+    
+    # newdata_prediction should not give warning if dose is not provisional dose
+    newdata <- tibble(
+      group_id = levels(summary(trial, "dose_info")$group_id[0])[1]
+    )
+    
+    newdata[1, summary(trial, "drug_info")$drug_name] <- runif(1)
+    
+    expect_failure(expect_warning(summary(trial, "newdata_prediction", newdata = newdata), regexp = "does not correspond to a pre-specified dose")) 
     
   })
 }
@@ -803,6 +815,9 @@ check_simplified_prior_no_hist_data <- function(example, formula_generator) {
   with(example, {
     trial <- blrm_trial(data = NULL, dose_info = dose_info, drug_info = drug_info, simplified_prior = TRUE, formula_generator = formula_generator)
     expect_tibble(summary(trial, "dose_prediction"))
+    
+    # Summary of trial should not error
+    expect_tibble(summary(trial))
   })
 }
 

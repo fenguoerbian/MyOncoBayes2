@@ -109,7 +109,8 @@ int cardinality_int(int[] elems) {
 
 // count the number of unique elements
 int cardinality_vector(vector elems) {
-  return rle_elem_count_vector(sort_asc(elems));
+  vector[num_elements(elems)] sort_asc_elems = sort_asc(elems);
+  return rle_elem_count_vector(sort_asc_elems);
 }
 
 // create an integer sequence

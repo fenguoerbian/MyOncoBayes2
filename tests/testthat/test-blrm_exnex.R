@@ -1,4 +1,3 @@
-
 context("blrm_exnex tests")
 
 
@@ -7,7 +6,7 @@ set.seed(12144)
 eps <- 1E-4
 eps_low <- 0.02
 
-## reference runs
+## reference runs (TODO: take from gold runs?)
 single_agent  <- run_example("single_agent")
 combo2  <- run_example("combo2")
 combo3  <- run_example("combo3")
@@ -31,7 +30,7 @@ check_model_basic  <- function(fit, envir) {
 
   ## check that the median and 50% interval prob align
   s_med  <- ss[,"50%"]
-  for(i in 1:length(s_med)) {
+  for(i in seq_along(s_med)) {
     i <- 1
     q_med  <- s_med[i]
     s_q  <- summary(fit, interval_prob=c(0,q_med,1))
@@ -77,9 +76,9 @@ test_that("interval probabilites are consistent", {
   skip_on_cran()
   combo2_sens  <- combo2
   sens_low <- hist_combo2 %>%
-    mutate(num_toxicities=0)
+    mutate(num_toxicities=0, num_patients=3*num_patients)
   combo2_sens$sens_low  <- sens_low
-  outp <- suppressMessages(capture.output(sens_fit_low <- with(combo2_sens, update(blrmfit, data=sens_low))))
+  outp <- suppressMessages(capture.output(sens_fit_low <- with(combo2_sens, update(blrmfit, iter=11000, warmup=1000, chains=1, data=sens_low))))
   s_low  <- summary(sens_fit_low, interval_prob=c(0,0.9,1))
   expect_equal(sum((s_low[,"(0,0.9]"] - 1)<eps), nrow(sens_low))
   expect_equal(sum((s_low[,"(0.9,1]"])<eps), nrow(sens_low))
@@ -93,14 +92,14 @@ test_that("interval probabilites are consistent", {
   expect_equal(sum((s_low_pp_resp[,"(-1,0.9]"] - 1)<eps), nrow(sens_low))
   expect_equal(sum((s_low_pp_resp[,"(0.9,1]"])<eps), nrow(sens_low))
 
-  s_low_pp_count  <- summary(sens_fit_low, interval_prob=c(-1,5,100), transform=FALSE, predictive=TRUE)
-  expect_equal(sum((s_low_pp_count[,"(-1,5]"] - 1)<eps), nrow(sens_low))
-  expect_equal(sum((s_low_pp_count[,"(5,100]"])<eps), nrow(sens_low))
+  s_low_pp_count  <- summary(sens_fit_low, interval_prob=c(-1,10,100), transform=FALSE, predictive=TRUE)
+  expect_equal(sum((s_low_pp_count[,"(-1,10]"] - 1)<eps), nrow(sens_low))
+  expect_equal(sum((s_low_pp_count[,"(10,100]"])<eps), nrow(sens_low))
 
   sens_high <- hist_combo2 %>%
-    mutate(num_toxicities=num_patients)
+    mutate(num_patients=20, num_toxicities=num_patients)
   combo2_sens$sens_high <- sens_high
-  outp <- suppressMessages(capture.output(sens_fit_high <- with(combo2_sens, update(blrmfit, data=sens_high))))
+  outp <- suppressMessages(capture.output(sens_fit_high <- with(combo2_sens, update(blrmfit, iter=11000, warmup=1000, chains=1, data=sens_high))))
   s_high  <- summary(sens_fit_high, interval_prob=c(0,0.1,1))
   expect_equal(sum((s_high[,"(0.1,1]"] - 1)<eps), nrow(sens_low))
   expect_equal(sum((s_high[,"(0,0.1]"])<eps), nrow(sens_low))
@@ -124,10 +123,12 @@ test_that("predictive interval probabilites are correct", {
     ## as we use a semi-analytic scheme to get more accurate posterior
     ## predictive summaries, we test here against a simulation based
     ## approach
-    fit  <- with(single_agent, update(blrmfit, iter=11000, warmup=1000, chains=1))
-    ndata <- transform(fit$data, num_patients=50)
+    single_agent_test <- single_agent
+    single_agent_test$test_data <- mutate(single_agent$blrmfit$data, num_patients=100, num_toxicities=c(0,0,0,25,50))
+    fit  <- with(single_agent_test, update(blrmfit, iter=21000, warmup=1000, chains=1, data=test_data))
+    ndata <- transform(fit$data, num_patients=100)
     s_pp <- summary(fit, newdata=ndata, prob=0.5, interval_prob=c(-1,1), predictive=TRUE, transform=TRUE)
-    post <- posterior_predict(fit, newdata=ndata)/50
+    post <- posterior_predict(fit, newdata=ndata)/100
     nr <- nrow(s_pp)
     expect_equal(sum( abs( colMeans(post) - s_pp[,"mean"] ) < eps_low ), nr)
     ## expect_equal(sum( ( apply(post, 2, sd) - s_pp[,"sd"] ) < eps_low ), nr) ## rather unstable estimates...skip
@@ -136,11 +137,12 @@ test_that("predictive interval probabilites are correct", {
     expect_equal(sum( abs( apply(post, 2, quantile, probs=0.75, type=3) - s_pp[,"75%"] ) < eps_low ), nr)
     expect_equal(sum( abs( apply(post, 2, function(x) mean(x <= 1)) - s_pp[,"(-1,1]"] ) < eps_low ), nr)
 
-    num <- single_agent$blrmfit$data$num_patients
-    test <- sweep(predictive_interval(single_agent$blrmfit, prob=0.5), 1, num, "/")
-    pp <- sweep(posterior_predict(single_agent$blrmfit), 2, num, "/")
+    num <- fit$data$num_patients
+    nr <- length(num)
+    test <- sweep(predictive_interval(fit, prob=0.5), 1, num, "/")
+    pp <- sweep(posterior_predict(fit), 2, num, "/")
     ref <- t(apply(pp, 2, quantile, c(0.25, 0.75), type=3))
-    expect_equal(sum(abs(test - ref)), 0)
+    expect_equal(sum(abs(test - ref) < eps_low), 2*nr)
 })
 
 ## TODO: Add proper runs which are compared against published results,
@@ -263,6 +265,58 @@ test_that("blrm_exnex accepts single-stratum data sets with general prior defini
 
     expect_true(nrow(summary(blrmfit)) == nrow(hist_SA_alt))
 
+})
+
+test_that("blrm_exnex summaries do not change depending on global variable definitions of dref", {
+
+    num_comp <- 1 # one investigational drug
+    num_inter <- 0 # no drug-drug interactions need to be modeled
+    num_groups <- nlevels(hist_SA$group_id) # no stratification needed
+    num_strata <- 1 # no stratification needed
+
+    dref <- 50
+
+    hist_SA_alt  <- mutate(hist_SA, stratum=factor(1))
+
+    ## in case a single stratum is used in the data, the priors for tau should accept
+    blrmfit <- blrm_exnex(
+        cbind(num_toxicities, num_patients - num_toxicities) ~
+            1 + log(drug_A / dref) |
+            0 |
+            stratum/group_id,
+        data = hist_SA_alt,
+        prior_EX_mu_mean_comp = matrix(
+            c(logit(1/2), # mean of intercept on logit scale
+              log(1)),    # mean of log-slope on logit scale
+            nrow = num_comp,
+            ncol = 2
+        ),
+        prior_EX_mu_sd_comp = matrix(
+            c(2,  # sd of intercept
+              1), # sd of log-slope
+            nrow = num_comp,
+            ncol = 2
+        ),
+        prior_EX_tau_mean_comp = array(0, c(1,num_comp,2)),
+        prior_EX_tau_sd_comp   = array(1, c(num_comp,2)),
+        prior_EX_prob_comp = matrix(1, nrow = num_comp, ncol = 1),
+        prior_tau_dist = 0,
+        prior_PD = FALSE,
+        cores=1,
+        iter=10,
+        warmup=5
+    )
+
+    mean1 <- summary(blrmfit)$mean
+    pmean1 <- summary(blrmfit, predictive=TRUE)$mean
+
+    dref <- 1000
+
+    mean2 <- summary(blrmfit)$mean
+    pmean2 <- summary(blrmfit, predictive=TRUE)$mean
+
+    expect_equal(mean1, mean2)
+    expect_equal(pmean1, pmean2)
 })
 
 test_that("blrm_exnex rejects wrongly nested stratum/group combinations in data sets", {
@@ -400,4 +454,172 @@ test_that("update.blrmfit combines data and add_data", {
     single_agent_new$hist_SA_sub <- hist_SA[1:3,]
     single_agent_new$only_blrmfit_1 <- with(single_agent_new, update(blrmfit, data=hist_SA_sub, add_data=only_cohort_SA))
     expect_true(nrow(summary(single_agent_new$only_blrmfit_1)) == 4)
+})
+
+test_that("blrm_exnex properly warns/errors if prior_is_EXNEX is inconsistent from prior_EX_prob", {
+
+    hist_data <- tibble(
+        group_id = as.factor(c(rep("trial_a",2),rep("trial_b",3), rep("trial_c",1))),
+        stratum_id = as.factor(c(rep("reg1",2),rep("reg2",2), rep("reg2",2))),
+        drug1 = c(20*5, 30*5, 20*14, 30*14, 45*7, 0),
+        drug2 = c(20*5, 30*5, 20*14, 30*14, 45*7, 10),
+        num_toxicities = c(0, 1, 1, 0, 1, 0),
+        num_patients = c(2, 6, 3, 4, 9, 29)
+    )
+
+    num_comp <-  2
+    num_strata <-  nlevels(hist_data$stratum_id)
+    num_groups <-  nlevels(hist_data$group_id)
+    num_inter <- 1
+
+    expect_error(blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                              1 + I(log(drug1)) |
+                              1 + I(log(drug2)) |
+                              0 + I(drug1 * drug2) | stratum_id/group_id,
+                          data=hist_data,
+                          prior_is_EXNEX_comp = rep(FALSE, 2),
+                          prior_EX_prob_comp=matrix(c(0.5, 1, 1), nrow = num_groups, ncol = num_comp, byrow = FALSE), # 0.5 would be ignored
+                          prior_is_EXNEX_inter = FALSE,
+                          prior_EX_prob_inter = matrix(c(1, 1, 1), nrow = num_groups, ncol =num_inter),
+                          prior_EX_mu_mean_inter = rep(0, num_inter),
+                          prior_EX_mu_sd_inter = rep(1, num_inter),
+                          prior_EX_tau_mean_inter =matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_EX_tau_sd_inter = matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_EX_mu_mean_comp = matrix(c(logit(0.20), 0), # (E(mu_alpha), E(mu_beta))
+                                                         nrow = num_comp,
+                                                         ncol = 2,
+                                                         byrow = TRUE),
+                          prior_EX_mu_sd_comp = matrix(c(2, 1), # (sd(mu_alpha), sd(mu_beta))
+                                                       nrow = num_comp,
+                                                       ncol = 2,
+                                                       byrow = TRUE),
+                          prior_EX_tau_mean_comp=abind(matrix(log( c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE), #level 1 reg1
+                                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),#level 2 reg2
+                                                       along=0),
+                          prior_EX_tau_sd_comp=abind(matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     along=0),
+                          prior_tau_dist=1,
+                          ), "*is_EXNEX*")
+
+    expect_error(blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                              1 + I(log(drug1)) |
+                              1 + I(log(drug2)) |
+                              0 + I(drug1 * drug2) | stratum_id/group_id,
+                          data=hist_data,
+                          prior_EX_mu_mean_comp = matrix(c(logit(0.20), 0), # (E(mu_alpha), E(mu_beta))
+                                                         nrow = num_comp,
+                                                         ncol = 2,
+                                                         byrow = TRUE),
+                          prior_EX_mu_sd_comp = matrix(c(2, 1), # (sd(mu_alpha), sd(mu_beta))
+                                                       nrow = num_comp,
+                                                       ncol = 2,
+                                                       byrow = TRUE),
+                          prior_EX_tau_mean_comp=abind(matrix(log( c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE), #level 1 reg1
+                                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),#level 2 reg2
+                                                       along=0),
+                          prior_EX_tau_sd_comp=abind(matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     along=0),
+                          prior_is_EXNEX_comp = c(TRUE, FALSE),
+                          prior_EX_prob_comp=cbind(c(1, 1, 1), c(0.5, 1, 1)), # 0.5 would be ignored
+                          prior_is_EXNEX_inter = FALSE,
+                          prior_EX_prob_inter = matrix(c(1, 1, 1), nrow = num_groups, ncol =num_inter),
+                          prior_EX_mu_mean_inter = rep(0, num_inter),
+                          prior_EX_mu_sd_inter = rep(1, num_inter),
+                          prior_EX_tau_mean_inter =matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_EX_tau_sd_inter = matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_tau_dist=1
+                          ), "*is_EXNEX*")
+
+    expect_error(blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                              1 + I(log(drug1)) |
+                              1 + I(log(drug2)) |
+                              0 + I(drug1 * drug2) | stratum_id/group_id,
+                          data=hist_data,
+                          prior_EX_mu_mean_comp = matrix(c(logit(0.20), 0), # (E(mu_alpha), E(mu_beta))
+                                                         nrow = num_comp,
+                                                         ncol = 2,
+                                                         byrow = TRUE),
+                          prior_EX_mu_sd_comp = matrix(c(2, 1), # (sd(mu_alpha), sd(mu_beta))
+                                                       nrow = num_comp,
+                                                       ncol = 2,
+                                                       byrow = TRUE),
+                          prior_EX_tau_mean_comp=abind(matrix(log( c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE), #level 1 reg1
+                                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),#level 2 reg2
+                                                       along=0),
+                          prior_EX_tau_sd_comp=abind(matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     along=0),
+                          prior_is_EXNEX_comp = c(FALSE, FALSE),
+                          prior_is_EXNEX_inter = FALSE,
+                          prior_EX_prob_comp=cbind(c(1, 1, 1), c(1, 1, 1)),
+                          prior_EX_prob_inter = matrix(c(0.5, 1, 1), nrow = num_groups, ncol =num_inter),
+                          prior_tau_dist=1,
+                          prior_EX_mu_mean_inter = rep(0, num_inter),
+                          prior_EX_mu_sd_inter = rep(1, num_inter),
+                          prior_EX_tau_mean_inter =matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_EX_tau_sd_inter = matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          ), "*is_EXNEX*")
+
+    expect_warning(blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                              1 + I(log(drug1)) |
+                              1 + I(log(drug2)) |
+                              0 + I(drug1 * drug2) | stratum_id/group_id,
+                          data=hist_data,
+                          prior_EX_mu_mean_comp = matrix(c(logit(0.20), 0), # (E(mu_alpha), E(mu_beta))
+                                                         nrow = num_comp,
+                                                         ncol = 2,
+                                                         byrow = TRUE),
+                          prior_EX_mu_sd_comp = matrix(c(2, 1), # (sd(mu_alpha), sd(mu_beta))
+                                                       nrow = num_comp,
+                                                       ncol = 2,
+                                                       byrow = TRUE),
+                          prior_EX_tau_mean_comp=abind(matrix(log( c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE), #level 1 reg1
+                                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),#level 2 reg2
+                                                       along=0),
+                          prior_EX_tau_sd_comp=abind(matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     along=0),
+                          prior_is_EXNEX_comp = c(TRUE, TRUE),
+                          prior_EX_prob_comp=cbind(c(1, 1, 1), c(1, 1, 1)), # 0.5 would be ignored
+                          prior_is_EXNEX_inter = FALSE,
+                          prior_EX_prob_inter = matrix(c(1, 1, 1), nrow = num_groups, ncol =num_inter),
+                          prior_EX_mu_mean_inter = rep(0, num_inter),
+                          prior_EX_mu_sd_inter = rep(1, num_inter),
+                          prior_EX_tau_mean_inter =matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_EX_tau_sd_inter = matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_tau_dist=1
+                          ), "*is_EXNEX*")
+
+    expect_warning(blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
+                              1 + I(log(drug1)) |
+                              1 + I(log(drug2)) |
+                              0 + I(drug1 * drug2) | stratum_id/group_id,
+                          data=hist_data,
+                          prior_EX_mu_mean_comp = matrix(c(logit(0.20), 0), # (E(mu_alpha), E(mu_beta))
+                                                         nrow = num_comp,
+                                                         ncol = 2,
+                                                         byrow = TRUE),
+                          prior_EX_mu_sd_comp = matrix(c(2, 1), # (sd(mu_alpha), sd(mu_beta))
+                                                       nrow = num_comp,
+                                                       ncol = 2,
+                                                       byrow = TRUE),
+                          prior_EX_tau_mean_comp=abind(matrix(log( c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE), #level 1 reg1
+                                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),#level 2 reg2
+                                                       along=0),
+                          prior_EX_tau_sd_comp=abind(matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     matrix(c(log(4)/1.96,log(2)/1.96), nrow=num_comp, ncol=2, TRUE),
+                                                     along=0),
+                          prior_is_EXNEX_comp = c(FALSE, FALSE),
+                          prior_is_EXNEX_inter = TRUE,
+                          prior_EX_prob_comp=cbind(c(1, 1, 1), c(1, 1, 1)),
+                          prior_EX_prob_inter = matrix(c(1, 1, 1), nrow = num_groups, ncol =num_inter),
+                          prior_EX_mu_mean_inter = rep(0, num_inter),
+                          prior_EX_mu_sd_inter = rep(1, num_inter),
+                          prior_EX_tau_mean_inter =matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_EX_tau_sd_inter = matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
+                          prior_tau_dist=1
+                          ), "*is_EXNEX*")
+
 })

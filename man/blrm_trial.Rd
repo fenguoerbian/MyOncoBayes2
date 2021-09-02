@@ -10,12 +10,12 @@ blrm_trial(
   dose_info,
   drug_info,
   simplified_prior = FALSE,
-  EXNEX_comp = TRUE,
+  EXNEX_comp = FALSE,
   EX_prob_comp_hist = 1,
   EX_prob_comp_new = 0.8,
   EXNEX_inter = FALSE,
-  EX_prob_inter = 0.8,
-  formula_generator = blrm_formula_linear,
+  EX_prob_inter = 1,
+  formula_generator = blrm_formula_saturating,
   interval_prob = c(0, 0.16, 0.33, 1),
   interval_max_mass = c(prob_underdose = 1, prob_target = 1, prob_overdose = 0.25),
   ...
@@ -221,7 +221,8 @@ internally generated.}
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
 
 # construct initial blrm_trial object from built-in example datasets

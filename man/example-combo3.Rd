@@ -13,20 +13,21 @@ therapy with three treatment components. From two previous studies
 \code{HistAgent1} and \code{HistAgent2}, historical data is available on each
 of the treatments as single-agents, as well as two of the two-way
 combinations. However, due to a difference in treatment schedule between the
-\code{Combo} study and the historical studies, a stratification (through \code{stratum})
+\code{Combo} study and the historical studies, a stratification (through \code{stratum_id})
 is made between the groups to allow differential discounting of the
 alternate-schedule data. The association is as below.
 
 \tabular{cc}{
- group_id (j):  \tab stratum (s_j): \cr
+ group_id (j):  \tab stratum_id (s_j): \cr
  Combo (1)      \tab BID (1)         \cr
  HistAgent1 (2) \tab QD (2)          \cr
  HistAgent2 (3) \tab QD (2)
 }
 
-For additional robustness, EXNEX priors are used for all group-level
-treatment component and interaction parameters, to limit the amount of
-borrowing in case of significant heterogeneity across groups.
+For additional robustness, EXNEX priors are used for all
+group-level treatment components while not for the interaction
+parameters. This is to limit the amount of borrowing in case of
+significant heterogeneity across groups.
 
 The complete model is as follows. As a function of doses \eqn{d_1,d_2,d_3}, the
 DLT rate in group \eqn{j} is, for \eqn{j = 1,\ldots,3},
@@ -66,23 +67,23 @@ Whereas in stratum \eqn{s=2} (\code{QD}, which contains the historical groups
 For all interaction parameters \eqn{\eta_{j}^{(12)}}, \eqn{\eta_{j}^{(13)}},
 \eqn{\eta_{j}^{(23)}}, and \eqn{\eta_{j}^{(123)}} (\eqn{j = 1,2,3}), the following
 prior is assumed:
-\deqn{\eta_{j}^{(\cdot)} \sim p_{\eta j}^{(\cdot)} \mbox{N}(\mu_{\eta}^{(\cdot)},{\tau_{\eta s_j}^{(\cdot)}}^2) + (1-p_{\eta j}^{(\cdot)}) \mbox{N}(m_{\eta j}^{(\cdot)}, {s_{\eta j}^{(\cdot)}}^2).}
-The exchangeability weights are \eqn{p_{\eta j}^{(\cdot)} = 0.9} for all interaction
-parameters and all groups. Here, for each \eqn{\mu_{\eta}^{(12)}}, \eqn{\mu_{\eta}^{(13)}},
+\deqn{\eta_{j}^{(\cdot)} \sim  \mbox{N}(\mu_{\eta}^{(\cdot)},{\tau_{\eta s_j}^{(\cdot)}}^2).}
+The exchangeability weights are \eqn{p_{\eta j}^{(\cdot)} = 0.9} for all
+parameters with EXNEX. Here, for each \eqn{\mu_{\eta}^{(12)}}, \eqn{\mu_{\eta}^{(13)}},
 \eqn{\mu_{\eta}^{(23)}}, and \eqn{\mu_{\eta}^{(123)}}, we take
 \deqn{\mu_{\eta}^{(\cdot)} \sim \mbox{N}(0, 1/2),}
 and for each \eqn{\tau_{\eta s}^{(12)}}, \eqn{\tau_{\eta s}^{(13)}},
 \eqn{\tau_{\eta s}^{(23)}}, and \eqn{\tau_{\eta s}^{(123)}},
 \deqn{\tau_{\eta s}^{(\cdot)} \sim \mbox{Log-Normal}(\log(0.25), (\log 2 / 1.96)^2),}
-for both strata \eqn{s = 1,2}. Furthermore, \eqn{m_{\eta j}^{(\cdot)} = 0} and
-\eqn{{s_{\eta j}^{(\cdot)}}^2 = 1/2}, uniformly across all indices.
+for both strata \eqn{s = 1,2}.
 
 Below is the syntax for specifying this model in \code{blrm_exnex}.
 }
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
 ## example combo3
 
@@ -91,38 +92,40 @@ library(abind)
 dref <- c(500, 500, 1000)
 num_comp <- 3
 num_inter <- choose(3,2) + 1
-num_strata <- nlevels(hist_combo3$stratum)
+num_strata <- nlevels(hist_combo3$stratum_id)
 num_groups <- nlevels(hist_combo3$group_id)
 
-blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
-                          1 + I(log(drug_A/dref[1])) |
-                          1 + I(log(drug_B/dref[2])) |
-                          1 + I(log(drug_C/dref[3])) |
-                          0
-                      + I(drug_A/dref[1] * drug_B/dref[2])
-                      + I(drug_A/dref[1] * drug_C/dref[3])
-                      + I(drug_B/dref[2] * drug_C/dref[3])
-                      + I(drug_A/dref[1] * drug_B/dref[2] * drug_C/dref[3]) |
-                      stratum/group_id,
-                      data=hist_combo3,
-                      prior_EX_mu_mean_comp=matrix(c(logit(1/3), 0), nrow=num_comp, ncol=2, TRUE),
-                      prior_EX_mu_sd_comp=matrix(c(2, 1), nrow=num_comp, ncol=2, TRUE),
-          prior_EX_tau_mean_comp=abind(matrix(log(  c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),
-                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),
-                                       along=0),
-                      prior_EX_tau_sd_comp=abind(matrix(log(4)/1.96, nrow=num_comp, ncol=2, TRUE),
-                                                 matrix(log(4)/1.96, nrow=num_comp, ncol=2, TRUE),
-                                                 along=0),
-                      prior_EX_mu_mean_inter=rep(0, num_inter),
-                      prior_EX_mu_sd_inter=rep(sqrt(2)/2, num_inter),
-                      prior_EX_tau_mean_inter=matrix(log(0.25)  , nrow=num_strata, ncol=num_inter),
-                      prior_EX_tau_sd_inter=matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
-                      prior_EX_prob_comp=matrix(0.9, nrow=num_groups, ncol=num_comp),
-                      prior_EX_prob_inter=matrix(0.9, nrow=num_groups, ncol=num_inter),
-                      ## by default EXNEX is on for components and off for all interactions
-                      prior_tau_dist=1,
-                      prior_PD=FALSE
-                      )
+blrmfit <- blrm_exnex(
+  cbind(num_toxicities, num_patients-num_toxicities) ~
+    1 + I(log(drug_A/dref[1])) |
+    1 + I(log(drug_B/dref[2])) |
+    1 + I(log(drug_C/dref[3])) |
+    0
+  + I(drug_A/dref[1] * drug_B/dref[2])
+  + I(drug_A/dref[1] * drug_C/dref[3])
+  + I(drug_B/dref[2] * drug_C/dref[3])
+  + I(drug_A/dref[1] * drug_B/dref[2] * drug_C/dref[3]) |
+    stratum_id/group_id,
+  data = hist_combo3,
+  prior_EX_mu_mean_comp = matrix(c(logit(1/3), 0), nrow = num_comp, ncol = 2, TRUE),
+  prior_EX_mu_sd_comp = matrix(c(2, 1), nrow = num_comp, ncol = 2, TRUE),
+  prior_EX_tau_mean_comp = abind(matrix(log(  c(0.25, 0.125)), nrow = num_comp, ncol = 2, TRUE),
+                                 matrix(log(2*c(0.25, 0.125)), nrow = num_comp, ncol = 2, TRUE),
+                                 along = 0),
+  prior_EX_tau_sd_comp = abind(matrix(log(4) / 1.96, nrow = num_comp, ncol = 2, TRUE),
+                               matrix(log(4) / 1.96, nrow = num_comp, ncol = 2, TRUE),
+                               along = 0),
+  prior_EX_mu_mean_inter = rep(0, num_inter),
+  prior_EX_mu_sd_inter = rep(sqrt(2) / 2, num_inter),
+  prior_EX_tau_mean_inter = matrix(log(0.25), nrow = num_strata, ncol = num_inter),
+  prior_EX_tau_sd_inter = matrix(log(2) / 1.96, nrow = num_strata, ncol = num_inter),
+  prior_EX_prob_comp = matrix(0.9, nrow = num_groups, ncol = num_comp),
+  prior_EX_prob_inter = matrix(1.0, nrow = num_groups, ncol = num_inter),
+  prior_is_EXNEX_comp = rep(TRUE, num_comp),
+  prior_is_EXNEX_inter = rep(FALSE, num_inter),
+  prior_tau_dist = 1,
+  prior_PD = FALSE
+)
 ## Recover user set sampling defaults
 options(.user_mc_options)
 

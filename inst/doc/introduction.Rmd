@@ -8,37 +8,41 @@ vignette: >
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 ---
-
+  
   
 ```{r, include=FALSE}
 library(OncoBayes2)
 library(knitr)
-library(ggplot2)
-  
-theme_set(bayesplot::bayesplot_theme_get())
-  
+
+ggplot2::theme_set(bayesplot::bayesplot_theme_get())
+
 knitr::opts_chunk$set(
-  fig.width = 1.62*4,
-  fig.height = 4
+fig.width = 1.62*4,
+fig.height = 4,
+warning=FALSE,
+message=FALSE
 )
 ## setup up fast sampling when run on CRAN
-is_CRAN <- !identical(Sys.getenv("NOT_CRAN"), "true")
+is_CRAN <- !identical(Sys.getenv("NOT_CRAN", "false"), "true")
 ## NOTE: for running this vignette locally, please uncomment the
 ## following line:
-## is_CRAN <- TRUE
+##is_CRAN <- FALSE
 .user_mc_options <- list()
 
 if (is_CRAN) {
-  .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1, OncoBayes2.MC.save_warmup=FALSE)
+} else {
+.user_mc_options <- options(OncoBayes2.MC.warmup=500, OncoBayes2.MC.iter=1000, OncoBayes2.MC.chains=4, OncoBayes2.MC.save_warmup=FALSE)
+options(mc.cores=parallel::detectCores(logical=FALSE))
 }
 
-options(warn = -1)
+##options(warn = -1)
 
 ```
 
 
 ## Introduction
-  
+
 The `OncoBayes2` package provides flexible functions for Bayesian
 meta-analytic modeling of the incidence of Dose Limiting Toxicities
 (DLTs) by dose level, under treatment regimes involving any number of
@@ -54,25 +58,65 @@ such as those using Bayesian Logistic Regression Models (BLRMs) endeavor
 to model the dose-toxicity relationship as a continuous curve, and 
 allow the model to guide dosing decisions. In this way, all available data
 contributes to the dosing decisions. Furthermore, extensions to the BLRM
-approach can support inclusion of available historical data on the 
-compound(s) involved.
-  
-The package supports incorporation of historical data through a
-Meta-Analytic-Combined (MAC) framework [1], which stratifies these
-heterogeneous sources of information through a hierarchical
-model. Additionally, it allows the use of
-EXchangeable/Non-EXchangeable (EX/NEX) priors to manage the amount of
-information-sharing across subgroups of historical and/or concurrent
-sources of data.
+approach can support inclusion of available additional data on the 
+compound(s) involved. The additional data can be either historical
+data collected prior trial conduct or concurrent data, which is
+collected during trial conduct in the context of another trial/context.
+
+The package supports incorporation of additional data through a
+Meta-Analytic-Combined (MAC) framework [1]. Within the MAC model the
+hetergeneous sources of data are assigned to *groups* and information
+is shared accross groups through a hierarchial model structure. For
+any given group this leads to borrowing strength from all other groups
+while discounting the information from other groups. The amount of
+discounting (or down-weighting) is determined by the heterogeniety. A
+group is commonly defined to be a trial, but that must not necessarily
+hold.
+
+The key assumption of the hierarhical model is the exchangability
+assumption between the groups. There are two independent mechanisms in
+the package which aim at relaxing the exchangability assumption:
+
+- Differential discounting: Groups are assigned to different
+strata. While the overal hierarchical mean stays the same, the
+heterogeniety between groups is allowed to be different between
+strata. Each group must be assigned to a single stratum only.
+
+- EXchangeable/Non-EXchangeable (EX/NEX) model for each group: With
+EXNEX each group is modelled as being exchangable with some
+probability and is allowed to have it's own group-specific estimate
+as if the grup is not exchangable with the remainder of the data.
+
+Both techniques are rather advanced and are not discussed further in
+this introduction.
+
+In the following we illustrate first a very common use case of
+historical information only and then consider concurrent data in
+addition. In particular, we will discuss a trial evaluating a
+combination of two drugs whenever historical information is available
+on each drug individually from separate trials. This example will be
+expanded by using in addition concurrent data on one of the drugs and
+on their combination.
+
+**Note on terminology:** While in the literature (see [1], [2], and
+[4]) the term *stratum* refers to a trial commonly, `OncoBayes2`
+deviates here and uses the term *group* instead. This is more in line
+with hierarchical modeling terminology. The term *stratum* is used to
+define a higher level grouping structure. That is, every group is
+assigned to a single *stratum* within `OncoBayes2`. This higher level
+grouping (groups of groups) is necessary whenever differential
+discounting is used. By convention `OncoBayes2` assigns any group to
+the stratum "all" whenever no stratum is assigned for a group.
 
 ```{r, message = FALSE}
 ## Load involved packages
-library(dplyr)  ## for mutate
-library(tidyr)  ## defines expand_grid
-library(tibble) ## for tibbles
+library(dplyr)   ## for mutate
+library(tidyr)   ## defines expand_grid
+library(tibble)  ## for tibbles
+library(ggplot2) ## for plotting
 ```
 
-## Example use-case
+## Example use-case: Dual combination trial with historical information
 
 Consider the application described in Section 3.2 of [1], in which the
 risk of DLT is to be studied as a function of dose for two drugs, drug
@@ -80,7 +124,7 @@ A and drug B. Historical information on the toxicity profiles of these
 two drugs is available from single agent trials `trial_A` and
 `trial_B`. The historical data for this example is available in an
 internal data set.
-  
+
 ```{r}
 kable(hist_combo2)
 ```
@@ -94,10 +138,12 @@ unobserved factor levels. This mechanism allows us to specify a joint
 meta-analytic prior for all four sources of historical and concurrent
 data.
 
-```{r}
+```{r,echo=TRUE}
 levels(hist_combo2$group_id)
 ```
 
+However, we will first consider only the dual combination trial AB and
+it's historical data and add concurrent data at a later stage.
 
 ### Setting up the trial design
 
@@ -113,7 +159,7 @@ details.
 
 One begins with `blrm_trial` by specifying three key design elements:
 
-* The dose-toxicity data
+* The historical dose-toxicity data
 * Information about the study drugs
 * The provisional dose levels to be studied during the escalation trial
 
@@ -136,11 +182,12 @@ kable(drug_info_combo2)
 #### Dose info
 
 The provisional dose levels are specified as below. For conciseness, we 
-begin by fixing the dose level of drug A in these provisional doses.
+limit the dose level of in these provisional doses.
 
 
 ```{r}
-dose_info <- filter(dose_info_combo2, group_id == "trial_AB", drug_A == 3)
+dose_info <- filter(dose_info_combo2, group_id == "trial_AB",
+                    drug_A %in% c(3,6), drug_B %in% c(0,400, 800))
 kable(dose_info)
 ```
 
@@ -154,12 +201,9 @@ can be used to initialize a `blrm_trial` object.
 combo2_trial_setup <- blrm_trial(
   data = hist_combo2,
   drug_info = drug_info_combo2,
-  dose_info = dose_info,
-  simplified_prior = FALSE
+  dose_info = dose_info
 )
 ```
-
-
 
 ### Specifying the prior and fitting the model
 
@@ -170,17 +214,20 @@ prior distribution for the dose-toxicity model.
 OncoBayes2 provides two methods for completing the model specification:
 
 1. Use `simplified_prior = TRUE`, which employs a package-default
-prior distribution, subject to a small number of optional
-arguments controlling the details.
+prior distribution, subject to a small number of optional arguments
+controlling the details.
 
-2. Provide a full prior specification to be passed to the main model-fitting
-engine of OncoBayes2: the `blrm_exnex` function.
+2. Provide a full prior specification to be passed to the `blrm_exnex`
+function.
 
-For illustrative purposes, here we highlight method #1. See 
-`?'example-combo2_trial'` for an example of #2. The below
-choice of prior broadly follows the case study in [4], although we 
-slightly deviate from the model in [4] by allowing an 
-EXchangeable/Non-EXchangeable prior for the drug components.
+For simplicity and concicneness purposes, here we use method #1, which
+is not recommended for actual trials as the prior should be choosen
+deliberatley and there is no gurantee that the simplified prior will
+remain stable accross releases of the package. See
+`?'example-combo2_trial'` for an example of #2. The below choice of
+prior broadly follows the case study in [4], although we slightly
+deviate from the model in [4] by a different reference dose and mean
+reference DLT rate.
 
 To employ the simplified prior, and fit the model with MCMC:
 
@@ -190,14 +237,16 @@ combo2_trial_start <- blrm_trial(
   drug_info = drug_info_combo2,
   dose_info = dose_info,
   simplified_prior = TRUE,
-  EX_prob_comp_hist = 0.8,
-  EX_prob_comp_new = 1
+  EXNEX_comp=FALSE,
+  EX_prob_comp_hist=1,
+  EX_prob_comp_new=1
 )
 ```
 
-Now, the object `combo2_trial_start` contains the posterior
-model fit, in addition to the trial design details. Next we highlight
-the main methods for extracting relevant information from it.
+Now, the object `combo2_trial_start` contains the posterior model fit
+at the start of the trial, in addition to the trial design
+details. Next we highlight the main methods for extracting relevant
+information from it.
 
 ### Summary of prior specification
 
@@ -234,15 +283,14 @@ The BLRM allows a principled approach to predicting the number of DLTs
 that may be observed in a future cohort. This may be a key estimand
 for understanding and limiting the toxicity risk to patients. For example,
 suppose a candidate starting dose for the new trial `trial_AB` is
-3 mg of Drug A + 400 mg of Drug B. We may wish to check that at this
-dose, the estimated probability of 2 or more DLTs out of
+3 mg of drug A + 400 mg of drug B. We may wish to check that at this
+dose, the predictive probability of 2 or more DLTs out of
 an initial cohort of 3 to 6 patients is sufficiently low. 
 
 ```{r}
 candidate_starting_dose <- summary(combo2_trial_start, "dose_info") %>%
   filter(drug_A == 3, drug_B == 400) %>%
-  expand_grid(num_patients = 3:6) %>%
-  mutate(num_toxicities = 0)
+  crossing(num_toxicities = 0, num_patients = 3:6)
 
 pp_summary <- summary(combo2_trial_start, interval_prob = c(-1, 0, 1, 6), predictive = TRUE,
                       newdata = candidate_starting_dose)
@@ -259,9 +307,10 @@ depending on the number of patients enrolled.
 
 ### Updating the model with new data
 
-Dose-escalation designs are adaptive in nature, as dosing decisions are made
-after each sequential cohort. The model must be updated after each 
-new enrollment. If a new cohort of patients is observed, say:
+Dose-escalation designs are adaptive in nature, as dosing decisions
+are made after each sequential cohort. The model must be updated with
+the accrued data for each dose escalation decision point.  If a new
+cohort of patients is observed, say:
 
 ```{r}
 new_cohort <- tibble(group_id = "trial_AB",
@@ -279,8 +328,17 @@ combo2_trial_update <- update(combo2_trial_start, add_data = new_cohort)
 ```
 
 This yields a new `blrm_trial` object with updated data and 
-posterior summaries. Below is the method for obtaining posterior estimates at 
-the next highest dose of drug A.
+posterior summaries. Obtaining the summaries for the pre-planned
+provisional doses is then again straightforward:
+
+```{r}
+kable(summary(combo2_trial_update, "dose_prediction"), digits = 2)
+```
+
+In case posterior summaries are needed for doses other than the
+pre-planned ones, then this is possible using the `newdata_prediction`
+functionality, which allows to specify a different set of doses via
+the `newdata` argument:
 
 ```{r}
 kable(summary(combo2_trial_update, "newdata_prediction",
@@ -299,7 +357,7 @@ model responds in various scenarios for upcoming cohorts.
 This can be done easily by again using `update()` with the 
 `add_data` argument. In the code below, we
 explore 3 possible outcomes for a subsequent cohort enrolled at 3 mg
-Drug A + 800 mg Drug B, and review the model's inference at adjacent
+drug A + 800 mg drug B, and review the model's inference at adjacent
 doses. 
 
 ```{r, message = FALSE, echo = TRUE, results = "hide"}
@@ -311,7 +369,7 @@ scenarios <- expand_grid(
   drug_B = 800,
   num_patients = 3,
   num_toxicities = 0:2
-) %>% split(1:3) %>% setNames(paste(0:2, "DLTs"))
+) %>% split(1:3) %>% setNames(paste0(0:2, "/3 DLTs"))
 
 candidate_doses <- expand_grid(
   group_id = "trial_AB",
@@ -319,63 +377,154 @@ candidate_doses <- expand_grid(
   drug_B = c(600, 800)
 )
 
-
 scenario_inference <- lapply(scenarios, function(scenario_newdata) {
-  
   # refit the model with each scenario's additional data
   scenario_fit <- update(combo2_trial_update, add_data = scenario_newdata)
-  
   # summarize posterior at candidate doses
   summary(scenario_fit, "newdata_prediction", newdata = candidate_doses)
-  
-})
+}) %>%
+  bind_rows(.id="Scenario")
 
 ```
 
 
 ```{r, echo = FALSE}
-kable(scenario_inference[["0 DLTs"]], digits = 2,
-      caption = "Model inference when 0 DLTs are observed in the next cohort")
+kable(select(scenario_inference, -group_id, -stratum_id, -dose_id), digits = 2,
+      caption = "Model inference for trial AB when varying hypothetical DLT scenarios for a cohort of size 3")
 ```
 
-```{r, echo = FALSE}
-kable(scenario_inference[["1 DLTs"]], digits = 2,
-      caption = "Model inference when 1 DLT is observed in the next cohort")
-```
+## Continuation of example: Using concurrent data
 
-```{r, echo = FALSE}
-kable(scenario_inference[["2 DLTs"]], digits = 2,
-      caption = "Model inference when 2 DLTs are observed in the next cohort")
-```
-
-## Continuation of example
-
-In the example of [1], at the time of completion of `trial_AB`, the
-following additional data was observed.
+In the example of [1], at the time of completion of the first stage of
+`trial_AB`, the following additional data was observed.
 
 ```{r}
-kable(filter(codata_combo2, cohort_time > 0))
+trial_AB_data <- filter(codata_combo2, group_id == "trial_AB", cohort_time==1)
+kable(trial_AB_data)
 ```
 
-Numerous toxicities were observed in the concurrent `IIT`
-study. Through the MAC framework, these data can influence the model
-summaries for `trial_AB`. Note that we use the `update` function
-differently than before, since we specify the entire data-set now we
-use the `data` argument.
+These data are easily incorporated into the model using another call to 
+`update`, as below.
 
 ```{r, message = FALSE, echo = TRUE, results = "hide"}
-final_fit <- update(combo2_trial_start, data = codata_combo2)
+combo2_trial_histdata <- update(combo2_trial_start, add_data = trial_AB_data)
 ```
 
+However, during the first stage of `trial_AB`, the `trial_A` studying
+drug A did continue and collected more data on the drug A
+dose-toxicity relationship:
 
-Model results can be visualized using package functions. See 
-`?plot_toxicity_curve` for details.
+```{r}
+trial_A_codata <- filter(codata_combo2, group_id == "trial_A", cohort_time==1)
+kable(trial_A_codata)
+```
+
+Wthin the MAC framework we may simply add the concurrent data to our
+overall model which yields refined predictions for future cohorts.
+
+
+```{r, message = FALSE, echo = TRUE, results = "hide"}
+combo2_trial_codata <- update(combo2_trial_histdata, add_data = trial_A_codata)
+```
+
+To compare the effect of co-data in this case it is simplest to
+visualize the interval probabilities as predicted by the model for the
+different data constellations. Here we use the function
+`plot_toxicity_intervals_stacked` to explore the dose-toxicity
+relationship in a continuous manner in terms of the dose.
+
+```{r, fig.height = 1.2 * 4, fig.width=1.62 * 4}
+
+plot_toxicity_intervals_stacked(combo2_trial_histdata,
+                                newdata=mutate(dose_info, dose_id=NULL, stratum_id="all"),
+                                x = vars(drug_B),
+                                group = vars(drug_A),
+                                facet_args = list(ncol = 1)
+) + ggtitle("Trial AB with historical data only")
+
+plot_toxicity_intervals_stacked(combo2_trial_codata,
+                                newdata=mutate(dose_info, dose_id=NULL, stratum_id="all"),
+                                x = vars(drug_B),
+                                group = vars(drug_A),
+                                facet_args = list(ncol = 1)
+) + ggtitle("Trial AB with historical and concurrent data on drug A")
+
+```
+
+As we can observe, the additional data on drug A moves the maximal
+admissable dose allowed by EWOC towards higher doses for drug B
+whenever drug A is 6 mg. This reflects that drug A has been observed
+to be relatively safe, since no DLT was observed for a number of doses.
+
+In the example of [1], during the conduct of the second satge of the
+`trial_AB` an additional external data source from a new trial became
+available. This time it is stemming from another trial which is 
+an investigator-initiated trial `IIT` of the same combination.
+Numerous toxicities were observed in this concurrent study as stage 2 of
+`trial_AB`.
+
+```{r}
+trial_AB_stage_2_codata <- filter(codata_combo2, cohort_time==2)
+kable(trial_AB_stage_2_codata)
+```
+
+As before, through the MAC framework, these data can influence the
+model summaries for `trial_AB`. We leave it to the reader to explore
+the differences in the co-data (combined historical and concurrent
+data) vs the historical data only approach.
+
+To conclude we present a graphical summary of the dose-toxicity
+relationship for the dual combination trial for the final data
+constellation. Note that we use the `data` option of `update` here to
+ensure that we use an entirely new dataset which includes all data
+collected; so this includes historical, trial and concurrent data:
+
+```{r, message = FALSE, echo = TRUE, results = "hide"}
+combo2_trial_final <- update(combo2_trial_start, data = codata_combo2)
+```
+
+As final summary we consider the 75% quantile of the probability for a
+DLT at all dose combinations. Whenever the 75% quantile exceeds 33%,
+then the EWOC criterium is violated and the dose is too toxic.
 
 ```{r, fig.height = 1.05 * 4, fig.width=1.62 * 4}
-plot_toxicity_curve(final_fit, x = vars(drug_B), group = vars(group_id, drug_A),
-                    facet_args = list(ncol = 1))
+
+grid_length <- 25
+
+dose_info_plot_grid <- expand_grid(stratum_id = "all",
+                                   group_id = "trial_AB",
+                                   drug_A=seq(min(dose_info_combo2$drug_A), max(dose_info_combo2$drug_A), length.out=grid_length),
+                                   drug_B=seq(min(dose_info_combo2$drug_B), max(dose_info_combo2$drug_B), length.out=grid_length))
+
+
+dose_info_plot_grid_sum <- summary(combo2_trial_final,
+                                   newdata=dose_info_plot_grid,
+                                   prob=0.5)
+
+ggplot(dose_info_plot_grid_sum, aes(drug_A, drug_B, z = !!as.name("75%"))) +
+  geom_contour_filled(breaks=c(0, 0.1, 0.16, 0.33, 1)) +
+  scale_fill_brewer("Quantile Range", type="div", palette = "RdBu", direction=-1) +
+  ggtitle("DLT Probability 75% Quantile")
 
 ```
+
+<!---
+## Advanced topics
+
+### Grouping and stratification factors
+
+A brief note on terminology: the `group_id` variable, present in the `data`
+and `dose_info` arguments of a `blrm_trial` object, divides observations and
+dose levels into homogeneous groups sharing the same set of parameters
+in the hierarchical model. These `group_id`'s are referred to as "strata"
+in [1], [2], and [4]. No confusion should arise between this terminology
+and the `stratum_id` variable, an optional set of higher-level stratifying
+factors which can serve to divide the `group_id`'s into classes which 
+share the same heterogeneity parameters. For more information on models
+employing multiple `stratum_id`'s, the user is referred to the
+section of `?blrm_exnex` on differential discounting, and to 
+`?example-combo3` for an example.
+-->
 
 ## References
 

@@ -5,7 +5,7 @@
 #' \code{HistAgent1} and \code{HistAgent2}, historical data is available on each
 #' of the treatments as single-agents, as well as two of the two-way
 #' combinations. However, due to a difference in treatment schedule between the
-#' \code{Combo} study and the historical studies, a stratification (through \code{stratum})
+#' \code{Combo} study and the historical studies, a stratification (through \code{stratum_id})
 #' is made between the groups to allow differential discounting of the
 #' alternate-dose data.
 #'
@@ -17,7 +17,7 @@
 #'   \item{drug_C}{dose of Drug C}
 #'   \item{num_patients}{number of patients}
 #'   \item{num_toxicities}{number of DLTs}
-#'   \item{stratum}{stratum for \code{group_id}'s used for differential discounting}
+#'   \item{stratum_id}{stratum for \code{group_id}'s used for differential discounting}
 #' }
 #'
 #' @template start-example

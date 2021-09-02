@@ -1,6 +1,6 @@
 context("posterior evaluations")
 
-fake_sampling()
+## DO NOT USE fake_sampling()
 combo2 <- run_example("combo2")
 combo3 <- run_example("combo3")
 
@@ -51,8 +51,8 @@ test_that("Unkown groups are rejected in posterior_* functions.", {
 
 test_that("Unkown strata are rejected in posterior_* functions.", {
     hist_combo3_alt  <- hist_combo3
-    old_levs <- levels(hist_combo3_alt$stratum)
-    levels(hist_combo3_alt$stratum)[1] <- "BIDflex"
+    old_levs <- levels(hist_combo3_alt$stratum_id)
+    levels(hist_combo3_alt$stratum_id)[1] <- "BIDflex"
     combo3$hist_combo3_alt  <- hist_combo3_alt
 
     expect_error(with(combo3, posterior_predict(blrmfit, newdata=hist_combo3_alt)),
@@ -60,16 +60,16 @@ test_that("Unkown strata are rejected in posterior_* functions.", {
     expect_error(with(combo3, posterior_linpred(blrmfit, newdata=hist_combo3_alt)),
                  regexp="Found unkown factor levels in stratum: BIDflex")
 
-    ## same error if the stratum is a character instead
-    combo3$hist_combo3_alt$stratum <- as.character(combo3$hist_combo3_alt$stratum)
+    ## same error if the stratum_id is a character instead
+    combo3$hist_combo3_alt$stratum_id <- as.character(combo3$hist_combo3_alt$stratum_id)
     expect_error(with(combo3, posterior_predict(blrmfit, newdata=hist_combo3_alt)),
                  regexp="Found unkown factor levels in stratum: BIDflex")
     expect_error(with(combo3, posterior_linpred(blrmfit, newdata=hist_combo3_alt)),
                  regexp="Found unkown factor levels in stratum: BIDflex")
 
     ## flip the level definitions
-    combo3$hist_combo3_alt$stratum <- hist_combo3$stratum
-    levels(combo3$hist_combo3_alt$stratum)[1:2] <- levels(hist_combo3$stratum)[2:1]
+    combo3$hist_combo3_alt$stratum_id <- hist_combo3$stratum_id
+    levels(combo3$hist_combo3_alt$stratum_id)[1:2] <- levels(hist_combo3$stratum_id)[2:1]
     expect_error(with(combo3, posterior_predict(blrmfit, newdata=hist_combo3_alt)),
                  regexp="Mismatch in factor level defintion of stratum")
     expect_error(with(combo3, posterior_linpred(blrmfit, newdata=hist_combo3_alt)),

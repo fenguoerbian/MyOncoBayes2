@@ -1,3 +1,34 @@
+September 1st, 2021 (0.8-1)
+
+* Address CRAN comments
+
+August 31st, 2021 (0.8-0)
+
+* Significantly speedup Stan model by dropping normalization of binomial
+* The default interaction model for blrm_trial is now saturating
+  (blrm_formula_saturating) in logit space, improving behavior for combinations 
+  with antagonistic toxicity.
+* blrm_trial simplified prior now defaults to ENXEX off, and prior parameter
+  defaults have been updated.
+* New save_warmup argument to blrm_exnex can be used to disable saving of warmup
+  samples, which defaults to the OncoBayes2.MC.save_warmup option, which 
+  defaults to TRUE in line with previous versions.
+  NOTE: Starting with the next version 0.9.0 the new default will be FALSE!
+* Do not crash for summary(trial, "data_prediction") if blrm_trial has NULL or 
+  0-row data
+* Spurious warning for dose_id NA on blrm_trial instantiation removed
+* Spurious warning for dose not prespecified on summary(..., newdata=...)
+  removed
+* New plot function plot_toxicity_intervals_stacked(), which visualizes model
+  posterior or predictive probabilities in discrete intervals, over a continuous
+  range of doses
+* Automated visual regression testing implemented using the vdiffr package
+* Fix in plot_toxicity_curve to avoid overplotting if newdata contains columns
+  other than grouping variables and doses (e.g. dose_id)
+* Avoid re-parsing model formula whenever newdata is not used in
+  respective functions. This prevents that changes to global variables
+  (like dref) have any effect whenever the fitted data only is used.
+
 May 7th, 2021 (0.7-0)
 
 * Catch data specification errors for wrongly nested groups/strata

@@ -2,7 +2,7 @@ context("examples")
 
 ## run examples with super-slim sampling to make sure they actually
 ## run
-fake_sampling()
+## DO NOT USE fake_sampling()
 
 if(FALSE) {
     ## does not run atm for odd reasons

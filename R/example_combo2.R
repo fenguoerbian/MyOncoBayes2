@@ -40,8 +40,10 @@
 #' \deqn{\boldsymbol\theta_{ij} \sim \mbox{BVN}(\boldsymbol \mu_i, \boldsymbol\Sigma_i).}
 #' For the mean, a further prior is specified as
 #' \deqn{\boldsymbol\mu_i = (\mu_{\alpha i}, \mu_{\beta i}) \sim \mbox{BVN}(\boldsymbol m_i, \boldsymbol S_i),}
-#' with \eqn{\boldsymbol m_i = (\mbox{logit}\, 0.1, \log 1)} and
-#' \eqn{\boldsymbol S_i  = \mbox{diag}(3.33^2, 1^2)} for each \eqn{i = 1,2}.
+#' while in the manuscript the prior \eqn{\boldsymbol m_i = (\mbox{logit}\, 0.1, \log 1)} and
+#' \eqn{\boldsymbol S_i  = \mbox{diag}(3.33^2, 1^2)} for each \eqn{i = 1,2} is
+#' used, we deviate here and use instead \eqn{\boldsymbol m_i = (\mbox{logit}\, 0.2, \log 1)} and
+#' \eqn{\boldsymbol S_i  = \mbox{diag}(2^2, 1^2)}.
 #' For the standard deviations and correlation parameters in the covariance matrix,
 #' \deqn{\boldsymbol\Sigma_i = \left( \begin{array}{cc}
 #' \tau^2_{\alpha i} & \rho_i \tau_{\alpha i} \tau_{\beta i}\\

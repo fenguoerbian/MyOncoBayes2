@@ -319,7 +319,7 @@
 #'
 #' # summary of posterior for DLT rate by dose for new set of covariate levels
 #' newdata <- expand.grid(
-#'   stratum = "BID", group_id = "Combo",
+#'   stratum_id = "BID", group_id = "Combo",
 #'   drug_A = 400, drug_B = 800, drug_C = c(320, 400, 600, 800),
 #'   stringsAsFactors = FALSE
 #' )
@@ -332,7 +332,7 @@
 #' library(dplyr)
 #' blrmfit_new <- update(blrmfit,
 #'                       data = rbind(hist_combo3, newdata) %>%
-#'                                arrange(stratum, group_id))
+#'                                arrange(stratum_id, group_id))
 #'
 #' # updated posterior summary
 #' summ_upd <- summary(blrmfit_new, newdata = newdata, interval_prob = c(0, 0.16, 0.33, 1))
@@ -363,6 +363,7 @@ blrm_exnex <- function(formula,
                        prior_tau_dist,
                        iter=getOption("OncoBayes2.MC.iter" , 2000),
                        warmup=getOption("OncoBayes2.MC.warmup", 1000),
+                       save_warmup=getOption("OncoBayes2.MC.save_warmup", TRUE),
                        thin=getOption("OncoBayes2.MC.thin", 1),
                        init=getOption("OncoBayes2.MC.init", 0.5),
                        chains=getOption("OncoBayes2.MC.chains", 4),
@@ -394,7 +395,7 @@ blrm_exnex <- function(formula,
 
     mt <- attr(mf, "terms")
 
-    for (i in 1:num_rhs_terms) {
+    for (i in seq_len(num_rhs_terms)) {
         tc <- terms(f, rhs=i)
         nt <- length(tc)-1
         if(nt == 2 && attr(tc, "intercept") == 1 )
@@ -411,7 +412,7 @@ blrm_exnex <- function(formula,
     ## we only support a single LHS
     assert_that(length(f)[1] == 1)
     ## check that we have an overall intercept for all components
-    for (i in 1:num_comp)
+    for (i in seq_len(num_comp))
         assert_that(attr(terms(f, rhs=i), "intercept") == 1, msg="Intercept must be present for all components.")
 
     ## the interaction model must not have an intercept
@@ -468,7 +469,7 @@ blrm_exnex <- function(formula,
     .validate_group_stratum_nesting(group_index, strata_index)
 
     ## obtain group => stratum map ordered by group id
-    group_strata <- data.frame(group_index=1:num_groups) %>%
+    group_strata <- data.frame(group_index=seq_len(num_groups)) %>%
         left_join(unique(data.frame(group_index=group_index, strata_index=strata_index)), by="group_index")
     ## since we allow groups to be specified through the factors,
     ## there can be groups without a stratum defined in case one level
@@ -481,20 +482,10 @@ blrm_exnex <- function(formula,
     }
     group_index <- array(group_index)
 
-    ## setup design matrices which must have intercept and slope
-    X_comp <- list()
-    X_comp_cols <- list()
-    for (i in 1:num_comp) {
-        X_comp <- c(X_comp, list(model.matrix(f, mf, rhs=i)))
-        X_comp_cols <- c(X_comp_cols, list(colnames( X_comp[[i]] )))
-        assert_matrix(X_comp[[i]], ncols=2, any.missing=FALSE)
-    }
-    X_comp <- do.call(abind, c(X_comp, list(along=0)))
-
-    if(has_inter)
-        X_inter <- model.matrix(f, mf, rhs=idx_inter_term)
-    else
-        X_inter <- model.matrix(~0, mf)
+    X <- .get_X(f, mf, num_comp, has_inter, idx_inter_term)
+    X_comp  <- X$comp
+    X_comp_cols  <- X$comp_cols
+    X_inter <- X$inter
 
     num_inter <- ncol(X_inter)
     has_inter <- num_inter > 0
@@ -567,10 +558,52 @@ blrm_exnex <- function(formula,
     assert_numeric(prior_NEX_mu_mean_inter, any.missing=FALSE, len=num_inter)
     assert_numeric(prior_NEX_mu_sd_inter, any.missing=FALSE, len=num_inter, lower=0)
 
-    if(missing(prior_is_EXNEX_comp))
-        prior_is_EXNEX_comp <- rep(TRUE, num_comp)
-    if(missing(prior_is_EXNEX_inter))
-        prior_is_EXNEX_inter <- rep(FALSE, num_inter)
+    if(missing(prior_is_EXNEX_comp)) {
+        prior_is_EXNEX_comp <- apply(prior_EX_prob_comp < 1, 2, any)
+    } else {
+
+        assert_that(
+            !any(!prior_is_EXNEX_comp & apply(prior_EX_prob_comp < 1, 2, any)),
+            msg = paste("At least one drug component has",
+                        "prior_is_ENXEX_comp = FALSE, but",
+                        "prior_EX_prob_comp < 1 for one or more group_id's.",
+                        "For these component(s), if an EXNEX prior is desired",
+                        "set prior_is_EXNEX_comp = TRUE. Otherwise, if a",
+                        "fully exchangeable prior is desired, set",
+                        "prior_is_EX_prob_comp = 1.")
+        )
+        if(any((prior_is_EXNEX_comp & apply(prior_EX_prob_comp == 1, 2, all)))) {
+          warning(paste("At least one drug component has",
+                     "prior_is_ENXEX_comp = TRUE, but",
+                     "prior_EX_prob_comp = 1 for every group_id.",
+                     "The sampler will be more efficient if",
+                     "prior_is_EXNEX_comp is set to FALSE for those",
+                     "component(s)."))
+        }
+    }
+
+    if(missing(prior_is_EXNEX_inter)) {
+        prior_is_EXNEX_inter <- apply(prior_EX_prob_inter < 1, 2, any)
+    } else {
+        assert_that(
+            !any(!prior_is_EXNEX_inter & apply(prior_EX_prob_inter < 1, 2, any)),
+            msg=paste("At least one drug component has",
+                      "prior_is_ENXEX_inter = FALSE, but",
+                      "prior_EX_prob_inter < 1 for one or more group_id's.",
+                      "For these interaction(s), if an EXNEX prior is desired",
+                      "set prior_is_EXNEX_inter = TRUE. Otherwise, if a",
+                      "fully exchangeable prior is desired, set",
+                      "prior_is_EX_prob_inter = 1.")
+        )
+        if(any((prior_is_EXNEX_inter & apply(prior_EX_prob_inter == 1, 2, all)))) {
+          warning(paste("At least one interaction prior has",
+                     "prior_is_ENXEX_inter = TRUE, but",
+                     "prior_EX_prob_inter = 1 for every group_id.",
+                     "The sampler will be more efficient if",
+                     "prior_is_EXNEX_inter is set to FALSE for those",
+                     "interaction(s)."))
+        }
+    }
     assert_logical(prior_is_EXNEX_comp, any.missing=FALSE, len=num_comp)
     assert_logical(prior_is_EXNEX_inter, any.missing=FALSE, len=num_inter)
 
@@ -629,15 +662,15 @@ blrm_exnex <- function(formula,
                                                           control=control_sampling,
                                                           algorithm = "NUTS",
                                                           open_progress=FALSE,
-                                                          save_warmup=TRUE
+                                                          save_warmup=save_warmup
                                                           ))
-    if(attributes(stanfit)$mode != 0)
-        stop("Stan sampler did not run successfully!")
-
     ## only display Stan messages in verbose mode
     if(verbose) {
         cat(paste(c(stan_msg, ""), collapse="\n"))
     }
+
+    if(attributes(stanfit)$mode != 0)
+        stop("Stan sampler did not run successfully!")
 
     ## label parameters of stanfit object
     labels <- list()
@@ -680,6 +713,26 @@ blrm_exnex <- function(formula,
 }
 
 
+#' Obtain design matrices.
+#' @keywords internal
+.get_X <- function(formula, model_frame, num_comp, has_inter, idx_inter_term) {
+    ## setup design matrices which must have intercept and slope
+    X_comp <- list()
+    X_comp_cols <- list()
+    for (i in seq_len(num_comp)) {
+        X_comp <- c(X_comp, list(model.matrix(formula, model_frame, rhs=i)))
+        X_comp_cols <- c(X_comp_cols, list(colnames( X_comp[[i]] )))
+        assert_matrix(X_comp[[i]], ncols=2, any.missing=FALSE)
+    }
+    X_comp <- do.call(abind, c(X_comp, list(along=0)))
+
+    if(has_inter)
+        X_inter <- model.matrix(formula, model_frame, rhs=idx_inter_term)
+    else
+        X_inter <- model.matrix(~0, model_frame)
+
+    list(comp=X_comp, inter=X_inter, comp_cols=X_comp_cols)
+}
 
 #'
 #' @describeIn blrm_exnex print function.
@@ -812,16 +865,16 @@ print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
         idx_str  <- matrix(idx_str, ncol=1)
     }
     ni  <- ncol(idx_str)
-    colnames(idx_str) <- paste0("idx_", 1:ni)
+    colnames(idx_str) <- paste0("idx_", seq_len(ni))
     idx_str <- as.data.frame(idx_str)
     assert_that(ni == length(fct), msg="Insufficient number of indices specified")
-    for(i in 1:ni) {
+    for(i in seq_len(ni)) {
         f <- fct[[i]]
-        key <- data.frame(idx=1:nlevels(f), label=levels(f))
+        key <- data.frame(idx=seq_len(nlevels(f)), label=levels(f))
         names(key) <- paste0(names(key), "_", i)
         idx_str <- left_join(idx_str, key, by=paste0("idx_", i))
     }
-    labs  <- paste0("label_", 1:ni)
+    labs  <- paste0("label_", seq_len(ni))
     names(stanfit)[idx] <- paste0(par, "[", do.call(paste, c(idx_str[labs], list(sep=","))), "]")
     stanfit
 }
@@ -834,7 +887,7 @@ print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
 }
 
 .make_label_factor <- function(labels) {
-    factor(1:length(labels), levels=1:length(labels), labels=labels)
+    factor(seq_along(labels), levels=seq_along(labels), labels=labels)
 }
 
 #' @method model.matrix blrmfit
@@ -848,7 +901,7 @@ model.matrix.blrmfit <- function(object, ...) {
 #' otherwise.
 #' @param group_def groups of data
 #' @param strata_def assigned stratum to group
-#' @keyword internal
+#' @keywords internal
 .validate_group_stratum_nesting <- function(group_def, strata_def) {
     group_id <- strata_id  <- NULL
     strata_per_group <- data.frame(group_id=group_def, strata_id=strata_def) %>%

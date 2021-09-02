@@ -5,7 +5,7 @@
 \alias{dose_info_combo2}
 \title{Dataset: trial dose information for a dual-agent combination study}
 \format{
-An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 33 rows and 4 columns.
+An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 42 rows and 4 columns.
 }
 \usage{
 dose_info_combo2

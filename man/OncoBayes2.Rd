@@ -19,6 +19,7 @@ drugs.
 Option \tab Default \tab Description \cr
 \code{OncoBayes2.MC.warmup} \tab 1000 \tab MCMC warmup iterations \cr
 \code{OncoBayes2.MC.iter} \tab 2000 \tab total MCMC iterations \cr
+\code{OncoBayes2.MC.save_warmup} \tab TRUE \tab save warmup samples \cr
 \code{OncoBayes2.MC.chains} \tab 4 \tab MCMC chains\cr
 \code{OncoBayes2.MC.thin} \tab 1 \tab MCMC thinning \cr
 \code{OncoBayes2.MC.control} \tab \code{list(adapt_delta=0.99,} \tab sets \code{control} argument for Stan call\cr

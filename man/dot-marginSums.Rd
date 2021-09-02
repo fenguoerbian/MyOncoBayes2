@@ -14,3 +14,4 @@
 \description{
 Backport from R 4
 }
+\keyword{internal}

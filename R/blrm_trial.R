@@ -212,13 +212,13 @@ blrm_trial <- function(
   drug_info,
 
   simplified_prior = FALSE,
-  EXNEX_comp = TRUE,
+  EXNEX_comp = FALSE,
   EX_prob_comp_hist = 1,
   EX_prob_comp_new = 0.8,
   EXNEX_inter = FALSE,
-  EX_prob_inter = 0.8,
+  EX_prob_inter = 1,
 
-  formula_generator = blrm_formula_linear,
+  formula_generator = blrm_formula_saturating,
 
   interval_prob = c(0, 0.16, 0.33, 1),
   interval_max_mass = c(prob_underdose = 1, prob_target=1, prob_overdose=0.25),
@@ -243,48 +243,26 @@ blrm_trial <- function(
   trial$dose_units <- drug_info$dose_unit
   trial$drug_info <- drug_info
 
-
   # Check dose_info
   dose_info <- .sanitize_dose_info(trial, dose_info)
-  # if (!has_name(dose_info, "stratum_id")) {
-  #   message("No stratum defined - assigning all groups to single stratum \"all\"")
-  #   dose_info[["stratum_id"]] <- "all"
-  # }
-  #
-  # assert_that(has_name(dose_info, "stratum_id"))
-  # assert_that(has_name(dose_info, "group_id"))
-  # assert_that(!has_name(dose_info, "num_patients"))
-  # assert_that(!has_name(dose_info, "num_toxicities"))
-  #
-  # # dose_info must have columns that correspond to drug name
-  # # Note: all() is needed for assertthat 0.2.0 compatibility
-  # assert_that(all(has_name(dose_info, trial$drug_info$drug_name)), msg="dose_info must use same drug names as specified in drug_info")
-  #
-  # if (!has_name(dose_info, "dose_id")) {
-  #   # warning("dose_info do not contain \"dose_id\" - adding \"dose_id\" column")
-  #   dose_info <- tibble::rowid_to_column(dose_info, "dose_id")
-  # }
 
   # Check data at t = 0
   if (is.null(data)) {
     list_args <- list()
 
-    if (is.factor(dose_info[["stratum_id"]])) {
-      list_args[["stratum_id"]] <- dose_info[["stratum_id"]][0]
-    } else {
-      list_args[["stratum_id"]] <- factor(dose_info[["stratum_id"]])[0]
+    if (!is.factor(dose_info[["stratum_id"]])) {
+      dose_info[["stratum_id"]] <- factor(dose_info[["stratum_id"]])
     }
+    list_args[["stratum_id"]] <- dose_info[["stratum_id"]][0]
+     
 
-    if (is.factor(dose_info[["group_id"]])) {
-      list_args[["group_id"]] <- dose_info[["group_id"]][0]
-    } else {
-      list_args[["group_id"]] <- factor(dose_info[["group_id"]])[0]
-    }
-
+    if (!is.factor(dose_info[["group_id"]])) {
+      dose_info[["group_id"]] <- factor(dose_info[["group_id"]])
+    } 
+    list_args[["group_id"]] <- dose_info[["group_id"]][0]
 
     list_args[["num_patients"]] <- numeric(0)
     list_args[["num_toxicities"]] <- numeric(0)
-
 
     for (drug_name in drug_info$drug_name)
     {
@@ -320,10 +298,6 @@ blrm_trial <- function(
   # Data must have columns that correspond to drug name
   assert_that(has_name(data, trial$drug_info$drug_name), msg="Data must use same drug names as specified in drug_info")
 
-  if (!has_name(data, "dose_id")) {
-    data$dose_id <- integer(1)*NA ## Make sure dose_id is an integer column
-  }
-
   # Define helper functions
   merge_to_factor_levels <- function(df_1, df_2, variable_name)
   {
@@ -354,6 +328,7 @@ blrm_trial <- function(
           )
         )
         all_level_strings <- all_level_df[[variable_name]]
+        
         all_factor_levels <- factor(all_level_strings, levels=all_level_strings)
       }
     }
@@ -387,10 +362,17 @@ blrm_trial <- function(
     drug_names = trial$drug_info$drug_name
   )
   trial$data <- data
-
+  
   # Save group and stratum factor levels
   trial$group_id_factor <- trial$data[["group_id"]][0]
   trial$stratum_id_factor <- trial$data[["stratum_id"]][0]
+  
+  trial$data <- .blrm_trial_sanitize_data(
+    trial, 
+    trial$data, 
+    trial_is_being_constructed = TRUE, # Do not test for blrm_trial object yet
+    warning_if_dose_not_prespecified = FALSE # Hist data does not need to be pre-specified
+  )
 
   # Create formula for individual components
   assert_class(formula_generator, "function")
@@ -424,9 +406,6 @@ blrm_trial <- function(
   trial$interval_prob <- interval_prob
 
   trial <- structure(trial, class="blrm_trial")
-
-  # Check our data more carefully before returning the object
-  .blrm_trial_sanitize_data(trial, data)
 
   if (simplified_prior) {
     # Create simplified prior
@@ -559,8 +538,15 @@ print.blrm_trial <- function(x, ...)
 
     interval_max <- as_tibble(as.list(interval_max_mass))
     interval_max <- interval_max[rep(1, times=nrow(trial_est_ewoc)),]
-
-    trial_est_ewoc$ewoc_ok <- rowSums( trial_est_intervals > interval_max ) == 0
+    
+    
+    if (nrow(interval_max) > 0)
+    {
+      trial_est_ewoc$ewoc_ok <- rowSums( trial_est_intervals > interval_max ) == 0
+    } else {
+      trial_est_ewoc$ewoc_ok <- logical(0)
+    }
+    
   } else {
     trial_est_ewoc$ewoc_ok <- TRUE
   }
@@ -623,7 +609,7 @@ print.blrm_trial <- function(x, ...)
   EX_prob_comp_hist,
   EX_prob_comp_new,
   EXNEX_inter,
-  EX_prob_inter, # TODO: Make EX_prob_inter for hist. data = 1 and new data .8?
+  EX_prob_inter, 
   ...
 )
 {
@@ -642,17 +628,17 @@ print.blrm_trial <- function(x, ...)
   ref_p_dlt  <- trial$drug_info$reference_p_dlt
   names(ref_p_dlt)  <- trial$drug_info$drug_name
   prior_EX_mu_mean_comp  <- substitute(cbind(logit(refs), rep(0, trial[["num_components"]])), list(refs=ref_p_dlt))
-  prior_EX_mu_sd_comp    <- substitute(matrix(c(2, 1), nrow = trial[["num_components"]], ncol = 2, byrow=TRUE))
+  prior_EX_mu_sd_comp    <- substitute(matrix(c(2, 0.7), nrow = trial[["num_components"]], ncol = 2, byrow=TRUE))
 
   ## Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}}
-  prior_EX_tau_mean_comp <- substitute(matrix(log(c(0.5, 0.25)), nrow = trial[["num_components"]], ncol = 2, byrow=TRUE))
-  prior_EX_tau_sd_comp <- substitute(matrix(log(4)/1.96, nrow = trial[["num_components"]], ncol = 2))
+  prior_EX_tau_mean_comp <- substitute(matrix(log(c(0.25, 0.125)), nrow = trial[["num_components"]], ncol = 2, byrow=TRUE))
+  prior_EX_tau_sd_comp <- substitute(matrix(log(c(4, 2))/1.96, nrow = trial[["num_components"]], ncol = 2))
 
   # Prior mean and sd on mu_{eta}
   prior_EX_mu_mean_inter  <- substitute(rep(0,   trial[["num_interaction_terms"]]))
-  prior_EX_mu_sd_inter    <- substitute(rep(0.5, trial[["num_interaction_terms"]]))
+  prior_EX_mu_sd_inter    <- substitute(rep(1.5, trial[["num_interaction_terms"]]))
   prior_EX_tau_mean_inter <- substitute(matrix(log(0.5)   , nrow = trial[["num_strata"]], ncol = trial[["num_interaction_terms"]]))
-  prior_EX_tau_sd_inter   <- substitute(matrix(log(4)/1.96, nrow = trial[["num_strata"]], ncol = trial[["num_interaction_terms"]]))
+  prior_EX_tau_sd_inter   <- substitute(matrix(log(2)/1.96, nrow = trial[["num_strata"]], ncol = trial[["num_interaction_terms"]]))
 
   prior_is_EXNEX_comp <- rep(EXNEX_comp, trial[["num_components"]])
 
@@ -660,18 +646,28 @@ print.blrm_trial <- function(x, ...)
   prior_EX_prob_comp <- matrix(NA, nrow = 0, ncol = trial[["num_components"]])
   ## Go in order of the factor levels
   for (group_name in levels(trial$group_id_factor)) {
-    if (nrow(filter(trial$data, group_id == group_name)) > 0 &&
-        nrow(filter(trial$dose_info, group_id == group_name)) == 0 ) {
-      ## There is exclusively historic data
-      prior_EX_prob_comp <- rbind(prior_EX_prob_comp, matrix(EX_prob_comp_hist, nrow = 1, ncol = trial[["num_components"]]))
+    if (EXNEX_comp) {
+      if (nrow(filter(trial$data, group_id == group_name)) > 0 &&
+          nrow(filter(trial$dose_info, group_id == group_name)) == 0 ) {
+        ## There is exclusively historic data
+        prior_EX_prob_comp <- rbind(prior_EX_prob_comp, matrix(EX_prob_comp_hist, nrow = 1, ncol = trial[["num_components"]]))
+      } else {
+        ## There is no historic data for this group, or there is also new data expected
+        prior_EX_prob_comp <- rbind(prior_EX_prob_comp, matrix(EX_prob_comp_new, nrow = 1, ncol = trial[["num_components"]]))
+      }
     } else {
-      ## There is no historic data for this group, or there is also new data expected
-      prior_EX_prob_comp <- rbind(prior_EX_prob_comp, matrix(EX_prob_comp_new, nrow = 1, ncol = trial[["num_components"]]))
+      prior_EX_prob_comp <- rbind(prior_EX_prob_comp, matrix(1, nrow = 1, ncol = trial[["num_components"]]))
     }
   }
 
   prior_is_EXNEX_inter <- rep(EXNEX_inter, trial[["num_interaction_terms"]])
-  prior_EX_prob_inter <- matrix(EX_prob_inter, nrow = trial[["num_groups"]], ncol = trial[["num_interaction_terms"]])
+  
+  if (EXNEX_inter) {
+    prior_EX_prob_inter <- matrix(EX_prob_inter, nrow = trial[["num_groups"]], ncol = trial[["num_interaction_terms"]])
+  } else {
+    prior_EX_prob_inter <- matrix(1, nrow = trial[["num_groups"]], ncol = trial[["num_interaction_terms"]])
+  }
+  
 
   prior_tau_dist <- 1
   ## Compute prior and return resulting trial object
@@ -778,12 +774,16 @@ print.blrm_trial <- function(x, ...)
 .blrm_trial_sanitize_data <- function(
   trial,
   data,
+  trial_is_being_constructed = FALSE,
+  warning_if_dose_not_prespecified = TRUE,
   require_num_patients = TRUE,
   require_num_toxicities = TRUE
 )
 {
-  .assert_is_blrm_trial(trial)
-
+  if (!trial_is_being_constructed) {
+    .assert_is_blrm_trial(trial)
+  }
+  
   assert_tibble(data)
 
   ## make R CMD check happy
@@ -820,7 +820,7 @@ print.blrm_trial <- function(x, ...)
   ## Data must have columns that correspond to drug name
   ## Note: all() is needed for assertthat 0.2.0 compatibility
   assert_that(all(has_name(data, colnames(trial$ref_doses))))
-
+  
   ## Check that dose_id is consistent
   if(has_name(data, "dose_id")) {
     colnames_for_join <- c("dose_id", "group_id", "stratum_id", trial$drug_info$drug_name)
@@ -832,7 +832,9 @@ print.blrm_trial <- function(x, ...)
     data_consistent_with_dose_info_final <- inner_join(data, trial$dose_info, by=colnames_for_final_join)
     assert_that(nrow(filter(data, !is.na(dose_id))) == nrow(data_consistent_with_dose_info_final),
                 msg="dose_id inconsistent with dose combinations. dose_id must be a unique identifier for dose_combo / group_id / stratum_id!")
+    
     if (any(is.na(data$dose_id))) {
+      
       warning("dose_id NA was provided - cannot check consistency of new data with pre-specified dose_info")
     }
   } else {
@@ -847,7 +849,10 @@ print.blrm_trial <- function(x, ...)
 
     data_consistent_with_dose_info_final <- left_join(data, trial$dose_info, by=colnames_for_final_join)
 
-    if(any(is.na(data_consistent_with_dose_info_final$dose_id))) {
+    if(
+      any(is.na(data_consistent_with_dose_info_final$dose_id)) && 
+      warning_if_dose_not_prespecified
+    ) {
       warning("Data that was provided does not correspond to a pre-specified dose!")
     }
 

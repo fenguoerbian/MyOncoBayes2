@@ -59,15 +59,13 @@ sample_prior <- function(model) {
     EX_mu_comp <- array(NA, dim=c(num_comp, 2))
     EX_mu_inter <- array(NA, dim=c(num_inter))
 
-    for (j in 1:num_comp) {
+    for (j in seq_len(num_comp)) {
         EX_mu_comp[j,1] <- rnorm(1, standata$prior_EX_mu_mean_comp[j,1], standata$prior_EX_mu_sd_comp[j,1])
         EX_mu_comp[j,2] <- rnorm(1, standata$prior_EX_mu_mean_comp[j,2], standata$prior_EX_mu_sd_comp[j,2])
     }
-
-    if (num_inter > 0) {
-        for (j in 1:num_inter) {
-            EX_mu_inter[j] <- rnorm(1, standata$prior_EX_mu_mean_inter[j], standata$prior_EX_mu_sd_inter[j])
-        }
+    
+    for (j in seq_len(num_inter)) {
+        EX_mu_inter[j] <- rnorm(1, standata$prior_EX_mu_mean_inter[j], standata$prior_EX_mu_sd_inter[j])
     }
 
     ## tau
@@ -89,8 +87,8 @@ sample_prior <- function(model) {
         stop("Unsupported tau prior density.")
     }
 
-    for (s in 1:num_strata) {
-        for (j in 1:num_comp) {
+    for (s in seq_len(num_strata)) {
+        for (j in seq_len(num_comp)) {
             EX_tau_comp[s,j,1] <- sample_tau_prior(standata$prior_tau_dist,
                                                    standata$prior_EX_tau_mean_comp[s,j,1],
                                                    standata$prior_EX_tau_sd_comp[s,j,1] )
@@ -100,24 +98,24 @@ sample_prior <- function(model) {
             EX_corr_comp[s,j,,] <- rcorvine(2, standata$prior_EX_corr_eta_comp[j], FALSE)
             EX_Sigma_comp[s,j,,] <- diag(as.vector(EX_tau_comp[s,j,]), 2, 2) %*% matrix(EX_corr_comp[s,j,,,drop=FALSE], 2, 2) %*% diag(as.vector(EX_tau_comp[s,j,]), 2, 2)
         }
-        if (num_inter > 0) {
-            for (j in 1:num_inter) {
-                EX_tau_inter[s,j] <- sample_tau_prior(standata$prior_tau_dist,
-                                                      standata$prior_EX_tau_mean_inter[s,j],
-                                                      standata$prior_EX_tau_sd_inter[s,j] )
-            }
-            EX_corr_inter[s,,] <- diag(num_inter)
-            if (num_inter > 1) {
-                EX_corr_inter[s,,] <- rcorvine(num_inter, standata$prior_EX_corr_eta_inter, FALSE)
-            }
-            EX_Sigma_inter[s,,] <- diag(as.vector(EX_tau_inter[s,,drop=FALSE]), num_inter, num_inter) %*% matrix(EX_corr_inter[s,,,drop=FALSE], num_inter, num_inter) %*% diag(as.vector(EX_tau_inter[s,,drop=FALSE]), num_inter, num_inter)
+        
+        for (j in seq_len(num_inter)) {
+            EX_tau_inter[s,j] <- sample_tau_prior(standata$prior_tau_dist,
+                                                  standata$prior_EX_tau_mean_inter[s,j],
+                                                  standata$prior_EX_tau_sd_inter[s,j] )
         }
+        EX_corr_inter[s,,] <- diag(num_inter)
+        if (num_inter > 1) {
+            EX_corr_inter[s,,] <- rcorvine(num_inter, standata$prior_EX_corr_eta_inter, FALSE)
+        }
+        EX_Sigma_inter[s,,] <- diag(as.vector(EX_tau_inter[s,,drop=FALSE]), num_inter, num_inter) %*% matrix(EX_corr_inter[s,,,drop=FALSE], num_inter, num_inter) %*% diag(as.vector(EX_tau_inter[s,,drop=FALSE]), num_inter, num_inter)
+        
     }
 
   ## EX - group-specific parameters
-  for (g in 1:num_groups) {
+  for (g in seq_len(num_groups)) {
     s <- group_stratum[g]
-    for (j in 1:num_comp) {
+    for (j in seq_len(num_comp)) {
         log_beta[g,j,1:2] <- rmvnorm(1, EX_mu_comp[j,], EX_Sigma_comp[s,j,,])
         ##log_beta[g,j,1] <- rnorm(1, EX_mu_comp[j,1], EX_tau_comp[s,j,1] )
         ##log_beta[g,j,2] <- rnorm(1, EX_mu_comp[j,2], EX_tau_comp[s,j,2] )
@@ -136,22 +134,22 @@ sample_prior <- function(model) {
     }
   }
   ## NEX - group-specific parameters
-  for (g in 1:num_groups) {
-    for (j in 1:num_comp) {
+  for (g in seq_len(num_groups)) {
+    for (j in seq_len(num_comp)) {
       log_beta[num_groups+g,j,1] <- rnorm(1, standata$prior_NEX_mu_mean_comp[j,1], standata$prior_NEX_mu_sd_comp[j,1])
       log_beta[num_groups+g,j,2] <- rnorm(1, standata$prior_NEX_mu_mean_comp[j,2], standata$prior_NEX_mu_sd_comp[j,2])
     }
-    if (num_inter > 0) {
-      for (j in 1:num_inter) {
-        eta[num_groups+g,j] <- rnorm(1, standata$prior_NEX_mu_mean_inter[j], standata$prior_NEX_mu_sd_inter[j])
-      }
+    
+    for (j in seq_len(num_inter)) {
+      eta[num_groups+g,j] <- rnorm(1, standata$prior_NEX_mu_mean_inter[j], standata$prior_NEX_mu_sd_inter[j])
     }
+    
   }
 
   ## convert slope to natural scale (enforced positivity)
   beta <- log_beta
-  for (g in 1:(2*num_groups)) {
-    for (j in 1:num_comp) {
+  for (g in seq_len(2*num_groups)) {
+    for (j in seq_len(num_comp)) {
       beta[g,j,2] <- exp(beta[g,j,2])
     }
   }
@@ -161,8 +159,8 @@ sample_prior <- function(model) {
   is_EX_inter <- array(NA, dim=c(num_groups,num_inter))
   draw_beta  <- array(NA, dim=c(1, num_groups, num_comp, 2))
   draw_eta  <- array(NA, dim=c(1, num_groups, num_inter))
-  for(g in 1:num_groups) {
-    for (j in 1:num_comp) {
+  for(g in seq_len(num_groups)) {
+    for (j in seq_len(num_comp)) {
       if(standata$prior_is_EXNEX_comp[j] == 1) {
         is_EX_comp[g,j] <- rbinom(1, 1, standata$prior_EX_prob_comp[g,j])
       } else {
@@ -172,16 +170,15 @@ sample_prior <- function(model) {
       draw_beta[1,g,j,1]  <- beta[gidx,j,1]
       draw_beta[1,g,j,2]  <- beta[gidx,j,2]
     }
-    if (num_inter > 0) {
-      for (j in 1:num_inter) {
-        if(standata$prior_is_EXNEX_inter[j] == 1) {
-          is_EX_inter[g,j] <- rbinom(1, 1, standata$prior_EX_prob_inter[g,j])
-        } else {
-          is_EX_inter[g,j] <- 1
-        }
-        gidx <- ifelse(is_EX_inter[g,j] == 1, g, num_groups + g)
-        draw_eta[1,g,j] <- eta[gidx,j]
+    
+    for (j in seq_len(num_inter)) {
+      if(standata$prior_is_EXNEX_inter[j] == 1) {
+        is_EX_inter[g,j] <- rbinom(1, 1, standata$prior_EX_prob_inter[g,j])
+      } else {
+        is_EX_inter[g,j] <- 1
       }
+      gidx <- ifelse(is_EX_inter[g,j] == 1, g, num_groups + g)
+      draw_eta[1,g,j] <- eta[gidx,j]
     }
   }
 
@@ -383,9 +380,9 @@ fit_exnex <- function(data, job, instance, ..., save_fit=FALSE) {
         idx <- expand.grid(lapply(dim(data), seq))
         num_dim <- length(dim(data))
         size  <- nrow(idx)
-        values  <- sapply(1:size, function(r) { asub(data, idx[r,], drop=FALSE) } )
-        idx[1:num_dim] <- lapply(1:num_dim, function(col) dimnames(data)[[col]][idx[,col]])
-        names(values) <- paste0(var, "[", do.call("paste", c(idx[1:num_dim], list(sep=","))), "]")
+        values  <- sapply(seq_len(size), function(r) { asub(data, idx[r,], drop=FALSE) } )
+        idx[seq_len(num_dim)] <- lapply(seq_len(num_dim), function(col) dimnames(data)[[col]][idx[,col]])
+        names(values) <- paste0(var, "[", do.call("paste", c(idx[seq_len(num_dim)], list(sep=","))), "]")
         res <- matrix(values, nrow=1, ncol=size)
         colnames(res) <- names(values)
         as.data.frame(res)
@@ -424,7 +421,7 @@ extract_warmup_info <- function(fit) {
     }
     stepsize <- sapply(info, ex_stepsize)
     inv_metric <- do.call(cbind, lapply(info, ex_mass))
-    colnames(inv_metric) <- names(stepsize) <- paste0("chain_", 1:length(info))
+    colnames(inv_metric) <- names(stepsize) <- paste0("chain_", seq_along(info))
     list(stepsize=stepsize, inv_metric=inv_metric)
 }
 

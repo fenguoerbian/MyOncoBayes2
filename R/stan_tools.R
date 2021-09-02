@@ -18,13 +18,13 @@ posterior_simulate <- function(sims, fun, vectorized=FALSE, res_type, envir) {
 
     sims <- sims[from_draw]
     aux <- mget(from_env, envir=envir)
-
+    
     if(!vectorized) {
         S <- NROW(sims[[1]])
         calc_draw <- function(i) do.call(fun, c(aux, extract_draw(sims, i)))
         if(missing(res_type))
             res_type <- calc_draw(1)
-        res <- vapply(1:S, calc_draw, res_type)
+        res <- vapply(seq_len(S), calc_draw, res_type)
         nd <- length(dim(res))
         if(nd == 0) {
             return(array(res, dim=c(length(res),1)))

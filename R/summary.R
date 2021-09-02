@@ -73,9 +73,9 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
     quantile_type <- ifelse(predictive, 7, 3)
 
     if(predictive) {
-        sizes <- pp_binomial_trials(object, newdata=data)
+        sizes <- pp_binomial_trials(object, newdata=newdata)
 
-        post_prob <- posterior_linpred(object, transform=TRUE, newdata=data)
+        post_prob <- posterior_linpred(object, transform=TRUE, newdata=newdata)
 
         ## integrate binomial sampling density per outcome and then
         ## summarize the obtained predictive p(y)
@@ -85,16 +85,16 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
         pred_lpmf <- matrix(-Inf, nrow=max_size+1, ncol=nr)
         pred_pmf <- matrix(0, nrow=max_size+1, ncol=nr)
         pred_cpmf <- matrix(1.0, nrow=max_size+1, ncol=nr)
-        for(r in 1:nr) {
+        for(r in seq_len(nr)) {
             ## create matrix of outcomes x draws of prob
             outcomes_row <- 0:sizes[r]
             nor <- length(outcomes_row)
             Pr <- matrix(post_prob[,r], nrow=nor, ncol=draws, byrow=TRUE)
-            pred_lpmf[1:nor,r] <- apply(dbinom(outcomes_row, sizes[r], prob=Pr, log=TRUE), 1, log_mean_exp)
+            pred_lpmf[seq_len(nor),r] <- apply(dbinom(outcomes_row, sizes[r], prob=Pr, log=TRUE), 1, log_mean_exp)
             ## normalize to sum-to-one per column
-            pred_lpmf[1:nor,r] <- pred_lpmf[1:nor,r] - log_sum_exp(pred_lpmf[1:nor,r])
+            pred_lpmf[seq_len(nor),r] <- pred_lpmf[seq_len(nor),r] - log_sum_exp(pred_lpmf[seq_len(nor),r])
             pred_pmf[,r] <- exp(pred_lpmf[,r])
-            pred_cpmf[1:nor,r] <- cumsum(pred_pmf[1:nor,r])
+            pred_cpmf[seq_len(nor),r] <- cumsum(pred_pmf[seq_len(nor),r])
             ## ensure that largest number is truly 1.0
             pred_cpmf[,r]  <- pmin(pred_cpmf[,r], 1.0)
         }
@@ -113,8 +113,8 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
         s <- sqrt(colSums(sweep(all_outcomes, 2, m)^2 * pred_pmf))
 
         quants <- matrix(NA, nrow=nr, ncol=length(probs))
-        for(r in 1:nr) {
-            quants[r,]  <- findInterval(probs, pred_cpmf[1:(sizes[r]+1),r])
+        for(r in seq_len(nr)) {
+            quants[r,]  <- findInterval(probs, pred_cpmf[seq_len(sizes[r]+1),r])
         }
         if(transform)
             quants <- sweep(quants, 1, sizes, "/")
@@ -130,25 +130,29 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
 
             nip <- length(interval_prob)
             out_interval <- matrix(NA, nrow=nr, ncol=nip+1)
-            for(r in 1:nr) {
-                all_outcomes_r <- all_outcomes[1:(sizes[r]+1),r]
+            for(r in seq_len(nr)) {
+                all_outcomes_r <- all_outcomes[seq_len(sizes[r]+1),r]
                 outcome_idx <- findInterval(c(-Inf, interval_prob, Inf), all_outcomes_r)
                 cpmf <- c(0,pred_cpmf[,r])
                 out_interval[r,] <- diff(cpmf[outcome_idx+1])
             }
             out_interval <- out_interval[,-c(1,nip+1),drop=FALSE]
-            colnames(out_interval) <- paste0("(", interval_prob[1:(nip-1)], ",", interval_prob[2:nip], "]")
+            colnames(out_interval) <- paste0("(", interval_prob[seq_len(nip-1)], ",", interval_prob[1 + seq_len(nip-1)], "]")
             out_sum <- cbind(out_sum, as.data.frame(out_interval))
         }
 
     } else {
-        post <- posterior_linpred(object, transform=transform, newdata=data)
+        post <- posterior_linpred(object, transform=transform, newdata=newdata)
 
-        out_sum <- as.data.frame(t(apply(post, 2, function(l) {
+        if (ncol(post) > 0) {
+          out_sum <- as.data.frame(t(apply(post, 2, function(l) {
             if(all(is.na(l)))
-                return(rep(NA, times=2+length(probs)))
+              return(rep(NA, times=2+length(probs)))
             c(mean=mean(l), sd=sd(l), quantile(l, probs=probs, type=quantile_type))
-        })))
+          })))
+        } else {
+          out_sum <- data.frame(0.0 * matrix(ncol = (2+length(probs)), nrow = 0))
+        }
 
         if(!missing(interval_prob)) {
             if(transform) {
@@ -159,13 +163,21 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
                 assert_numeric(interval_prob, any.missing=FALSE, sorted=TRUE, finite=TRUE)
             }
 
-            out_interval <- as.data.frame(t(apply(post, 2, function(l) .proportions(table(cut(l, breaks=c(-Inf, interval_prob, Inf)))))))
+            if (ncol(post) > 0)
+            {
+              out_interval <- as.data.frame(t(apply(post, 2, function(l) .proportions(table(cut(l, breaks=c(-Inf, interval_prob, Inf)))))))
+            } else {
+              out_interval <- data.frame(0.0 * matrix(ncol = (1+length(interval_prob)), nrow = 0))
+              colnames(out_interval) <- levels(cut(numeric(0), breaks=c(-Inf, interval_prob, Inf)))
+
+            }
+
             out_interval <- out_interval[,-c(1,ncol(out_interval)), drop=FALSE]
             out_sum <- cbind(out_sum, out_interval)
         }
     }
 
-    names(out_sum)[1:(2+length(probs))] <- c("mean", "sd", paste0(100 * probs, "%"))
+    names(out_sum)[seq_len(2+length(probs))] <- c("mean", "sd", paste0(100 * probs, "%"))
 
     rownames(out_sum) <- rn
     out_sum
@@ -249,7 +261,13 @@ summary.blrm_trial <- function(
   }
 
   newdata_predict <- function() {
-    args[["newdata"]] <- .blrm_trial_sanitize_data(trial=object, data=args[["newdata"]], require_num_patients = FALSE, require_num_toxicities = FALSE)
+    args[["newdata"]] <- .blrm_trial_sanitize_data(
+      trial=object,
+      data=args[["newdata"]],
+      warning_if_dose_not_prespecified = FALSE,
+      require_num_patients = FALSE,
+      require_num_toxicities = FALSE
+    )
 
     args_without_newdata <- args
     args_without_newdata[["newdata"]] <- NULL
@@ -275,7 +293,7 @@ summary.blrm_trial <- function(
 #' Backport from R 4
 #' @param x object to summarise
 #' @param margin margin over which to marginalize
-#' @keyword internal
+#' @keywords internal
 .marginSums <- function (x, margin = NULL)
 {
     if (!is.array(x))
@@ -300,7 +318,7 @@ summary.blrm_trial <- function(
 #' Backport from R 4
 #' @param x object to summarise
 #' @param margin margin over which to marginalize
-#' @keyword internal
+#' @keywords internal
 .proportions <- function (x, margin = NULL)
 {
     if (length(margin))

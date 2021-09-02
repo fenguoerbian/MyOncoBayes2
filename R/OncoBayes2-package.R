@@ -13,6 +13,7 @@
 #' Option \tab Default \tab Description \cr
 #' \code{OncoBayes2.MC.warmup} \tab 1000 \tab MCMC warmup iterations \cr
 #' \code{OncoBayes2.MC.iter} \tab 2000 \tab total MCMC iterations \cr
+#' \code{OncoBayes2.MC.save_warmup} \tab TRUE \tab save warmup samples \cr
 #' \code{OncoBayes2.MC.chains} \tab 4 \tab MCMC chains\cr
 #' \code{OncoBayes2.MC.thin} \tab 1 \tab MCMC thinning \cr
 #' \code{OncoBayes2.MC.control} \tab \code{list(adapt_delta=0.99,} \tab sets \code{control} argument for Stan call\cr
@@ -31,18 +32,18 @@
 #' Stan Development Team (2019). RStan: the R interface to Stan. R package version 2.19.2. https://mc-stan.org
 #'
 #' @name OncoBayes2
-#' @alias OncoBayes2
+#' @aliases OncoBayes2
 #' @docType package
 #' @useDynLib OncoBayes2, .registration = TRUE
 #' @import methods
+#' @import Rcpp
+#' @importFrom RcppParallel RcppParallelLibs CxxFlags
 #' @importFrom rstan sampling get_sampler_params summary stanc_builder
 #' @importFrom utils capture.output modifyList combn head
 #' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms model.matrix.default setNames update update.default .getXlevels as.formula na.fail qlogis dbinom
-#' @import methods
 #' @import assertthat
 #' @import checkmate
 #' @import Formula
-#' @import Rcpp
 #' @import rstantools
 #' @import dplyr
 #' @import tidyr

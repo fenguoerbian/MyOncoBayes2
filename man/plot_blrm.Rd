@@ -4,40 +4,22 @@
 \alias{plot_blrm}
 \alias{plot_toxicity_curve}
 \alias{plot_toxicity_intervals}
-\alias{plot_toxicity_curve.default}
+\alias{plot_toxicity_intervals_stacked}
+\alias{plot_toxicity_curve.blrmfit}
 \alias{plot_toxicity_curve.blrm_trial}
-\alias{plot_toxicity_intervals.default}
+\alias{plot_toxicity_intervals.blrmfit}
 \alias{plot_toxicity_intervals.blrm_trial}
+\alias{plot_toxicity_intervals_stacked.blrmfit}
+\alias{plot_toxicity_intervals_stacked.blrm_trial}
 \title{Plot a fitted model}
 \usage{
-plot_toxicity_curve(
-  object,
-  newdata,
-  x,
-  group,
-  xlim,
-  ylim,
-  transform,
-  prob,
-  prob_outer,
-  size,
-  alpha,
-  facet_args = list(),
-  hline_at,
-  grid_length
-)
+plot_toxicity_curve(object, ...)
 
-plot_toxicity_intervals(
-  object,
-  newdata,
-  x,
-  group,
-  interval_prob,
-  interval_max_mass,
-  ewoc_colors
-)
+plot_toxicity_intervals(object, ...)
 
-\method{plot_toxicity_curve}{default}(
+plot_toxicity_intervals_stacked(object, ...)
+
+\method{plot_toxicity_curve}{blrmfit}(
   object,
   newdata,
   x,
@@ -51,7 +33,8 @@ plot_toxicity_intervals(
   alpha = 1,
   facet_args = list(),
   hline_at = c(0.16, 0.33),
-  grid_length = 100
+  grid_length = 100,
+  ...
 )
 
 \method{plot_toxicity_curve}{blrm_trial}(
@@ -67,18 +50,21 @@ plot_toxicity_intervals(
   size = 0.75,
   alpha = 1,
   facet_args = list(),
-  hline_at = c(0.16, 0.33),
-  grid_length = 100
+  hline_at,
+  grid_length = 100,
+  ewoc_shading = TRUE,
+  ...
 )
 
-\method{plot_toxicity_intervals}{default}(
+\method{plot_toxicity_intervals}{blrmfit}(
   object,
   newdata,
   x,
   group,
   interval_prob = c(0, 0.16, 0.33, 1),
   interval_max_mass = c(NA, NA, 0.25),
-  ewoc_colors = c("green", "red")
+  ewoc_colors = c("green", "red"),
+  ...
 )
 
 \method{plot_toxicity_intervals}{blrm_trial}(
@@ -88,11 +74,45 @@ plot_toxicity_intervals(
   group,
   interval_prob,
   interval_max_mass,
-  ewoc_colors = c("green", "red")
+  ewoc_colors = c("green", "red"),
+  ...
+)
+
+\method{plot_toxicity_intervals_stacked}{blrmfit}(
+  object,
+  newdata,
+  x,
+  group,
+  xlim,
+  ylim = c(0, 0.5),
+  predictive = FALSE,
+  transform = !predictive,
+  interval_prob,
+  grid_length = 100,
+  facet_args = list(),
+  ...
+)
+
+\method{plot_toxicity_intervals_stacked}{blrm_trial}(
+  object,
+  newdata,
+  x,
+  group,
+  xlim,
+  ylim = c(0, 0.5),
+  predictive = FALSE,
+  transform = !predictive,
+  interval_prob,
+  grid_length = 100,
+  ewoc_shading = TRUE,
+  facet_args = list(),
+  ...
 )
 }
 \arguments{
 \item{object}{fitted model object}
+
+\item{...}{currently unused}
 
 \item{newdata}{optional data frame specifying for what to predict;
 if missing, then the data of the input model \code{object} is
@@ -104,12 +124,16 @@ to \code{summary(object, "dose_info")}.}
 This also supports 'tidy' parameter selection by specifying 
 `x = vars(...)`, where `...` is specified the same way as in 
 [dplyr::select(...)][dplyr::select] and similar functions. Examples of 
-using `x` in this way can be found in the examples.}
+using `x` in this way can be found in the examples. For `blrm_trial` 
+methods, it defaults to the first entry in 
+`summary(blrm_trial, "drug_info")$drug_name`.}
 
 \item{group}{Grouping variable(s) whose levels will be mapped to different
 facets of the plot. `group` can be a character vector, tidy parameter(s)
 of the form `group = vars(...)`, or a formula to be passed directly to
-[ggplot2::facet_wrap].}
+[ggplot2::facet_wrap]. For `blrm_trial` methods, it defaults to `group_id`,
+plus all entries of `summary(blrm_trial, "drug_info")$drug_name` except
+the first, which is mapped to `x`.}
 
 \item{xlim}{x-axis limits}
 
@@ -137,8 +161,15 @@ to [ggplot2::facet_wrap()].}
 
 \item{grid_length}{Number of grid points within \code{xlim} for plotting.}
 
+\item{ewoc_shading}{logical indicates if doses violating EWOC should be
+shaded in gray. Applies only to `blrm_trial` methods. Defaults to TRUE.}
+
 \item{interval_prob}{defines the interval probabilities reported in
-the standard outputs. Defaults to \code{c(0, 0.16, 0.33, 1)}.}
+the standard outputs. Defaults to \code{c(0, 0.16, 0.33, 1)}, 
+when `predictive = FALSE` and/or `transform = TRUE`, or to intervals 
+giving 0, 1, or 2+ DLTs when `predictive = TRUE` and `transform = FALSE`.
+For `blrm_trial` methods, this is taken from the 
+`blrm_trial$interval_prob` slot by default.}
 
 \item{interval_max_mass}{vector defining for each interval of
 the \code{interval_prob} vector a maximal admissible
@@ -147,12 +178,17 @@ probability mass in a given interval exceeds the threshold,
 then the Escalation With Overdose Control (EWOC) criterion is
 considered to be not fulfilled. Dose levels not fulfilling
 EWOC are ineligible for the next cohort of patients. The
-default restricts the overdose probability to less than 0.25.}
+default restricts the overdose probability to less than 0.25. For
+`blrm_trial` methods, this is taken from the 
+`blrm_trial$interval_max_mass` slot by default.}
 
 \item{ewoc_colors}{Fill colors used for bars indicating EWOC OK or not.
-Vector of two characters, each of which must correspond to 
-\code{bayesplot} package color schemes 
+Vector of two characters, each of which must correspond to
+\code{bayesplot} package color schemes
 (see \code{?bayesplot::color_scheme_get})}
+
+\item{predictive}{logical indicates if the posterior predictive is
+being summarized. Defaults to \code{FALSE}.}
 }
 \value{
 A ggplot object that can be further
@@ -163,35 +199,54 @@ A ggplot object that can be further
 may change with future releases.
 
 Plotting methods for \code{blrmfit} and \code{blrm_trial} objects.
-\code{plot_toxicity_curve} plots continuous profiles of the dose-toxicity curve.
-\code{plot_toxicity_intervals} plots the posterior probability mass in
-subintervals of [0,1].
 }
 \details{
-Plots the dose-toxicity curve, with P(DLT) on the vertical axis
-and dose of "drug_name_x" on the horizontal.
+\code{plot_toxicity_curve} plots continuous profiles of the dose-toxicity curve.
+
+\code{plot_toxicity_intervals} plots the posterior probability mass in
+subintervals of [0,1], at a discrete set of provisional doses. 
+
+\code{plot_toxicity_intervals_stacked} is similar to 
+\code{plot_toxicity_intervals}, but over a continuous range of doses.
 }
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
 library(dplyr) # for vars()
 
 example_model("combo2")
+
+# Plot the dose-toxicity curve
 plot_toxicity_curve(blrmfit,
                     x = vars(drug_A),
                     group = ~ group_id * drug_B,
                     newdata = filter(dose_info_combo2, group_id == "trial_AB"),
                     facet_args = list(ncol = 4))
+                    
+# Plot posterior DLT-rate-interval probabilities at discrete dose levels
 plot_toxicity_intervals(blrmfit,
                         x = vars(drug_A),
                         group = ~ group_id * drug_B,
                         newdata = filter(dose_info_combo2, group_id == "trial_AB"))
+
+# Plot posterior DLT-rate-interval probabilities over continuous dose
+plot_toxicity_intervals_stacked(blrmfit,
+                                x = vars(drug_A),
+                                group = ~ group_id * drug_B,
+                                newdata = filter(dose_info_combo2, group_id == "trial_AB"))
+
+# Plot predictive distribution probabilities over continuous dose
+plot_toxicity_intervals_stacked(blrmfit,
+                                x = vars(drug_A),
+                                group = ~ group_id * drug_B,
+                                predictive = TRUE,
+                                interval_prob = c(-1, 0, 1, 6),
+                                newdata = mutate(filter(dose_info_combo2, group_id == "trial_AB"),
+                                                 num_patients = 6, num_toxicities = 0))
 ## Recover user set sampling defaults
 options(.user_mc_options)
 
-}
-\seealso{
-\code{\link{plot_toxicity_intervals}}
 }

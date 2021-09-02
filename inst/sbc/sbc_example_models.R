@@ -6,6 +6,10 @@ example_designs <- list(
 
   combo3_EXNEX = list(
     modeltype = "EXNEX",
+    EXNEX_comp = c(TRUE, TRUE, FALSE),
+    EX_prob_comp = matrix(c(0.5, 0.9, 1.0,
+                            1.0, 0.8, 1.0,
+                            0.5, 0.5, 1.0), byrow=TRUE, nrow=3, ncol=3),
     design = expand.grid(
       stratum_id = "STRAT",
       group_id = LETTERS[1:3],
@@ -19,6 +23,8 @@ example_designs <- list(
 
   combo2_EX = list(
     modeltype = "EX",
+    EXNEX_comp = c(FALSE, FALSE),
+    EX_prob_comp = matrix(c(1.0), nrow=3, ncol=2),
     design = expand.grid(
       stratum_id = "STRAT",
       group_id = LETTERS[1:3],
@@ -31,6 +37,8 @@ example_designs <- list(
 
   combo2_EXNEX = list(
     modeltype = "EXNEX",
+    EXNEX_comp = c(TRUE, TRUE),
+    EX_prob_comp = matrix(c(0.8), nrow=3, ncol=2),
     design = expand.grid(
       stratum_id = "STRAT",
       group_id = LETTERS[1:3],
@@ -42,14 +50,16 @@ example_designs <- list(
   ),
 
   log2bayes_EXNEX = list(
-    modeltype = "EXNEX",
-    design = expand.grid(
-      stratum_id = "STRAT",
-      group_id = LETTERS[1:3],
-      drug_A = c(0.0625, 0.125, 0.25, 0.5, 1),
-      num_patients = 5
-    ) %>% arrange(stratum_id, group_id, drug_A),
-    dref = c(1)
+      modeltype = "EXNEX",
+      EXNEX_comp = c(TRUE),
+      EX_prob_comp = matrix(c(0.5, 0.9, 1.0), nrow=3, ncol=1),
+      design = expand.grid(
+          stratum_id = "STRAT",
+          group_id = LETTERS[1:3],
+          drug_A = c(0.0625, 0.125, 0.25, 0.5, 1),
+          num_patients = 5
+      ) %>% arrange(stratum_id, group_id, drug_A),
+      dref = c(1)
   )
 )
 
@@ -63,13 +73,16 @@ example_models <- lapply(
       design <- example$design
       dref <- example$dref
       modeltype <- example$modeltype
-      is_exnex <- modeltype != "EX"
-      p_exch <- switch(
-          modeltype,
-          "EX" = 1,
-          "NEX" = 1e-06,
-          "EXNEX" = 0.8
-      )
+      ##is_exnex <- modeltype != "EX"
+      ##p_exch <- switch(
+      ##    modeltype,
+      ##    "EX" = 1,
+      ##    "NEX" = 1e-06,
+      ##    "EXNEX" = 0.8
+      ##)
+      example_prior_EX_prob_comp <- example$EX_prob_comp
+      example_prior_is_EXNEX_comp <- example$EXNEX_comp
+
 
       names(dref) <- grep(names(design), pattern = "drug_", value=TRUE)
 
@@ -96,9 +109,11 @@ example_models <- lapply(
           prior_EX_mu_sd_inter = rep(log(2)/1.96, num_inter),
           prior_EX_tau_mean_inter = matrix(log(0.25)  , nrow=num_strata, ncol=num_inter),
           prior_EX_tau_sd_inter = matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
-          prior_EX_prob_comp = matrix(p_exch, nrow=num_groups, ncol=num_comp),
+          ##prior_EX_prob_comp = matrix(p_exch, nrow=num_groups, ncol=num_comp),
+          prior_EX_prob_comp = example_prior_EX_prob_comp,
           prior_EX_prob_inter = matrix(1.0, nrow=num_groups, ncol=num_inter),
-          prior_is_EXNEX_comp = rep(is_exnex, num_comp),
+          ##prior_is_EXNEX_comp = rep(is_exnex, num_comp),
+          prior_is_EXNEX_comp = example_prior_is_EXNEX_comp,
           prior_is_EXNEX_inter = rep(FALSE, num_inter),
           prior_tau_dist=1,
           prior_NEX_mu_mean_comp = matrix(c(logit(1/3), 0), nrow=num_comp, ncol=2, TRUE),
@@ -121,7 +136,8 @@ example_models <- lapply(
           init = 1.0,
           chains = 2,
           ##cores = 1, ## control via mc.cores option
-          prior_PD = FALSE
+          prior_PD = FALSE,
+          save_warmup=FALSE
       )
 
       base_args <- blrm_args

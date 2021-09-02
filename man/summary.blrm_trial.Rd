@@ -41,7 +41,8 @@ Provides model summaries for \code{\link{blrm_trial}} analyses.
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
 # construct initial blrm_trial object from built-in example datasets
 combo2_trial_setup <- blrm_trial(

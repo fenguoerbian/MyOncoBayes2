@@ -42,8 +42,12 @@
 #' @export
 posterior_linpred.blrmfit <- function(object, transform=FALSE, newdata, draws, ...) {
     dat <- pp_data(object, newdata=newdata, draws=draws)
-    if (transform)
-        dat <- inv_logit(dat)
+    if (transform) {
+        if (all(dim(dat) > 0)) {
+            # Prevent crash due to 0-length data
+            dat <- inv_logit(dat)
+        }
+    }
     return(dat)
 }
 

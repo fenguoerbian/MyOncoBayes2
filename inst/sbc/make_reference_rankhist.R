@@ -78,7 +78,8 @@ summarizeExperiments()
 #' Number of jobs per chunk
 #'
 ## chunk_size <- 60 ## OK with 2 cores per chain
-chunk_size <- 30
+##chunk_size <- 30
+chunk_size <- 100 ## increased as model speedsup a lot
 
 ids_warmup <- unwrap(getJobPars())
 

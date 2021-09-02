@@ -29,6 +29,7 @@ blrm_exnex(
   prior_tau_dist,
   iter = getOption("OncoBayes2.MC.iter", 2000),
   warmup = getOption("OncoBayes2.MC.warmup", 1000),
+  save_warmup = getOption("OncoBayes2.MC.save_warmup", TRUE),
   thin = getOption("OncoBayes2.MC.thin", 1),
   init = getOption("OncoBayes2.MC.init", 0.5),
   chains = getOption("OncoBayes2.MC.chains", 4),
@@ -132,6 +133,8 @@ heterogeniety parameters. Choices are 0=fixed to it's mean,
 \item{iter}{number of iterations (including warmup).}
 
 \item{warmup}{number of warmup iterations.}
+
+\item{save_warmup}{save warmup samples (TRUE / FALSE)}
 
 \item{thin}{period of saving samples.}
 
@@ -389,7 +392,8 @@ increase robustness in case of outlying observations in individual groups
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
 # fit an example model. See documentation for "combo3" example
 example_model("combo3")
@@ -406,7 +410,7 @@ print(cbind(hist_combo3, summ))
 
 # summary of posterior for DLT rate by dose for new set of covariate levels
 newdata <- expand.grid(
-  stratum = "BID", group_id = "Combo",
+  stratum_id = "BID", group_id = "Combo",
   drug_A = 400, drug_B = 800, drug_C = c(320, 400, 600, 800),
   stringsAsFactors = FALSE
 )
@@ -419,7 +423,7 @@ newdata$num_toxicities <- c(0, 1, 2, 2)
 library(dplyr)
 blrmfit_new <- update(blrmfit,
                       data = rbind(hist_combo3, newdata) \%>\%
-                               arrange(stratum, group_id))
+                               arrange(stratum_id, group_id))
 
 # updated posterior summary
 summ_upd <- summary(blrmfit_new, newdata = newdata, interval_prob = c(0, 0.16, 0.33, 1))

@@ -16,3 +16,4 @@ otherwise.}
 Test if each group is assigned to exactly 1 stratum. Error
 otherwise.
 }
+\keyword{internal}

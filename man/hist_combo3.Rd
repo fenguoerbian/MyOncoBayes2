@@ -13,7 +13,7 @@ A data frame with 18 rows and 7 variables:
   \item{drug_C}{dose of Drug C}
   \item{num_patients}{number of patients}
   \item{num_toxicities}{number of DLTs}
-  \item{stratum}{stratum for \code{group_id}'s used for differential discounting}
+  \item{stratum_id}{stratum for \code{group_id}'s used for differential discounting}
 }
 }
 \usage{
@@ -25,14 +25,15 @@ therapy with three treatment components. From two previous studies
 \code{HistAgent1} and \code{HistAgent2}, historical data is available on each
 of the treatments as single-agents, as well as two of the two-way
 combinations. However, due to a difference in treatment schedule between the
-\code{Combo} study and the historical studies, a stratification (through \code{stratum})
+\code{Combo} study and the historical studies, a stratification (through \code{stratum_id})
 is made between the groups to allow differential discounting of the
 alternate-dose data.
 }
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
 ## example combo3
 
@@ -41,38 +42,40 @@ library(abind)
 dref <- c(500, 500, 1000)
 num_comp <- 3
 num_inter <- choose(3,2) + 1
-num_strata <- nlevels(hist_combo3$stratum)
+num_strata <- nlevels(hist_combo3$stratum_id)
 num_groups <- nlevels(hist_combo3$group_id)
 
-blrmfit <- blrm_exnex(cbind(num_toxicities, num_patients-num_toxicities) ~
-                          1 + I(log(drug_A/dref[1])) |
-                          1 + I(log(drug_B/dref[2])) |
-                          1 + I(log(drug_C/dref[3])) |
-                          0
-                      + I(drug_A/dref[1] * drug_B/dref[2])
-                      + I(drug_A/dref[1] * drug_C/dref[3])
-                      + I(drug_B/dref[2] * drug_C/dref[3])
-                      + I(drug_A/dref[1] * drug_B/dref[2] * drug_C/dref[3]) |
-                      stratum/group_id,
-                      data=hist_combo3,
-                      prior_EX_mu_mean_comp=matrix(c(logit(1/3), 0), nrow=num_comp, ncol=2, TRUE),
-                      prior_EX_mu_sd_comp=matrix(c(2, 1), nrow=num_comp, ncol=2, TRUE),
-          prior_EX_tau_mean_comp=abind(matrix(log(  c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),
-                                       matrix(log(2*c(0.25, 0.125)), nrow=num_comp, ncol=2, TRUE),
-                                       along=0),
-                      prior_EX_tau_sd_comp=abind(matrix(log(4)/1.96, nrow=num_comp, ncol=2, TRUE),
-                                                 matrix(log(4)/1.96, nrow=num_comp, ncol=2, TRUE),
-                                                 along=0),
-                      prior_EX_mu_mean_inter=rep(0, num_inter),
-                      prior_EX_mu_sd_inter=rep(sqrt(2)/2, num_inter),
-                      prior_EX_tau_mean_inter=matrix(log(0.25)  , nrow=num_strata, ncol=num_inter),
-                      prior_EX_tau_sd_inter=matrix(log(2)/1.96, nrow=num_strata, ncol=num_inter),
-                      prior_EX_prob_comp=matrix(0.9, nrow=num_groups, ncol=num_comp),
-                      prior_EX_prob_inter=matrix(0.9, nrow=num_groups, ncol=num_inter),
-                      ## by default EXNEX is on for components and off for all interactions
-                      prior_tau_dist=1,
-                      prior_PD=FALSE
-                      )
+blrmfit <- blrm_exnex(
+  cbind(num_toxicities, num_patients-num_toxicities) ~
+    1 + I(log(drug_A/dref[1])) |
+    1 + I(log(drug_B/dref[2])) |
+    1 + I(log(drug_C/dref[3])) |
+    0
+  + I(drug_A/dref[1] * drug_B/dref[2])
+  + I(drug_A/dref[1] * drug_C/dref[3])
+  + I(drug_B/dref[2] * drug_C/dref[3])
+  + I(drug_A/dref[1] * drug_B/dref[2] * drug_C/dref[3]) |
+    stratum_id/group_id,
+  data = hist_combo3,
+  prior_EX_mu_mean_comp = matrix(c(logit(1/3), 0), nrow = num_comp, ncol = 2, TRUE),
+  prior_EX_mu_sd_comp = matrix(c(2, 1), nrow = num_comp, ncol = 2, TRUE),
+  prior_EX_tau_mean_comp = abind(matrix(log(  c(0.25, 0.125)), nrow = num_comp, ncol = 2, TRUE),
+                                 matrix(log(2*c(0.25, 0.125)), nrow = num_comp, ncol = 2, TRUE),
+                                 along = 0),
+  prior_EX_tau_sd_comp = abind(matrix(log(4) / 1.96, nrow = num_comp, ncol = 2, TRUE),
+                               matrix(log(4) / 1.96, nrow = num_comp, ncol = 2, TRUE),
+                               along = 0),
+  prior_EX_mu_mean_inter = rep(0, num_inter),
+  prior_EX_mu_sd_inter = rep(sqrt(2) / 2, num_inter),
+  prior_EX_tau_mean_inter = matrix(log(0.25), nrow = num_strata, ncol = num_inter),
+  prior_EX_tau_sd_inter = matrix(log(2) / 1.96, nrow = num_strata, ncol = num_inter),
+  prior_EX_prob_comp = matrix(0.9, nrow = num_groups, ncol = num_comp),
+  prior_EX_prob_inter = matrix(1.0, nrow = num_groups, ncol = num_inter),
+  prior_is_EXNEX_comp = rep(TRUE, num_comp),
+  prior_is_EXNEX_inter = rep(FALSE, num_inter),
+  prior_tau_dist = 1,
+  prior_PD = FALSE
+)
 ## Recover user set sampling defaults
 options(.user_mc_options)
 

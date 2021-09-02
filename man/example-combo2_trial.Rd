@@ -22,7 +22,8 @@ To run this example, use \code{example_model("combo2_trial")}. See
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
 library(tibble)
 library(dplyr)
@@ -44,15 +45,15 @@ dims <- summary(combo2_trial_setup, "dimensionality")
 combo2_trial_start <- update(
   combo2_trial_setup,
   prior_EX_mu_mean_comp = matrix(
-    c(logit(0.1), 0,  # hyper-mean of (intercept, log-slope) for drug A
-      logit(0.1), 0), # hyper-mean of (intercept, log-slope) for drug B
+    c(logit(0.2), 0,  # hyper-mean of (intercept, log-slope) for drug A
+      logit(0.2), 0), # hyper-mean of (intercept, log-slope) for drug B
     nrow = dims$num_components,
     ncol = 2,
     byrow = TRUE
   ),
   prior_EX_mu_sd_comp = matrix(
-    c(3.33, 1,  # hyper-sd of mean mu for (intercept, log-slope) for drug A
-      3.33, 1), # hyper-sd of mean mu for (intercept, log-slope) for drug B
+    c(2.0, 1,  # hyper-sd of mean mu for (intercept, log-slope) for drug A
+      2.0, 1), # hyper-sd of mean mu for (intercept, log-slope) for drug B
     nrow = dims$num_components,
     ncol = 2,
     byrow = TRUE

@@ -40,8 +40,10 @@ For the component parameters \eqn{\boldsymbol\theta_{ij}},
 \deqn{\boldsymbol\theta_{ij} \sim \mbox{BVN}(\boldsymbol \mu_i, \boldsymbol\Sigma_i).}
 For the mean, a further prior is specified as
 \deqn{\boldsymbol\mu_i = (\mu_{\alpha i}, \mu_{\beta i}) \sim \mbox{BVN}(\boldsymbol m_i, \boldsymbol S_i),}
-with \eqn{\boldsymbol m_i = (\mbox{logit}\, 0.1, \log 1)} and
-\eqn{\boldsymbol S_i  = \mbox{diag}(3.33^2, 1^2)} for each \eqn{i = 1,2}.
+while in the manuscript the prior \eqn{\boldsymbol m_i = (\mbox{logit}\, 0.1, \log 1)} and
+\eqn{\boldsymbol S_i  = \mbox{diag}(3.33^2, 1^2)} for each \eqn{i = 1,2} is
+used, we deviate here and use instead \eqn{\boldsymbol m_i = (\mbox{logit}\, 0.2, \log 1)} and
+\eqn{\boldsymbol S_i  = \mbox{diag}(2^2, 1^2)}.
 For the standard deviations and correlation parameters in the covariance matrix,
 \deqn{\boldsymbol\Sigma_i = \left( \begin{array}{cc}
 \tau^2_{\alpha i} & \rho_i \tau_{\alpha i} \tau_{\beta i}\\
@@ -65,9 +67,10 @@ Below is the syntax for specifying this fully exchangeable model in
 \examples{
 ## Setting up dummy sampling for fast execution of example
 ## Please use 4 chains and 100x more warmup & iter in practice
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
+                            OncoBayes2.MC.save_warmup=FALSE)
 
-dref <- c(300, 960)
+dref <- c(6, 960)
 
 num_comp <- 2 # two investigational drugs
 num_inter <- 1 # one drug-drug interaction needs to be modeled
@@ -82,15 +85,15 @@ blrmfit <- blrm_exnex(
       group_id,
   data = codata_combo2,
   prior_EX_mu_mean_comp = matrix(
-     c(logit(0.1), 0,  # hyper-mean of (intercept, log-slope) for drug A
-       logit(0.1), 0), # hyper-mean of (intercept, log-slope) for drug B
+     c(logit(0.2), 0,  # hyper-mean of (intercept, log-slope) for drug A
+       logit(0.2), 0), # hyper-mean of (intercept, log-slope) for drug B
        nrow = num_comp,
        ncol = 2,
        byrow = TRUE
       ),
   prior_EX_mu_sd_comp = matrix(
-     c(3.33, 1,  # hyper-sd of mean mu for (intercept, log-slope) for drug A
-       3.33, 1), # hyper-sd of mean mu for (intercept, log-slope) for drug B
+     c(2.0, 1,  # hyper-sd of mean mu for (intercept, log-slope) for drug A
+       2.0, 1), # hyper-sd of mean mu for (intercept, log-slope) for drug B
        nrow = num_comp,
        ncol = 2,
        byrow = TRUE

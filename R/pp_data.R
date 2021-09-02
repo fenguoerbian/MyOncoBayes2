@@ -2,37 +2,34 @@
 #'
 #' @keywords internal
 pp_data <- function(object, newdata, draws, re.form) {
-    data <- object$data
-    if(!missing(newdata))
-        data <- newdata
     if(!missing(re.form))
         stop("ERROR: re.form not yet supported")
 
-    strata_group_fct <- .get_strata_group_fct(object, data)
-
-    f <- object$formula
-    orig_mf <- object$model
     idx_group_term <- object$idx_group_term
     idx_inter_term <- object$idx_inter_term
     has_inter <- object$has_inter
-    tt <- terms(f, data=orig_mf, lhs=1, rhs=1:idx_group_term)
-    Terms <- delete.response(tt)
-    mf <- model.frame(Terms, data)
-
     num_comp <- object$standata$num_comp
 
     ## setup design matrices which must have intercept and slope
-    X_comp <- list()
-    for (i in 1:num_comp) {
-        X_comp[[i]] <- model.matrix(f, mf, rhs=i)
-        assert_matrix(X_comp[[i]], ncols=2, any.missing=FALSE)
-    }
-    X_comp <- do.call(abind, c(X_comp, list(along=0)))
 
-    if(has_inter)
-        X_inter <- model.matrix(f, mf, rhs=idx_inter_term)
-    else
-        X_inter <- model.matrix(~0, mf)
+    if(!missing(newdata)) {
+        data <- newdata
+        f <- object$formula
+        orig_mf <- object$model
+        tt <- terms(f, data=orig_mf, lhs=1, rhs=seq_len(idx_group_term))
+        Terms <- delete.response(tt)
+        mf <- model.frame(Terms, data)
+
+        X <- .get_X(f, mf, num_comp, has_inter, idx_inter_term)
+        X_comp  <- X$comp
+        X_inter <- X$inter
+    } else {
+        data <- object$data
+        X_comp <- object$standata$X_comp
+        X_inter <- object$standata$X_inter
+    }
+
+    strata_group_fct <- .get_strata_group_fct(object, data)
 
     num_obs <- dim(X_comp)[2]
 
@@ -56,7 +53,7 @@ pp_data <- function(object, newdata, draws, re.form) {
     }
 
     if(!missing(draws))
-        post <- extract_draw(post, 1:draws)
+        post <- extract_draw(post, seq_len(draws))
 
     ##pp <- posterior_simulate(post, blrm_logit_grouped, envir=list2env(pred_data))
     pp <- posterior_simulate(post, blrm_logit_grouped_vec, vectorized=TRUE, envir=list2env(pred_data))
@@ -125,12 +122,12 @@ blrm_logit_grouped_vec <- function(group, stratum, X_comp, X_inter, beta, eta) {
     num_inter <- dim(X_inter)[2]
     num_obs <- length(group)
     S <- dim(beta)[1]
-    mu <- matrix(NA, S, num_obs)
-    for(i in 1:num_obs) {
+    mu <- matrix(0.0*NA, S, num_obs)
+    for (i in seq_len(num_obs)) { # LW: patched to NOT run if num_obs
         g <- group[i]
         s <- stratum[i]
         log_p0_nr <- 0
-        for(j in 1:num_comp) {
+        for(j in seq_len(num_comp)) {
             ##log_p0_nr <- log_p0_nr + log(1 - inv_logit(X_comp[j,i,] %*% beta[g,j,]))
             log_p0_nr <- log_p0_nr + log_inv_logit(-1 * adrop(X_comp[j,i,,drop=FALSE], drop=1) %*% t(matrix(beta[,g,j,,drop=FALSE], S, 2)))
         }
@@ -154,7 +151,7 @@ pp_binomial_trials <- function(object, newdata) {
     f <- object$formula
     orig_mf <- object$model
     idx_group_term <- object$idx_group_term
-    tt <- terms(f, data=orig_mf, lhs=1, rhs=1:idx_group_term)
+    tt <- terms(f, data=orig_mf, lhs=1, rhs=seq_len(idx_group_term))
     mf <- model.frame(tt, data)
     y <- model.response(mf)
     return(rowSums(y))
@@ -169,7 +166,7 @@ pp_binomial_trials <- function(object, newdata) {
     f <- object$formula
     orig_mf <- object$model
     idx_group_term <- object$idx_group_term
-    tt <- terms(f, data=orig_mf, lhs=1, rhs=1:idx_group_term)
+    tt <- terms(f, data=orig_mf, lhs=1, rhs=seq_len(idx_group_term))
     Terms <- delete.response(tt)
     mf <- model.frame(Terms, data)
 

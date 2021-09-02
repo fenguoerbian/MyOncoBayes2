@@ -6,7 +6,7 @@ functions {
     if (dist == 0) {
       // this is the fixed density => we assign standard normals to
       // avoid sampling issues
-      return normal_lpdf(tau| 0, 1);
+      return std_normal_lpdf(tau);
     } else if (dist == 1) {
       return lognormal_lpdf(tau| a, b);
     } else if (dist == 2) {
@@ -95,6 +95,24 @@ functions {
     return binomial_logit_lpmf(r_obs | n_obs, blrm_logit_fast(obs_gidx, n, X_comp, finite_cov, X_inter, beta, eta) );
   }
 
+  real blrm_lupmf_comp(int[] r,
+                       int[] obs_gidx, int[] n,
+                       matrix[] X_comp, int[,] finite_cov,
+                       matrix X_inter,
+                       vector[] beta, vector eta) {
+    int num_obs = size(obs_gidx);
+    int r_obs[num_obs];
+    int nr_obs[num_obs];
+    vector[num_obs] theta = blrm_logit_fast(obs_gidx, n, X_comp, finite_cov, X_inter, beta, eta);
+    vector[num_obs] log_pi = log_inv_logit(theta);
+    vector[num_obs] log_inv_pi = log_inv_logit(-1.0*theta);
+    for(i in 1:num_obs) {
+      r_obs[i] = r[obs_gidx[i]];
+      nr_obs[i] = n[obs_gidx[i]] - r_obs[i];
+    }
+    return dot_product( to_vector(r_obs), log_pi ) + dot_product(to_vector(nr_obs), log_inv_pi );
+  }
+
   // calculates for a given group all mixture configurations and 
   vector blrm_mix_lpmf_comp(int g, int num_groups,
                             int[] obs_gidx,
@@ -131,6 +149,45 @@ functions {
     }
 
     return mix_lpmf;
+  }
+  
+  // calculates for a given group all mixture configurations and
+  // ... unnormalized version avoiding nasty log-gamma calls
+  vector blrm_mix_lupmf_comp(int g, int num_groups,
+                            int[] obs_gidx,
+                            int[] r, int[] n,
+                            matrix[] X_comp, int[,] finite_cov,
+                            matrix X_inter,
+                            vector[,] beta, int[,] mix_idx_beta,
+                            vector[] eta, int[,] mix_idx_eta) {
+    int num_mix_comp = size(mix_idx_beta);
+    int num_comp = dims(mix_idx_beta)[2];
+    int num_inter = dims(mix_idx_eta)[2];
+    vector[num_mix_comp] mix_lupmf;
+
+    if (num_elements(r) == 0)
+      return rep_vector(0.0, num_mix_comp);
+    
+    for(m in 1:num_mix_comp) {
+      int ind_beta[num_comp] = mix_idx_beta[m];
+      int ind_eta[num_inter] = mix_idx_eta[m];
+      vector[2] beta_mix_config[num_comp];
+      vector[num_inter] eta_mix_config;
+      for(i in 1:num_comp)
+        beta_mix_config[i] = beta[ind_beta[i] == 1 ? g : g + num_groups,i];
+      for(i in 1:num_inter)
+        eta_mix_config[i] = eta[ind_eta[i] == 1 ? g : g + num_groups,i];
+
+      mix_lupmf[m] = blrm_lupmf_comp(r, obs_gidx,
+                                     n,
+                                     X_comp,
+                                     finite_cov,
+                                     X_inter,
+                                     beta_mix_config,
+                                     eta_mix_config);
+    }
+
+    return mix_lupmf;
   }
 }
 data {
@@ -224,6 +281,7 @@ transformed data {
   // indices for each group
   int<lower=0,upper=num_obs> group_obs_idx[num_groups,max(num_obs_group)] = rep_array(0, num_groups, max(num_obs_group));
   vector<upper=0>[num_mix_comp] mix_log_weight[num_groups];
+  vector[num_groups] log_normfactor_group = rep_vector(0, num_groups);
 
   // determine for each group the set of indices which belong to it
   for (g in 1:num_groups) {
@@ -246,18 +304,23 @@ transformed data {
   }
   
   for(j in 1:num_comp) {
-    if(cardinality_vector(X_comp[j,:,1]) > 1 || X_comp[j,1,1] != 1.0)
+    vector[num_obs] X_comp_intercept = X_comp[j,:,1];
+    if(cardinality_vector(X_comp_intercept) > 1 || X_comp[j,1,1] != 1.0)
       reject("Compound (", j, ") design matrix must have an intercept.");
   }
 
-  if(num_inter > 0)
-    if(cardinality_vector(X_inter[:,1]) == 1 && X_inter[1,1] == 1.0)
+  if(num_inter > 0) {
+    vector[num_obs] X_inter_intercept = X_inter[:,1];
+    if(cardinality_vector(X_inter_intercept) == 1 && X_inter[1,1] == 1.0)
       print("INFO: Interaction design matrix appears to have an intercept, which is unexpected.");
+  }
 
   // NOTE: Non-centered parametrization is hard-coded
 
-  for(i in 1:num_obs)
+  for(i in 1:num_obs) {
     n[i] = r[i] + nr[i];
+    log_normfactor_group[group[i]] += lchoose(n[i], r[i]);
+  }
 
   // count number of cases per group
   for(g in 1:num_groups) {
@@ -440,36 +503,52 @@ transformed parameters {
       beta[g,j,2] = exp(beta[g,j,2]);
 }
 model {
-  real log_lik = 0.0;
-  // loop over the data by group; nested into that we have to
-  // loop over the different mixture configurations
-  for(g in 1:num_groups) {
-    int s = group_stratum_cid[g];
-    int group_size = num_obs_group[g];
-    int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
-    if(num_cases_group[g] != 0) {
-      // lpmf for each mixture configuration
-      vector[num_mix_comp] mix_lpmf =
-          blrm_mix_lpmf_comp(// subset data
-              g, num_groups,
-              obs_gidx,
-              r,
-              n,
-              X_comp,
-              finite_cov,
-              X_inter,
-              // select EX+NEX of this group
-              beta, mix_idx_beta,
-              eta, mix_idx_eta)
-          // prior weight for each component
-          + mix_log_weight[g];
-      // finally add the sum (on the natural scale) as log to the target
-      // log density
-      log_lik += log_sum_exp(mix_lpmf);
-    } // num_cases_group[g] == 0 => log_lik = 0
+  if(!prior_PD) {
+    if (num_mix_comp == 1) {
+      // no mixture model case, EXNEX off => use vectorization accross
+      // data-rows
+      vector[num_obs] theta;
+      for(g in 1:num_groups) {
+        int s = group_stratum_cid[g];
+        int group_size = num_obs_group[g];
+        int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
+        theta[obs_gidx] = blrm_logit_fast(obs_gidx, n, X_comp, finite_cov, X_inter, beta[g], eta[g]);
+      }
+      r ~ binomial_logit(n, theta);
+    } else {
+      vector[num_groups] log_lik;
+      // loop over the data by group; nested into that we have to
+      // loop over the different mixture configurations
+      for(g in 1:num_groups) {
+        int s = group_stratum_cid[g];
+        int group_size = num_obs_group[g];
+        int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
+        if(num_cases_group[g] != 0) {
+          // lpmf for each mixture configuration
+          vector[num_mix_comp] mix_lupmf =
+              blrm_mix_lupmf_comp(// subset data
+                  g, num_groups,
+                  obs_gidx,
+                  r,
+                  n,
+                  X_comp,
+                  finite_cov,
+                  X_inter,
+                  // select EX+NEX of this group
+                  beta, mix_idx_beta,
+                  eta, mix_idx_eta)
+              // prior weight for each component
+              + mix_log_weight[g];
+          // finally add the sum (on the natural scale) as log to the target
+          // log density
+          log_lik[g] = log_sum_exp(mix_lupmf);
+        } else { // num_cases_group[g] == 0 => log_lik = 0
+          log_lik[g] = 0.0;
+        }
+      }
+      target += sum(log_lik);
+    }
   }
-  if (!prior_PD)
-    target += log_lik;
   
   // EX part: hyper-parameters priors for hierarchical priors
   for(j in 1:num_comp) {
@@ -492,9 +571,9 @@ model {
   // hierarchical priors NCP
   for(g in 1:num_groups) {
     for(j in 1:num_comp)
-      log_beta_raw[g,j] ~ normal(0, 1);
+      log_beta_raw[g,j] ~ std_normal();
 
-    eta_raw[g] ~ normal(0, 1);
+    eta_raw[g] ~ std_normal();
   }
 
   // NEX priors (always uncorrelated)
@@ -526,8 +605,8 @@ generated quantities {
     int group_size = num_obs_group[g];
     int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
     // lpmf for each mixture configuration
-    vector[num_mix_comp] mix_lpmf =
-        blrm_mix_lpmf_comp(g, num_groups,
+    vector[num_mix_comp] mix_lupmf =
+        blrm_mix_lupmf_comp(g, num_groups,
                            obs_gidx,
                            r,
                            n,
@@ -537,13 +616,13 @@ generated quantities {
                            beta, mix_idx_beta,
                            eta, mix_idx_eta)
       + mix_log_weight[g];
-    real log_norm = log_sum_exp(mix_lpmf);
-    vector[num_mix_comp] log_EX_prob_mix = mix_lpmf - log_norm;
+    real log_norm = log_sum_exp(mix_lupmf);
+    vector[num_mix_comp] log_EX_prob_mix = mix_lupmf - log_norm;
     int mix_config_ind = categorical_rng(exp(log_EX_prob_mix));
     int mix_beta_config[num_comp] = mix_idx_beta[mix_config_ind];
     int mix_eta_config[num_inter] = mix_idx_eta[mix_config_ind];
 
-    log_lik_group[g] = log_norm;
+    log_lik_group[g] = log_norm + log_normfactor_group[g];
     
     // marginalize & pick group specific parameters which have been sampled
     {
