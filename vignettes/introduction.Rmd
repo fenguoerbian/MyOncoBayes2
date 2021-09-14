@@ -65,27 +65,27 @@ collected during trial conduct in the context of another trial/context.
 
 The package supports incorporation of additional data through a
 Meta-Analytic-Combined (MAC) framework [1]. Within the MAC model the
-hetergeneous sources of data are assigned to *groups* and information
-is shared accross groups through a hierarchial model structure. For
+heterogeneous sources of data are assigned to *groups* and information
+is shared across groups through a hierarchical model structure. For
 any given group this leads to borrowing strength from all other groups
 while discounting the information from other groups. The amount of
-discounting (or down-weighting) is determined by the heterogeniety. A
+discounting (or down-weighting) is determined by the heterogeneity. A
 group is commonly defined to be a trial, but that must not necessarily
 hold.
 
-The key assumption of the hierarhical model is the exchangability
+The key assumption of the hierarchical model is the exchangability
 assumption between the groups. There are two independent mechanisms in
 the package which aim at relaxing the exchangability assumption:
 
 - Differential discounting: Groups are assigned to different
-strata. While the overal hierarchical mean stays the same, the
-heterogeniety between groups is allowed to be different between
+strata. While the overall hierarchical mean stays the same, the
+heterogeneity between groups is allowed to be different between
 strata. Each group must be assigned to a single stratum only.
 
 - EXchangeable/Non-EXchangeable (EX/NEX) model for each group: With
-EXNEX each group is modelled as being exchangable with some
+EXNEX each group is modelled as being exchangeable with some
 probability and is allowed to have it's own group-specific estimate
-as if the grup is not exchangable with the remainder of the data.
+as if the group is not exchangeable with the remainder of the data.
 
 Both techniques are rather advanced and are not discussed further in
 this introduction.
@@ -220,10 +220,10 @@ controlling the details.
 2. Provide a full prior specification to be passed to the `blrm_exnex`
 function.
 
-For simplicity and concicneness purposes, here we use method #1, which
-is not recommended for actual trials as the prior should be choosen
-deliberatley and there is no gurantee that the simplified prior will
-remain stable accross releases of the package. See
+For simplicity and conciseness purposes, here we use method #1, which
+is not recommended for actual trials as the prior should be chosen
+deliberately and there is no guarantee that the simplified prior will
+remain stable across releases of the package. See
 `?'example-combo2_trial'` for an example of #2. The below choice of
 prior broadly follows the case study in [4], although we slightly
 deviate from the model in [4] by a different reference dose and mean
@@ -452,11 +452,11 @@ plot_toxicity_intervals_stacked(combo2_trial_codata,
 ```
 
 As we can observe, the additional data on drug A moves the maximal
-admissable dose allowed by EWOC towards higher doses for drug B
+admissible dose allowed by EWOC towards higher doses for drug B
 whenever drug A is 6 mg. This reflects that drug A has been observed
 to be relatively safe, since no DLT was observed for a number of doses.
 
-In the example of [1], during the conduct of the second satge of the
+In the example of [1], during the conduct of the second stage of the
 `trial_AB` an additional external data source from a new trial became
 available. This time it is stemming from another trial which is 
 an investigator-initiated trial `IIT` of the same combination.
@@ -485,7 +485,7 @@ combo2_trial_final <- update(combo2_trial_start, data = codata_combo2)
 
 As final summary we consider the 75% quantile of the probability for a
 DLT at all dose combinations. Whenever the 75% quantile exceeds 33%,
-then the EWOC criterium is violated and the dose is too toxic.
+then the EWOC criterion is violated and the dose is too toxic.
 
 ```{r, fig.height = 1.05 * 4, fig.width=1.62 * 4}
 

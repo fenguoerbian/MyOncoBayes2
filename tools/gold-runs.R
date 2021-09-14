@@ -9,6 +9,7 @@ source("tests/testthat/helper-sampling.R")
 source("tests/testthat/helper-trial_examples.R")
 source("tests/testthat/helper-load_gold.R")
 
+set_sampling_default(2000, 1000, 2, 2, FALSE)
 gold_runs <- load_gold(FALSE)
 gold_runs$commit <- git_commit
 

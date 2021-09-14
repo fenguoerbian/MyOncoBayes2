@@ -134,7 +134,7 @@ heterogeniety parameters. Choices are 0=fixed to it's mean,
 
 \item{warmup}{number of warmup iterations.}
 
-\item{save_warmup}{save warmup samples (TRUE / FALSE)}
+\item{save_warmup}{save warmup samples (\code{TRUE} / \code{FALSE}). Only if set to \code{TRUE}, then all random variables are saved in the posterior. This substantially increases the storage needs of the posterior.}
 
 \item{thin}{period of saving samples.}
 

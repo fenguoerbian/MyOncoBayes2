@@ -651,6 +651,16 @@ blrm_exnex <- function(formula,
 
     control_sampling <- modifyList(list(adapt_delta=0.99, stepsize=0.1), control)
 
+    ## whenever no warmup is saved, we also drop all unneccessary parameters as
+    ## - raw parameters
+    ## - correlation cholesky factors
+    ## - NEX / EX paramters (only store by-group estimates)
+    exclude_pars <- ifelse(save_warmup, "", c("log_beta_raw", "eta_raw",
+                                              "tau_log_beta_raw", "tau_eta_raw",
+                                              "L_corr_log_beta", "L_corr_eta",
+                                              "beta", "eta",
+                                              "beta_EX_prob", "eta_EX_prob"))
+
     stan_msg <- capture.output(stanfit <- rstan::sampling(stanmodels$blrm_exnex,
                                                           data=stan_data,
                                                           warmup=warmup,
@@ -662,7 +672,9 @@ blrm_exnex <- function(formula,
                                                           control=control_sampling,
                                                           algorithm = "NUTS",
                                                           open_progress=FALSE,
-                                                          save_warmup=save_warmup
+                                                          save_warmup=save_warmup,
+                                                          include=FALSE,
+                                                          pars=exclude_pars
                                                           ))
     ## only display Stan messages in verbose mode
     if(verbose) {
@@ -681,12 +693,14 @@ blrm_exnex <- function(formula,
     stanfit <- .label_index(stanfit, "tau_log_beta", strata_fct, labels$component, labels$param_log_beta)
     stanfit <- .label_index(stanfit, "rho_log_beta", labels$component)
     stanfit <- .label_index(stanfit, "beta_group", group_fct, labels$component, labels$param_beta)
-    stanfit <- .label_index(stanfit, "beta_EX_prob", group_fct, labels$component)
+    if(save_warmup)
+        stanfit <- .label_index(stanfit, "beta_EX_prob", group_fct, labels$component)
     stanfit <- .label_index(stanfit, "log_lik_group", group_fct)
     if(has_inter) {
         labels$param_eta <- .make_label_factor(.abbreviate_label(colnames(X_inter)))
         stanfit <- .label_index(stanfit, "eta_group", group_fct, labels$param_eta)
-        stanfit <- .label_index(stanfit, "eta_EX_prob", group_fct, labels$param_eta)
+        if(save_warmup)
+            stanfit <- .label_index(stanfit, "eta_EX_prob", group_fct, labels$param_eta)
         stanfit <- .label_index(stanfit, "mu_eta", labels$param_eta)
         stanfit <- .label_index(stanfit, "tau_eta", strata_fct, labels$param_eta)
         stanfit <- .label_index(stanfit, "Sigma_corr_eta", labels$param_eta, labels$param_eta)

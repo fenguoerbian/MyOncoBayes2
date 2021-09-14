@@ -1,8 +1,8 @@
-a24bd33c3e58ac480b5255db8de234f3 *DESCRIPTION
+7c832672311c39ad4b1f2f7e4fd0c4cc *DESCRIPTION
 23dd6b5ed281df5d76914351e2b88351 *NAMESPACE
 7417017d2fc3165b3fe676b1993d266f *R/OncoBayes2-package.R
 cd7cd6343530e8310a9788f9281c9d07 *R/bind_rows_0.R
-afcdc65e5e3f178ef8beb4aaded61418 *R/blrm_exnex.R
+23416340a3fc213af07ac47b28d3f3ab *R/blrm_exnex.R
 6fe5a816cd56e8ea0972e8a28f1a432b *R/blrm_formula_linear.R
 cae65b46f2e572e0bf531317eff9312b *R/blrm_formula_saturating.R
 2df4be1209c1f4ff6d4fe7b6dc92ce4c *R/blrm_trial.R
@@ -30,7 +30,7 @@ fd963533356c4ba99f15879d04c19bc0 *R/posterior_predict.R
 162d5d5ac7a0abd2c7c7c23ada3259db *R/stan_tools.R
 464dc916d214a81ee80df3193b4d168b *R/stanmodels.R
 abbd561298d661b190fc374a2250312e *R/summary.R
-e1cea4247c1b48739b1a39a917b64b5b *R/sysdata.rda
+77a5eebf731e76962f06d7d7358bc694 *R/sysdata.rda
 8bf54510fa3a057f6560abc12c424def *R/update.R
 95984e4d2522457c8eeedf15173450ae *R/utils.R
 d96ae64ac8fa684eeec8f76ab8c04048 *R/zzz.R
@@ -43,11 +43,11 @@ c1bcdce3e8392b184034eab80bd0fbef *data/dose_info_combo2.rda
 bda1e8c91d47e6652b24283cb4ef38d1 *data/hist_SA.rda
 4deeb94233379b3bb7f28f7275dcf4e4 *data/hist_combo2.rda
 119f896fc4051e945aa11d067ea15bbf *data/hist_combo3.rda
-bfdb968b2bec99f488fcd0841e717c45 *inst/NEWS
-5dca9909885ead21ae1c2337de71aeb3 *inst/doc/OncoBayes2.pdf
+6830186f3a81bc1cd2b2ee040ed46abc *inst/NEWS
+66fcdf67d0fdadd7c1a7717fb371c49a *inst/doc/OncoBayes2.pdf
 072d595d0413f49ac7e3be04305825a5 *inst/doc/introduction.R
-8ef994ea883594d4b5ff0ffaf3e97dbf *inst/doc/introduction.Rmd
-e6ed3bcd77690a41f599b628f5819d56 *inst/doc/introduction.html
+b3f123924e95ff4de8f9bb0dfc4c7118 *inst/doc/introduction.Rmd
+afa69565600d88ed487e7f7954651d63 *inst/doc/introduction.html
 b51bd3f98a3e3ea5c26a0bdb8a7b0db1 *inst/extra/run-oq.R
 855c064dbf8deaff96c8dc8a87169109 *inst/include/stan_meta_header.hpp
 694ba14cdcd9ab18f6406d146a78e448 *inst/sbc/calibration.md5
@@ -55,7 +55,7 @@ b51bd3f98a3e3ea5c26a0bdb8a7b0db1 *inst/extra/run-oq.R
 0cfa5590cf14d5c708828f767fb740f5 *inst/sbc/make_reference_rankhist.R
 11deca9783642b454f88daa19500e3df *inst/sbc/sbc_example_models.R
 d6c86677cdf2661fdeffd330d876f212 *inst/sbc/sbc_report.R
-6e7051d89d4b23815cdc4ea67bf9917a *inst/sbc/sbc_report.html
+e981cef3ff320188775398f3a9dcb599 *inst/sbc/sbc_report.html
 37f09bdffdefd75bf0f222b4539fcc2b *inst/sbc/sbc_report_plots.R
 138143c0a511b38037a3c77f905d5d0a *inst/sbc/sbc_tools.R
 4abfdf2a234da42e839f8ee431e92ff6 *inst/stan/blrm_exnex.stan
@@ -65,7 +65,7 @@ b556e5b2d4b764afb8badcfdaa4da9fb *inst/stan/include/license.stan
 716dad64395179a9aaad9b535125c69c *inst/stan/include/utils.stan
 6bcd4e44578200f94c920c8f688f85f4 *man/OncoBayes2.Rd
 5a274ce69116cf8f873429f651f9767f *man/bind_rows_0.Rd
-83d807378db3857100604cf415648e01 *man/blrm_exnex.Rd
+df6acd8f7f0c6eb1d82ca5be85f5972a *man/blrm_exnex.Rd
 22cf574215e22db32021608bacd9cc3c *man/blrm_formula_linear.Rd
 e45686be79e814124e423a86f457b4f0 *man/blrm_formula_saturating.Rd
 e4ef88db7c00fcd328409074339a25b3 *man/blrm_trial.Rd
@@ -125,10 +125,10 @@ c0ea95469c798ce3f33102e73f5228ca *tools/build.sh
 2521c8d8c0aeb74fd8da3ef68f7960d6 *tools/build_ref_pdf.sh
 e76bc77390d188d06b6969e88ff23b1e *tools/coverage.R
 ebba9113b71c5ff1b4a5a3ded022ee15 *tools/document.sh
-e74656434e8cd78443e7afcc54e49616 *tools/gold-runs.R
+f8e877bdc33efe1e1285bf605851c57e *tools/gold-runs.R
 bb5a8896046fcca0061b06e01a629c06 *tools/install.sh
 35528bf71867141d165e1fa003f88ffe *tools/make-ds.R
 34e6b12ba370464b64c80d303f379d7d *tools/make_cc.R
 bf7cb16f68655c53c282321843104bc8 *tools/oq.sh
 9a324e30bb96a8ff7ddb9acbd5ebdb4b *tools/update_ref_plots.R
-8ef994ea883594d4b5ff0ffaf3e97dbf *vignettes/introduction.Rmd
+b3f123924e95ff4de8f9bb0dfc4c7118 *vignettes/introduction.Rmd
