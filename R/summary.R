@@ -34,7 +34,7 @@
 #'
 #' @template start-example
 #' @examples
-#' example_model("single_agent")
+#' example_model("single_agent", silent=TRUE)
 #'
 #' ## obtain underdosing (0-0.16), target dosing (0.16-0.33) and
 #' ## overdosing (0.33-1) probabilities

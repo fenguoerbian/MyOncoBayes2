@@ -34,7 +34,7 @@ The summary of the prior creates a structured
                             OncoBayes2.MC.save_warmup=FALSE)
 
 ## run combo2 analysis which defines blrmfit model object
-example_model("combo2")
+example_model("combo2", silent=TRUE)
 
 prior_summary(blrmfit)
 

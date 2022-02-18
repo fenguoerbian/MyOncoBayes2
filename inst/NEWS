@@ -1,3 +1,16 @@
+February 16th, 2022 (0.8-4)
+
+* Switch SBC runs to use clustermq in lieu of batchtools. Also now use
+  L'Ecuyer CMG as rng engine during SBC runs.
+
+* add critical_quantile function allowing to calculate critical doses
+  which fulfill conditions like EWOC.
+
+October 7th, 2021 (0.8-3)
+
+* Make Stan model compile with 2.27+ (lupmf postfix for variables is
+  not allowed)
+
 September 13th, 2021 (0.8-2)
 
 * Drop unneccessary random variables from the posterior whenever

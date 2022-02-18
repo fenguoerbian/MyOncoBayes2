@@ -5,6 +5,10 @@
 #' output: html_vignette
 #' params:
 #'   include_plots: FALSE
+#' vignette: >
+#'   %\VignetteIndexEntry{Simulation based calibration for OncoBayes2}
+#'   %\VignetteEngine{knitr::rmarkdown}
+#'   %\VignetteEncoding{UTF-8}
 #' ---
 #'
 #+ include=FALSE
@@ -144,9 +148,9 @@ B <- calibration$B
 S <- calibration$S
 
 bins_all <- calibration$data %>%
-  tidyr::gather(key = "param", value = "count", - model, -bin) %>%
+  tidyr::gather(key = "param", value = "count", - data_scenario, -bin) %>%
   mutate(partype = sapply(strsplit(param, "[[]"), '[', 1),
-         group = interaction(model, partype))
+         group = interaction(data_scenario, partype))
 
 
 cal_split <- split(bins_all, bins_all$group)
@@ -161,8 +165,8 @@ pl_split <- lapply(cal_split, function(cal_df) plot_binned(cal_df))
 kable(calibration$sampler_diagnostics, digits=3)
 
 chisq  <- bins_all %>%
-  arrange(model, partype, param, bin) %>%
-  group_by(model, partype, param) %>%
+  arrange(data_scenario, partype, param, bin) %>%
+  group_by(data_scenario, partype, param) %>%
   mutate(allna = all(count == 0)) %>%
   filter(!allna) %>%
   do(tidy(chisq.test(.$count))[,c(1,3,2)] ) %>%
@@ -177,26 +181,26 @@ chisq  <- bins_all %>%
 #' ## $\chi^2$ Statistic, Model 1: Single-agent logistic regression
 #'
 
-kable(chisq %>% filter(model == "log2bayes_EXNEX") %>% select(-model, -partype), digits=3)
+kable(chisq %>% filter(data_scenario== "log2bayes_EXNEX") %>% select(-data_scenario, -partype), digits=3)
 
 #'
 #' ## $\chi^2$ Statistic, Model 2: Double combination, fully exchangeable
 #'
 
 
-kable(chisq %>% filter(model == "combo2_EX") %>% select(-model, -partype), digits=3)
+kable(chisq %>% filter(data_scenario == "combo2_EX") %>% select(-data_scenario, -partype), digits=3)
 
 #'
 #' ## $\chi^2$ Statistic, Model 3: Double combination, EXchangeable/NonEXchangeable model
 #'
 
-kable(chisq %>% filter(model == "combo2_EXNEX") %>% select(-model, -partype), digits=3)
+kable(chisq %>% filter(data_scenario == "combo2_EXNEX") %>% select(-data_scenario, -partype), digits=3)
 
 #'
 #' ## $\chi^2$ Statistic, Model 4: Triple combination, EX/NEX model
 #'
 
-kable(chisq %>% filter(model == "combo3_EXNEX") %>% select(-model, -partype), digits=3)
+kable(chisq %>% filter(data_scenario == "combo3_EXNEX") %>% select(-data_scenario, -partype), digits=3)
 
 #+ results="asis", include=include_plots, eval=include_plots
 spin_child("sbc_report_plots.R")

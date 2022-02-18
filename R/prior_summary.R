@@ -18,7 +18,7 @@
 #' @template start-example
 #' @examples
 #' ## run combo2 analysis which defines blrmfit model object
-#' example_model("combo2")
+#' example_model("combo2", silent=TRUE)
 #'
 #' prior_summary(blrmfit)
 #'

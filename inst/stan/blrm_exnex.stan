@@ -163,7 +163,7 @@ functions {
     int num_mix_comp = size(mix_idx_beta);
     int num_comp = dims(mix_idx_beta)[2];
     int num_inter = dims(mix_idx_eta)[2];
-    vector[num_mix_comp] mix_lupmf;
+    vector[num_mix_comp] mix_ll;
 
     if (num_elements(r) == 0)
       return rep_vector(0.0, num_mix_comp);
@@ -178,16 +178,16 @@ functions {
       for(i in 1:num_inter)
         eta_mix_config[i] = eta[ind_eta[i] == 1 ? g : g + num_groups,i];
 
-      mix_lupmf[m] = blrm_lupmf_comp(r, obs_gidx,
-                                     n,
-                                     X_comp,
-                                     finite_cov,
-                                     X_inter,
-                                     beta_mix_config,
-                                     eta_mix_config);
+      mix_ll[m] = blrm_lupmf_comp(r, obs_gidx,
+                                  n,
+                                  X_comp,
+                                  finite_cov,
+                                  X_inter,
+                                  beta_mix_config,
+                                  eta_mix_config);
     }
 
-    return mix_lupmf;
+    return mix_ll;
   }
 }
 data {
@@ -525,7 +525,7 @@ model {
         int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
         if(num_cases_group[g] != 0) {
           // lpmf for each mixture configuration
-          vector[num_mix_comp] mix_lupmf =
+          vector[num_mix_comp] mix_ll =
               blrm_mix_lupmf_comp(// subset data
                   g, num_groups,
                   obs_gidx,
@@ -541,7 +541,7 @@ model {
               + mix_log_weight[g];
           // finally add the sum (on the natural scale) as log to the target
           // log density
-          log_lik[g] = log_sum_exp(mix_lupmf);
+          log_lik[g] = log_sum_exp(mix_ll);
         } else { // num_cases_group[g] == 0 => log_lik = 0
           log_lik[g] = 0.0;
         }
@@ -605,7 +605,7 @@ generated quantities {
     int group_size = num_obs_group[g];
     int obs_gidx[group_size] = group_obs_idx[g,1:group_size];
     // lpmf for each mixture configuration
-    vector[num_mix_comp] mix_lupmf =
+    vector[num_mix_comp] mix_ll =
         blrm_mix_lupmf_comp(g, num_groups,
                            obs_gidx,
                            r,
@@ -616,8 +616,8 @@ generated quantities {
                            beta, mix_idx_beta,
                            eta, mix_idx_eta)
       + mix_log_weight[g];
-    real log_norm = log_sum_exp(mix_lupmf);
-    vector[num_mix_comp] log_EX_prob_mix = mix_lupmf - log_norm;
+    real log_norm = log_sum_exp(mix_ll);
+    vector[num_mix_comp] log_EX_prob_mix = mix_ll - log_norm;
     int mix_config_ind = categorical_rng(exp(log_EX_prob_mix));
     int mix_beta_config[num_comp] = mix_idx_beta[mix_config_ind];
     int mix_eta_config[num_inter] = mix_idx_eta[mix_config_ind];

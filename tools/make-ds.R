@@ -54,9 +54,9 @@ make_internal_ds <- function() {
 
     ## reshape calibration data
     calibration_data <- calibration$data %>%
-        tidyr::gather(key = "param", value = "count", - model, -bin) %>%
+        tidyr::gather(key = "param", value = "count", - data_scenario, -bin) %>%
         arrange(param, bin) %>%
-        group_by(model, param) %>%
+        group_by(data_scenario, param) %>%
         mutate(ecdf = cumsum(count) / calibration$S,
                ecdf_ref = (bin + 1) / calibration$B,
                allzero = all(ecdf == 0)) %>%

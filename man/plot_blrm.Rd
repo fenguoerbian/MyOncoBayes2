@@ -120,20 +120,24 @@ used. If \code{object} is a \code{blrmfit} object, \code{newdata} defaults to
 the \code{data} argument. If \code{object} is a \code{blrm_trial}, it defaults
 to \code{summary(object, "dose_info")}.}
 
-\item{x}{Character giving the parameter name to be mapped to the x-axis. 
-This also supports 'tidy' parameter selection by specifying 
-`x = vars(...)`, where `...` is specified the same way as in 
-[dplyr::select(...)][dplyr::select] and similar functions. Examples of 
-using `x` in this way can be found in the examples. For `blrm_trial` 
-methods, it defaults to the first entry in 
-`summary(blrm_trial, "drug_info")$drug_name`.}
+\item{x}{Character giving the parameter name to be mapped to the
+x-axis.  This also supports 'tidy' parameter selection by
+specifying \code{x = vars(...)}, where \code{...} is specified
+the same way as in \code{\link[dplyr:select]{dplyr::select()}}
+and similar functions. Examples of using \code{x} in this way
+can be found in the examples. For \code{blrm_trial} methods, it
+defaults to the first entry in \code{summary(blrm_trial,
+"drug_info")$drug_name}.}
 
-\item{group}{Grouping variable(s) whose levels will be mapped to different
-facets of the plot. `group` can be a character vector, tidy parameter(s)
-of the form `group = vars(...)`, or a formula to be passed directly to
-[ggplot2::facet_wrap]. For `blrm_trial` methods, it defaults to `group_id`,
-plus all entries of `summary(blrm_trial, "drug_info")$drug_name` except
-the first, which is mapped to `x`.}
+\item{group}{Grouping variable(s) whose levels will be mapped to
+different facets of the plot. \code{group} can be a character
+vector, tidy parameter(s) of the form \code{group = vars(...)},
+or a formula to be passed directly to
+\code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}. For
+\code{blrm_trial} methods, it defaults to \code{group_id}, plus
+all entries of \code{summary(blrm_trial,
+"drug_info")$drug_name} except the first, which is mapped to
+\code{x}.}
 
 \item{xlim}{x-axis limits}
 
@@ -144,32 +148,32 @@ the linear predictor on the logit link scale is transformed
 with \code{inv_logit} to the 0-1 response scale.}
 
 \item{prob}{central probability mass to report for the inner ribbon, i.e.
-the quantiles 0.5-prob/2 and 0.5+prob/2 are displayed.}
+the quantiles \code{0.5-prob/2} and \code{0.5+prob/2} are displayed.}
 
 \item{prob_outer}{central probability mass to report for the outer ribbon, i.e.
-the quantiles 0.5-prob/2 and 0.5+prob/2 are displayed.}
+the quantiles \code{0.5-prob/2} and \code{0.5+prob/2} are displayed.}
 
 \item{alpha, size}{Arguments passed to geoms. For this plot, \code{alpha} is
-passed to [ggplot2::geom_ribbon()], and \code{size} is passed to
-[ggplot2::geom_line].}
+passed to \code{\link[ggplot2:geom_ribbon]{ggplot2::geom_ribbon()}}, and \code{size} is passed to
+\code{\link[ggplot2:geom_line]{ggplot2::geom_line()}}.}
 
 \item{facet_args}{A named list of arguments (other than `facets`) passed
-to [ggplot2::facet_wrap()].}
+to \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}.}
 
 \item{hline_at}{Location(s) of horizontal guide lines (passed to
-[bayesplot::hline_at]).}
+\code{\link[bayesplot:hline_at]{bayesplot::hline_at()}}).}
 
 \item{grid_length}{Number of grid points within \code{xlim} for plotting.}
 
 \item{ewoc_shading}{logical indicates if doses violating EWOC should be
-shaded in gray. Applies only to `blrm_trial` methods. Defaults to TRUE.}
+shaded in gray. Applies only to \code{blrm_trial} methods. Defaults to \code{TRUE}.}
 
 \item{interval_prob}{defines the interval probabilities reported in
-the standard outputs. Defaults to \code{c(0, 0.16, 0.33, 1)}, 
-when `predictive = FALSE` and/or `transform = TRUE`, or to intervals 
-giving 0, 1, or 2+ DLTs when `predictive = TRUE` and `transform = FALSE`.
-For `blrm_trial` methods, this is taken from the 
-`blrm_trial$interval_prob` slot by default.}
+the standard outputs. Defaults to \code{c(0, 0.16, 0.33, 1)},
+when \code{predictive = FALSE} and/or \code{transform = TRUE}, or to intervals
+giving 0, 1, or 2+ DLTs when \code{predictive = TRUE} and \code{transform = FALSE}.
+For \code{blrm_trial} methods, this is taken from
+\code{summary(blrm_trial, "interval_prob")} by default.}
 
 \item{interval_max_mass}{vector defining for each interval of
 the \code{interval_prob} vector a maximal admissible
@@ -179,23 +183,23 @@ then the Escalation With Overdose Control (EWOC) criterion is
 considered to be not fulfilled. Dose levels not fulfilling
 EWOC are ineligible for the next cohort of patients. The
 default restricts the overdose probability to less than 0.25. For
-`blrm_trial` methods, this is taken from the 
-`blrm_trial$interval_max_mass` slot by default.}
+\code{blrm_trial} methods, this is taken from
+\code{summary(blrm_trial, "interval_max_mass")} by default.}
 
 \item{ewoc_colors}{Fill colors used for bars indicating EWOC OK or not.
 Vector of two characters, each of which must correspond to
-\code{bayesplot} package color schemes
-(see \code{?bayesplot::color_scheme_get})}
+\code{\link[bayesplot]{bayesplot-package}} color schemes
+(see \code{?\link[bayesplot:color_scheme_get]{bayesplot::color_scheme_get()}})}
 
 \item{predictive}{logical indicates if the posterior predictive is
 being summarized. Defaults to \code{FALSE}.}
 }
 \value{
 A ggplot object that can be further
-  customized using the **ggplot2** package.
+  customized using the \code{\link[ggplot2]{ggplot2}} package.
 }
 \description{
-**Warning**: these methods are at an experimental stage of development, and
+\strong{Warning}: these methods are at an experimental stage of development, and
 may change with future releases.
 
 Plotting methods for \code{blrmfit} and \code{blrm_trial} objects.
@@ -204,9 +208,9 @@ Plotting methods for \code{blrmfit} and \code{blrm_trial} objects.
 \code{plot_toxicity_curve} plots continuous profiles of the dose-toxicity curve.
 
 \code{plot_toxicity_intervals} plots the posterior probability mass in
-subintervals of [0,1], at a discrete set of provisional doses. 
+subintervals of [0,1], at a discrete set of provisional doses.
 
-\code{plot_toxicity_intervals_stacked} is similar to 
+\code{plot_toxicity_intervals_stacked} is similar to
 \code{plot_toxicity_intervals}, but over a continuous range of doses.
 }
 \examples{
@@ -215,37 +219,38 @@ subintervals of [0,1], at a discrete set of provisional doses.
 .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
                             OncoBayes2.MC.save_warmup=FALSE)
 
-library(dplyr) # for vars()
 
-example_model("combo2")
+example_model("combo2", silent=TRUE)
 
 # Plot the dose-toxicity curve
 plot_toxicity_curve(blrmfit,
-                    x = vars(drug_A),
+                    x = "drug_A",
                     group = ~ group_id * drug_B,
-                    newdata = filter(dose_info_combo2, group_id == "trial_AB"),
+                    newdata = subset(dose_info_combo2, group_id == "trial_AB"),
                     facet_args = list(ncol = 4))
-                    
+
 # Plot posterior DLT-rate-interval probabilities at discrete dose levels
 plot_toxicity_intervals(blrmfit,
-                        x = vars(drug_A),
+                        x = "drug_A",
                         group = ~ group_id * drug_B,
-                        newdata = filter(dose_info_combo2, group_id == "trial_AB"))
+                        newdata = subset(dose_info_combo2, group_id == "trial_AB"))
 
 # Plot posterior DLT-rate-interval probabilities over continuous dose
 plot_toxicity_intervals_stacked(blrmfit,
-                                x = vars(drug_A),
+                                x = "drug_A",
                                 group = ~ group_id * drug_B,
-                                newdata = filter(dose_info_combo2, group_id == "trial_AB"))
+                                newdata = subset(dose_info_combo2, group_id == "trial_AB"))
 
 # Plot predictive distribution probabilities over continuous dose
 plot_toxicity_intervals_stacked(blrmfit,
-                                x = vars(drug_A),
+                                x = "drug_A",
                                 group = ~ group_id * drug_B,
                                 predictive = TRUE,
                                 interval_prob = c(-1, 0, 1, 6),
-                                newdata = mutate(filter(dose_info_combo2, group_id == "trial_AB"),
-                                                 num_patients = 6, num_toxicities = 0))
+                                newdata = transform(subset(dose_info_combo2,
+                                                           group_id == "trial_AB"),
+                                                    num_patients = 6,
+                                                    num_toxicities = 0))
 ## Recover user set sampling defaults
 options(.user_mc_options)
 

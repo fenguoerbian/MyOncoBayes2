@@ -19,7 +19,7 @@
 #' @examples
 #'
 #' ## run single-agent analysis which defines blrmfit model object
-#' example_model("single_agent")
+#' example_model("single_agent", silent=TRUE)
 #'
 #' ## obtain posterior of linear prediction on 0-1 scale
 #' post_prob_dlt <- posterior_linpred(blrmfit, TRUE, newdata=hist_SA)

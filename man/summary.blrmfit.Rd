@@ -68,7 +68,7 @@ by the number of trials such that results are on the 0-1 scale.
 .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
                             OncoBayes2.MC.save_warmup=FALSE)
 
-example_model("single_agent")
+example_model("single_agent", silent=TRUE)
 
 ## obtain underdosing (0-0.16), target dosing (0.16-0.33) and
 ## overdosing (0.33-1) probabilities

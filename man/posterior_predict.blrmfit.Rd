@@ -56,7 +56,7 @@ prior for future groups.
                             OncoBayes2.MC.save_warmup=FALSE)
 
 
-example_model("single_agent")
+example_model("single_agent", silent=TRUE)
 
 post_pred  <- posterior_predict(blrmfit)
 ## turn DLT counts into DLT rates

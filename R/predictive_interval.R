@@ -18,7 +18,7 @@
 #'
 #' @template start-example
 #' @examples
-#' example_model("single_agent")
+#' example_model("single_agent", silent=TRUE)
 #'
 #' predictive_interval(blrmfit)
 #'

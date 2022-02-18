@@ -14,9 +14,9 @@ print(packageDescription("OncoBayes2"))
 
 cat("RUNNING PACKAGE TESTS:\n")
 # Run each section separately to get subsequent numbering per section
-# of the TAP reporter; execution order must be aligned with steps described 
+# of the TAP reporter; execution order must be aligned with steps described
 # in the vignette
-for(test in c("blrm_exnex", "blrm_trial", "examples", "posterior", "sbc")) {
+for(test in c("blrm_exnex", "blrm_trial", "examples", "posterior", "sbc", "plot_toxicity_curve", "plot_toxicity_intervals", "critical_quantile")) {
     test_package("OncoBayes2", filter=test, reporter="tap")
 }
 

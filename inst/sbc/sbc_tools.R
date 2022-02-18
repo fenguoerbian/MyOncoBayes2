@@ -1,19 +1,31 @@
 #'
 #' Utilities for SBC validation
 #'
-library(devtools)
-devtools::load_all("../..")
-library(rstan)
-library(mvtnorm)
-library(checkmate) # only needed inside blrm_exnex
-library(Formula) # only needed inside blrm_exnex
-library(abind) # only needed inside blrm_exnex
-library(dplyr)
-library(tidyr)
-library(assertthat)
-source("lkj.R")
 
-options(OncoBayes2.abbreviate.min = 0)
+load_OB2_dev <- function() {
+    if(!("OncoBayes2" %in% .packages())) {
+        cat("OncoBayes2 not yet loaded, bringing up local dev version.\n")
+        devtools::load_all("../..")
+        options(OncoBayes2.abbreviate.min = 0)
+    } else {
+        cat("OncoBayes2 is already loaded.\n")
+    }
+}
+
+setup_lecuyer_seeds <- function(lecuyer_seed, num) {
+    ## note: seed have the format from L'Ecuyer. Just set
+    ## RNGkind("L'Ecuyer-CMRG")
+    ## and then use .Random.seed
+    job_seeds <- list()
+    job_seeds[[1]] <- parallel::nextRNGStream(lecuyer_seed)
+    i <- 2
+    while(i < num+1) {
+        job_seeds[[i]] <- parallel::nextRNGStream(job_seeds[[i-1]])
+        i  <- i + 1
+    }
+    job_seeds
+}
+
 
 ## Sample prior
 
@@ -40,7 +52,6 @@ options(OncoBayes2.abbreviate.min = 0)
 ## prior_is_EXNEX_inter + prior_EX_prob_inter => pick which one
 
 sample_prior <- function(model) {
-
     num_strata <- model$num_strata
     num_groups <- model$num_groups
     num_comp <- model$num_comp
@@ -63,7 +74,7 @@ sample_prior <- function(model) {
         EX_mu_comp[j,1] <- rnorm(1, standata$prior_EX_mu_mean_comp[j,1], standata$prior_EX_mu_sd_comp[j,1])
         EX_mu_comp[j,2] <- rnorm(1, standata$prior_EX_mu_mean_comp[j,2], standata$prior_EX_mu_sd_comp[j,2])
     }
-    
+
     for (j in seq_len(num_inter)) {
         EX_mu_inter[j] <- rnorm(1, standata$prior_EX_mu_mean_inter[j], standata$prior_EX_mu_sd_inter[j])
     }
@@ -98,7 +109,7 @@ sample_prior <- function(model) {
             EX_corr_comp[s,j,,] <- rcorvine(2, standata$prior_EX_corr_eta_comp[j], FALSE)
             EX_Sigma_comp[s,j,,] <- diag(as.vector(EX_tau_comp[s,j,]), 2, 2) %*% matrix(EX_corr_comp[s,j,,,drop=FALSE], 2, 2) %*% diag(as.vector(EX_tau_comp[s,j,]), 2, 2)
         }
-        
+
         for (j in seq_len(num_inter)) {
             EX_tau_inter[s,j] <- sample_tau_prior(standata$prior_tau_dist,
                                                   standata$prior_EX_tau_mean_inter[s,j],
@@ -109,7 +120,7 @@ sample_prior <- function(model) {
             EX_corr_inter[s,,] <- rcorvine(num_inter, standata$prior_EX_corr_eta_inter, FALSE)
         }
         EX_Sigma_inter[s,,] <- diag(as.vector(EX_tau_inter[s,,drop=FALSE]), num_inter, num_inter) %*% matrix(EX_corr_inter[s,,,drop=FALSE], num_inter, num_inter) %*% diag(as.vector(EX_tau_inter[s,,drop=FALSE]), num_inter, num_inter)
-        
+
     }
 
   ## EX - group-specific parameters
@@ -139,11 +150,11 @@ sample_prior <- function(model) {
       log_beta[num_groups+g,j,1] <- rnorm(1, standata$prior_NEX_mu_mean_comp[j,1], standata$prior_NEX_mu_sd_comp[j,1])
       log_beta[num_groups+g,j,2] <- rnorm(1, standata$prior_NEX_mu_mean_comp[j,2], standata$prior_NEX_mu_sd_comp[j,2])
     }
-    
+
     for (j in seq_len(num_inter)) {
       eta[num_groups+g,j] <- rnorm(1, standata$prior_NEX_mu_mean_inter[j], standata$prior_NEX_mu_sd_inter[j])
     }
-    
+
   }
 
   ## convert slope to natural scale (enforced positivity)
@@ -170,7 +181,7 @@ sample_prior <- function(model) {
       draw_beta[1,g,j,1]  <- beta[gidx,j,1]
       draw_beta[1,g,j,2]  <- beta[gidx,j,2]
     }
-    
+
     for (j in seq_len(num_inter)) {
       if(standata$prior_is_EXNEX_inter[j] == 1) {
         is_EX_inter[g,j] <- rbinom(1, 1, standata$prior_EX_prob_inter[g,j])
@@ -218,13 +229,11 @@ sample_prior <- function(model) {
 #' the problem data, job specifics and a blrmfit object which defines
 #' the prior to sample and the design matrix.
 #'
-simulate_fake <- function(data, job, model, ...) {
+simulate_fake <- function(scenario) {
 
-  model  <- data$models[[model]]
+  prior_draw  <- sample_prior(scenario)
 
-  prior_draw  <- sample_prior(model)
-
-  standata  <- model$base_fit$standata
+  standata  <- scenario$base_fit$standata
 
   ## logit by data-row
   draw_mu <- with(standata, blrm_logit_grouped_vec(group, stratum, X_comp, X_inter, prior_draw$draw_beta, prior_draw$draw_eta))
@@ -239,7 +248,7 @@ simulate_fake <- function(data, job, model, ...) {
 
 extract_draws <- function(sims, draw) lapply(sims, asub, idx=draw, dim=1, drop=FALSE)
 
-extract_draw <- function(sims, draw) {
+extract_one_draw <- function(sims, draw) {
     assert_that(length(draw) == 1)
     lapply(lapply(sims, asub, idx=draw, dim=1, drop=FALSE), adrop, drop=1, one.d.array=TRUE)
 }
@@ -277,7 +286,8 @@ learn_warmup_info <- function(standata, stanfit) {
     gmean <- function(x) exp(mean(log(x)))
     post <- rstan::extract(stanfit)[1:8]
     S <- NROW(post[[1]])
-    draws  <- lapply(seq(1,S,length=10), extract_draw, sims=post)
+    draws  <- lapply(seq(1,S,length=10), extract_one_draw, sims=post)
+    ##draws  <- lapply(seq(1,S,length=10), OncoBayes2:::extract_draw, sims=post)
     warmup_info  <- extract_warmup_info(stanfit)
     warmup_info$stepsize  <- gmean(warmup_info$stepsize)
     warmup_info$inv_metric  <- apply(warmup_info$inv_metric, 1, gmean)
@@ -291,29 +301,28 @@ learn_warmup_info <- function(standata, stanfit) {
 #' **instance** of the scenario as generated by `simulate_fake`.
 #'
 
-fit_exnex <- function(data, job, instance, ..., save_fit=FALSE) {
+fit_exnex <- function(yrep, draw, scenario, ..., save_fit=FALSE) {
 
-    yrep <- instance$yrep
-    draw <- instance$draw
+    ##yrep <- instance$yrep
+    ##draw <- instance$draw
     group_draws <- list()
     group_draws$draw_beta <- array(draw$draw_beta, dim=dim(draw$draw_beta)[-1], dimnames=dimnames(draw$draw_beta)[-1])
     group_draws$draw_eta <- array(draw$draw_eta, dim=dim(draw$draw_eta)[-1], dimnames=dimnames(draw$draw_eta)[-1])
 
-    pars <- job$pars$prob.pars
-    model  <- data$models[[pars$model]]
+    ##pars <- job$pars$prob.pars
 
-    dref <- model$dref
-    sim_data <- model$base_fit$data
+    dref <- scenario$dref
+    sim_data <- scenario$base_fit$data
     sim_data$num_toxicities <- yrep
 
-    blrm_args <- model$blrm_args
+    blrm_args <- scenario$blrm_args
 
-    have_warmup_info  <- c("warmup_info") %in% names(model)
+    have_warmup_info  <- c("warmup_info") %in% names(scenario)
 
     if(have_warmup_info) {
         ## use a randomly selected warmup info from the ones provided
-        fit_warmup_info <- sample(model$warmup_info, 1)[[1]]
-        blrm_args <- model$blrm_args_with_warmup_info
+        fit_warmup_info <- sample(scenario$warmup_info, 1)[[1]]
+        blrm_args <- scenario$blrm_args_with_warmup_info
         blrm_args$init  <- sample(fit_warmup_info$draws, blrm_args$chains)
         blrm_args$control <- modifyList(blrm_args$control,
                                         list(##adapt_inv_metric=fit_warmup_info$inv_metric,
@@ -321,14 +330,15 @@ fit_exnex <- function(data, job, instance, ..., save_fit=FALSE) {
                                         )
     }
 
-    fit <- update(model$base_fit,
+    fit <- update(scenario$base_fit,
                   data = sim_data,
                   init = blrm_args$init,
                   iter = blrm_args$iter,
                   warmup = blrm_args$warmup,
                   chains = blrm_args$chains,
                   control = blrm_args$control,
-                  verbose=TRUE
+                  verbose=TRUE,
+                  save_warmup=!have_warmup_info
                   )
 
     sampler_params <- rstan::get_sampler_params(fit$stanfit, inc_warmup=FALSE)
@@ -423,6 +433,19 @@ extract_warmup_info <- function(fit) {
     inv_metric <- do.call(cbind, lapply(info, ex_mass))
     colnames(inv_metric) <- names(stepsize) <- paste0("chain_", seq_along(info))
     list(stepsize=stepsize, inv_metric=inv_metric)
+}
+
+run_sbc_case <- function(job.id, repl, data_scenario, base_scenarios, seeds) {
+    RNGkind("L'Ecuyer-CMRG")
+    .Random.seed <<- seeds[[job.id]]
+
+    runtime <- system.time({
+        load_OB2_dev()
+        scenario <- base_scenarios[[data_scenario]]
+        fake <- simulate_fake(scenario)
+        fit <- fit_exnex(fake$yrep, fake$draw, scenario)
+    })
+    c(list(job.id=job.id, time.running=unname(runtime["elapsed"])), fit)
 }
 
 

@@ -122,6 +122,8 @@ example_models <- lapply(
           prior_NEX_mu_mean_inter = rep(0, num_inter),
           prior_NEX_mu_sd_inter = rep(log(2)/1.96, num_inter),
 
+          ##iter = 1000 + 1000,
+          ##warmup = 1000,
           iter = 1000 + 1000,
           warmup = 1000,
           control = list(

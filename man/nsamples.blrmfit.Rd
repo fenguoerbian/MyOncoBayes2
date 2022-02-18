@@ -23,7 +23,7 @@ Return the number of posterior samples
 
 
 ## run single-agent analysis which defines blrmfit model object
-example_model("single_agent")
+example_model("single_agent", silent=TRUE)
 
 nsamples(blrmfit)
 

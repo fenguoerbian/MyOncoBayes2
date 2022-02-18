@@ -5,7 +5,7 @@ test_that("blrm_exnex meets SBC requirements wrt to a Chi-Square statistic.", {
     require(dplyr)
     require(tidyr)
     sbc_chisq_test <-  OncoBayes2:::calibration_data %>%
-        group_by(model, param) %>%
+        group_by(data_scenario, param) %>%
         do(as.data.frame(chisq.test(.$count)[c("statistic", "p.value")]))
     num_tests  <- nrow(sbc_chisq_test)
     num_failed <- sum(sbc_chisq_test$p.value < 0.05)
@@ -24,7 +24,7 @@ test_that("blrm_exnex meets SBC requirements per bin.", {
     crit_low  <- qbinom(alpha/2, S, ptrue)
     crit_high  <- qbinom(1-alpha/2, S, ptrue)
     sbc_binom_test <-  OncoBayes2:::calibration_data %>%
-        group_by(model, param) %>%
+        group_by(data_scenario, param) %>%
         summarise(crit=sum(count < crit_low | count > crit_high)) %>%
         mutate(pvalue=pbinom(crit, B, alpha), extreme=pvalue<0.025|pvalue>0.975)
     num_tests  <- nrow(sbc_binom_test)

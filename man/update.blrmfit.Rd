@@ -31,7 +31,7 @@ Adds data rows to a \code{\link{blrm_exnex}} or
 .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
                             OncoBayes2.MC.save_warmup=FALSE)
 
-example_model("single_agent")
+example_model("single_agent", silent=TRUE)
 
 library(tibble)
 new_cohort <- tibble(group_id="trial_A", drug_A=50, num_patients=4, num_toxicities=1)

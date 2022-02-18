@@ -1,169 +1,141 @@
+#! /usr/bin/env Rscript
+
+start_time  <- Sys.time()
+
 library(pkgbuild)
 ## ensure that the current dev version of OncoBayes2 is loaded
 pkgbuild::compile_dll("../..")
 
+pkg <- c("assertthat", "rstan", "mvtnorm", "checkmate", "Formula", "abind", "dplyr", "tidyr")
+sapply(pkg, require, character.only=TRUE)
+
+library(clustermq)
 library(knitr)
-library(batchtools)
 set.seed(453453)
+
+
 ## load utilities and current dev version of OncoBayes2
-source("sbc_tools.R")
-
-#' according to the docs this speeds up the reduce step
-options(batchtools.progress = FALSE)
-
-registry_tmp <- Sys.getenv("TMP_NFS", tempdir())
-
-reg <- makeExperimentRegistry(
-    file.dir = tempfile("sbc-", registry_tmp),
-    ## use the default configured batchtools configuration batchtools.conf
-    ## - found in the environemnt variable R_BATCHTOOLS_SEARCH_PATH
-    ## - current working directory
-    ## - $(HOME)/.batchtools.conf
-    ## conf.file = NA,
-    seed = 47845854,
-    ## our worker functions and package loading
-    source="sbc_tools.R")
-
-## resources of each job: Less than 55min, 2000MB RAM and 1 core
-job_resources <- list(walltime=55, memory=2000, ncpus=1, max.concurrent.jobs=500)
-
-if(FALSE) {
-  ## for debugging here
-  removeProblems("combo2_EX")
-  removeProblems("combo2_NEX")
-  removeProblems("combo2_EXNEX")
-  removeProblems("base")
-}
+sbc_tools <- new.env()
+source("sbc_tools.R", local=sbc_tools)
+source("lkj.R", local=sbc_tools)
+sbc_tools$load_OB2_dev()
 
 #' Evaluate dense and sparse data-scenario
-source("sbc_example_models.R")
-
-## family, mean_mu, sd_mu, sd_tau, samp_sd
-scenarios <- data.frame(model = names(example_models),
-                        stringsAsFactors=FALSE)
-
-base_data  <- list(models = example_models)
-
-addProblem("warmup_base",
-           data = base_data,
-           fun = simulate_fake,
-           seed = 2345,
-           ## caching speeds up the reduce step
-           cache = TRUE
-)
-
-addAlgorithm("OncoBayes2", fit_exnex)
+source("sbc_example_models.R", local=sbc_tools)
 
 
-pdes_warmup <- list(warmup_base = scenarios)
-ades <- list(OncoBayes2 = data.frame())
+scheduler <- getOption("clustermq.scheduler")
 
-#' Add the defined problems and analysis methods to the registry and
-#' set the number of replications:
+if(is.null(scheduler)) {
+    ## in this case we enable the multiprocess option to leverage local CPUs
+    options(clustermq.scheduler="multiprocess")
+}
+
+scheduler <- getOption("clustermq.scheduler")
+
+##options(clustermq.scheduler="LOCAL")
+n_jobs <- 1
+if(scheduler == "multiprocess") {
+    ## on a local machine we only use as many CPUs as available
+    n_jobs  <- as.numeric(system2("nproc", stdout=TRUE))
+}
+if(scheduler %in% c("LSF", "SGE", "SLURM", "PBS", "Torque")) {
+    ## on a queinging enabled backend, we use a lot more parallelism
+    n_jobs  <- 200
+}
+
+cat("Using clustermq backend", scheduler, "with", n_jobs, "concurrent jobs.\n")
+
+## replications to use
 S <- 1E4
+##S <- 1E3
 
-## leads to 50 warmup infos per condition based on 100 chains
-S_warmup <- 50
+scenarios <- expand.grid(repl=1:S, data_scenario=names(sbc_tools$example_models), stringsAsFactors=FALSE)
+scenarios <- cbind(job.id=1:nrow(scenarios), scenarios)
 
+num_simulations <- nrow(scenarios)
+
+cat("Total number of jobs to dispatch:", num_simulations, "\n")
+
+RNGkind("L'Ecuyer-CMRG")
+set.seed(56969)
+rng_seeds <- sbc_tools$setup_lecuyer_seeds(.Random.seed, num_simulations)
+
+S_warmup <- max(floor(0.1 * S), 1)
 S_final <- S - S_warmup
-addExperiments(pdes_warmup, ades, repls = S_warmup)
 
-summarizeExperiments()
+idx_warmup <- scenarios$repl <= S_warmup
 
-#'
-#' Run first batch where we learn the warmup info
-#'
+scenarios_warmup <- scenarios[idx_warmup,]
+scenarios_main <- scenarios[!idx_warmup,]
 
-#'
-#' Number of jobs per chunk
-#'
-## chunk_size <- 60 ## OK with 2 cores per chain
-##chunk_size <- 30
-chunk_size <- 100 ## increased as model speedsup a lot
+worker <- clustermq::workers(n_jobs, reuse=TRUE, template=list(walltime=300, job_name="ob2_sbc"))
 
-ids_warmup <- unwrap(getJobPars())
+## if we make an unclean exit for whatever reason, clean up the ressources
+on.exit(worker$finalize())
 
-#'
-#' run smaller chunk sizes at the beginning to quickly have the
-#' desired warmup info
-#'
-ids_warmup[,chunk:=chunk(job.id, chunk.size=chunk_size/2)]
+sim_result_warmup <- Q_rows(scenarios_warmup, sbc_tools$run_sbc_case,
+                            const=list(base_scenarios=sbc_tools$example_models, seeds=rng_seeds),
+                            pkgs=pkg,
+                            export=as.list(sbc_tools),
+                            n_jobs=n_jobs,
+                            workers=worker)
 
-## submitJobs(warmup_ids)
-## print(getStatus())
+assert_that(sum(idx_warmup) == length(sim_result_warmup), msg="Check if all warmup simulations were processed.")
 
-auto_submit(ids_warmup, reg, job_resources)
 
 #'
 #' Collect warmup info
 #'
-warmup_info  <- reduceResultsList(
-    fun=function(run) {
-        run[c("stepsize", "inv_metric", "draws")]
-    }
-)
+warmup_info  <- lapply(sim_result_warmup,  function(run) {
+    run[c("stepsize", "inv_metric", "draws")]
+})
 
-warmup_info_by_model <- lapply(split(ids_warmup$job.id,  ids_warmup$model), function(mj) list(warmup_info=warmup_info[mj]))
+scenarios_warmup <- transform(scenarios_warmup, warmup_job.id=1:nrow(scenarios_warmup))
+
+warmup_info_by_model <- lapply(split(scenarios_warmup$warmup_job.id,  scenarios_warmup$data_scenario),
+                               function(mj) list(warmup_info=warmup_info[mj]))
 
 #'
 #' Schedule remaining runs with available warmup info
 #'
-base_data_final <- base_data
-base_data_final$models  <- modifyList(base_data_final$models, warmup_info_by_model)
+example_models_with_warmup <- modifyList(sbc_tools$example_models, warmup_info_by_model)
 
-addProblem("base",
-           data = base_data_final,
-           fun = simulate_fake,
-           seed = 2345 + nrow(ids_warmup),
-           ## caching speeds up the reduce step
-           cache = TRUE
-)
+sim_result_main <- Q_rows(scenarios_main, sbc_tools$run_sbc_case,
+                          const=list(base_scenarios=example_models_with_warmup, seeds=rng_seeds),
+                          pkgs=pkg,
+                          export=as.list(sbc_tools),
+                          n_jobs=n_jobs,
+                          workers=worker)
 
-pdes <- list(base = scenarios)
+assert_that(sum(!idx_warmup) == length(sim_result_main), msg="Check if all main simulations were processed.")
 
-addExperiments(pdes, ades, repls = S_final)
+## shut down cluster worker
+## if proper cleanup is successful, cancel kill-on-exit
+## see https://mschubert.github.io/clustermq/articles/technicaldocs.html
+if (worker$cleanup())
+    on.exit()
 
-summarizeExperiments()
+extract_results <- function(x) c(rank=as.list(x$rank),
+                                 list(job.id=x$job.id,
+                                      time.running=x$time.running,
+                                      n_divergent=x$n_divergent,
+                                      min_Neff=x$min_Neff,
+                                      max_Rhat=x$max_Rhat,
+                                      lp_ess_bulk = x$lp_ess_bulk,
+                                      lp_ess_tail = x$lp_ess_tail
+                                      ))
 
-
-#'
-#' Chunk the jobs into packs of size 20 chunks to run
-#'
-ids <- getJobTable()
-ids_main <- ids[problem=="base"]
-ids_main[, chunk:=chunk(job.id, chunk.size=chunk_size)]
-
-num_jobs <- nrow(ids)
-
-#' Once things run fine let's submit this work to the cluster.
-##submitJobs(ids, job_resources)
-##print(getStatus())
-
-#' This function deals with unstable nodes in the cluster
-auto_submit(ids_main, reg, job_resources)
-
-#' Ensure that no error occured
-assert_that(nrow(findErrors()) == 0)
-
-#' Collect results.
-calibration_data <- ijoin(
-  ## grab job parameters
-  unwrap(getJobPars()),
-  unwrap(reduceResultsDataTable(fun=function(x) c(rank=as.list(x$rank),
-                                                  list(n_divergent=x$n_divergent,
-                                                       min_Neff=x$min_Neff,
-                                                       max_Rhat=x$max_Rhat,
-                                                       lp_ess_bulk = x$lp_ess_bulk,
-                                                       lp_ess_tail = x$lp_ess_tail
-                                                       )) ))
-)
+calibration_data <- bind_rows(lapply(sim_result_warmup,  extract_results), lapply(sim_result_main,  extract_results)) %>%
+    arrange(job.id) %>%
+    merge(scenarios, by="job.id")
 
 ## check that indeed all jobs have finished
-assert_that(nrow(calibration_data) == num_jobs)
+assert_that(nrow(calibration_data) == num_simulations)
 
 ## collect sampler diagnostics
 sampler_diagnostics <- calibration_data %>%
-    group_by(model, problem) %>%
+    group_by(data_scenario) %>%
     summarize(N=n(),
               total_divergent=sum(n_divergent),
               min_ess=min(min_Neff),
@@ -184,18 +156,15 @@ if(any(sampler_diagnostics$max_Rhat > 1.2) ) {
     warning("There were some parameters with large Rhat!")
 }
 
-# there is only one algorithm. remove that column.
-calibration_data <- calibration_data %>% select(-algorithm, -problem)
-
 #' Bin raw data as used in the analysis.
 B <- 1024L / 2^5
 
 rank_params <- names(calibration_data)[grepl(names(calibration_data), pattern = "rank")]
 
-# calibration_data_binned <- calibration_data[, scale64(.SD), by=c("problem", "model", params)]
-
 calibration_data_binned <- calibration_data %>%
-  mutate_at(.vars = rank_params, .funs = function(x) ceiling((x + 1) / (1024 / B) - 1))
+  mutate(across(starts_with("rank"), function(x) ceiling((x + 1) / (1024 / B) - 1)))
+
+head(calibration_data_binned)
 
 names(calibration_data_binned) <- gsub(
   names(calibration_data_binned),
@@ -207,20 +176,20 @@ params <- gsub(rank_params, pattern = "rank[.]", replacement = "")
 
 calibration_binned <- calibration_data_binned %>%
   dplyr::select(-job.id, - n_divergent, - min_Neff) %>%
-  tidyr::gather(key = "param", value = "bin", - model) %>%
-  group_by(model, param, bin) %>%
+  tidyr::gather(key = "param", value = "bin", - data_scenario) %>%
+  group_by(data_scenario, param, bin) %>%
   tally() %>%
   right_join(
     expand.grid(
-      model = unique(calibration_data_binned$model),
+      data_scenario = unique(calibration_data_binned$data_scenario),
       param = params,
       bin = 0:(B - 1),
       stringsAsFactors = FALSE
     ),
-    c("model", "param", "bin")
+    c("data_scenario", "param", "bin")
   ) %>%
   replace_na(list(n = 0)) %>%
-  arrange(model, param, bin) %>%
+  arrange(data_scenario, param, bin) %>%
   spread(key = param, value = n)
 
 
@@ -253,61 +222,25 @@ cat(paste0("Created:  ", created_str, "\ngit hash: ", git_hash, "\nMD5:      ", 
 #'
 #' Summarize execution time
 #'
-job_report <- unwrap(getJobTable())
-units(job_report$time.running)  <- "mins"
-
-chunk_cols  <- c("job.id", "chunk")
-job_report  <- rbind(
-    job_report[ids_warmup[, ..chunk_cols], on="job.id", nomatch=0],
-    job_report[ids_main[, ..chunk_cols], on="job.id", nomatch=0]
-)
-
-runtime_by_problem_model  <- job_report %>%
-    group_by(model, problem) %>%
-    summarize(total=sum(time.running), mean=mean(time.running), max=max(time.running))
+job_report <- calibration_data[c("job.id", "repl", "data_scenario", "time.running")]
+job_report$time.running  <- job_report$time.running/60
 
 runtime_by_problem  <- job_report %>%
-    group_by(problem) %>%
+    group_by(data_scenario) %>%
     summarize(total=sum(time.running), mean=mean(time.running), max=max(time.running))
-
-runtime  <- job_report %>%
-    group_by(model) %>%
-    summarize(total=sum(time.running), mean=mean(time.running), max=max(time.running))
-
-runtime_by_problem_chunk  <- job_report %>%
-    group_by(problem, chunk) %>%
-    summarize(chunk_total=sum(time.running)) %>%
-    summarize(total=sum(chunk_total), mean=mean(chunk_total), max=max(chunk_total))
 
 cat("Summary on job runtime on cluster:\n\n")
 
-cat("\nRuntime by problem and chunk:\n")
-kable(runtime_by_problem_chunk, digits=2)
-
-cat("\nRuntime by problem and model:\n")
-kable(runtime_by_problem_model, digits=2)
-
-cat("\nRuntime by model:\n")
-kable(runtime, digits=2)
-
-cat("\nRuntime by problem:\n")
+cat("\nRuntime by data scenario:\n")
 kable(runtime_by_problem, digits=2)
 
-duration_by_problem <- job_report %>%
-    group_by(problem) %>%
-        summarize(total=difftime(max(done), min(submitted), units="mins"))
+end_time <- Sys.time()
 
-duration <- job_report %>%
-    summarize(total=difftime(max(done), min(submitted), units="mins"))
+total_runtime <- difftime(end_time, start_time)
+units(total_runtime) <- "mins"
 
-cat("\nDuration by problem:\n")
-kable(duration_by_problem, digits=2)
+cat("\n\nTotal runtime (min):", as.numeric(total_runtime), "\n\n\n")
 
-cat("\nDuration:\n")
-kable(duration, digits=2)
-
-#' Cleanup
-removeRegistry(0)
 
 #' Session info
 sessionInfo()

@@ -10,197 +10,26 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<meta name="author" content />
 
 
 <title>Simulation based calibration for OncoBayes2</title>
 
 
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
 
 
 
 
-<style type="text/css">body {
-background-color: #fff;
-margin: 1em auto;
-max-width: 700px;
-overflow: visible;
-padding-left: 2em;
-padding-right: 2em;
-font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-font-size: 14px;
-line-height: 1.35;
-}
-#TOC {
-clear: both;
-margin: 0 0 10px 10px;
-padding: 4px;
-width: 400px;
-border: 1px solid #CCCCCC;
-border-radius: 5px;
-background-color: #f6f6f6;
-font-size: 13px;
-line-height: 1.3;
-}
-#TOC .toctitle {
-font-weight: bold;
-font-size: 15px;
-margin-left: 5px;
-}
-#TOC ul {
-padding-left: 40px;
-margin-left: -1.5em;
-margin-top: 5px;
-margin-bottom: 5px;
-}
-#TOC ul ul {
-margin-left: -2em;
-}
-#TOC li {
-line-height: 16px;
-}
-table {
-margin: 1em auto;
-border-width: 1px;
-border-color: #DDDDDD;
-border-style: outset;
-border-collapse: collapse;
-}
-table th {
-border-width: 2px;
-padding: 5px;
-border-style: inset;
-}
-table td {
-border-width: 1px;
-border-style: inset;
-line-height: 18px;
-padding: 5px 5px;
-}
-table, table th, table td {
-border-left-style: none;
-border-right-style: none;
-}
-table thead, table tr.even {
-background-color: #f7f7f7;
-}
-p {
-margin: 0.5em 0;
-}
-blockquote {
-background-color: #f6f6f6;
-padding: 0.25em 0.75em;
-}
-hr {
-border-style: solid;
-border: none;
-border-top: 1px solid #777;
-margin: 28px 0;
-}
-dl {
-margin-left: 0;
-}
-dl dd {
-margin-bottom: 13px;
-margin-left: 13px;
-}
-dl dt {
-font-weight: bold;
-}
-ul {
-margin-top: 0;
-}
-ul li {
-list-style: circle outside;
-}
-ul ul {
-margin-bottom: 0;
-}
-pre, code {
-background-color: #f7f7f7;
-border-radius: 3px;
-color: #333;
-white-space: pre-wrap; 
-}
-pre {
-border-radius: 3px;
-margin: 5px 0px 10px 0px;
-padding: 10px;
-}
-pre:not([class]) {
-background-color: #f7f7f7;
-}
-code {
-font-family: Consolas, Monaco, 'Courier New', monospace;
-font-size: 85%;
-}
-p > code, li > code {
-padding: 2px 0px;
-}
-div.figure {
-text-align: center;
-}
-img {
-background-color: #FFFFFF;
-padding: 2px;
-border: 1px solid #DDDDDD;
-border-radius: 3px;
-border: 1px solid #CCCCCC;
-margin: 0 5px;
-}
-h1 {
-margin-top: 0;
-font-size: 35px;
-line-height: 40px;
-}
-h2 {
-border-bottom: 4px solid #f7f7f7;
-padding-top: 10px;
-padding-bottom: 2px;
-font-size: 145%;
-}
-h3 {
-border-bottom: 2px solid #f7f7f7;
-padding-top: 10px;
-font-size: 120%;
-}
-h4 {
-border-bottom: 1px solid #f7f7f7;
-margin-left: 8px;
-font-size: 105%;
-}
-h5, h6 {
-border-bottom: 1px solid #ccc;
-font-size: 105%;
-}
-a {
-color: #0033dd;
-text-decoration: none;
-}
-a:hover {
-color: #6666ff; }
-a:visited {
-color: #800080; }
-a:visited:hover {
-color: #BB00BB; }
-a[href^="http:"] {
-text-decoration: underline; }
-a[href^="https:"] {
-text-decoration: underline; }
 
-code > span.kw { color: #555; font-weight: bold; } 
-code > span.dt { color: #902000; } 
-code > span.dv { color: #40a070; } 
-code > span.bn { color: #d14; } 
-code > span.fl { color: #d14; } 
-code > span.ch { color: #d14; } 
-code > span.st { color: #d14; } 
-code > span.co { color: #888888; font-style: italic; } 
-code > span.ot { color: #007020; } 
-code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; } 
-code > span.er { color: #a61717; background-color: #e3d2d2; } 
-</style>
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
 
 
 
@@ -213,18 +42,18 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 <h1 class="title toc-ignore">Simulation based calibration for OncoBayes2</h1>
-<h4 class="date">Tue Sep 14 08:58:17 2021</h4>
+<h4 class="date">Fri Feb 18 14:17:23 2022</h4>
 
 
 
 <p>This report documents the results of a simulation based calibration (SBC) run for <code>OncoBayes2</code>. TODO</p>
 <p>The calibration data presented here has been generated at and with the <code>OncoBayes</code> git version as:</p>
-<pre><code>## Created:  2021-08-16 09:39:32 UTC
-## git hash: 9b7dc4d107dea0844862f274850b462d947e7726
-## MD5:      41d58fb91ec1652d3a1b33bd9cb11b76</code></pre>
+<pre><code>## Created:  2022-02-02 15:28:28 UTC
+## git hash: a5cb76361091022cdd8f6b0158b92bcf719b76d0
+## MD5:      8471f3d58cd0b32772d2907b73e1361e</code></pre>
 <p>The MD5 hash of the calibration data file presented here must match the above listed MD5:</p>
 <pre><code>##                    calibration.rds 
-## &quot;41d58fb91ec1652d3a1b33bd9cb11b76&quot;</code></pre>
+## &quot;8471f3d58cd0b32772d2907b73e1361e&quot;</code></pre>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <p>Simulation based calibration (SBC) is a necessary condition which must be met for any Bayesian analysis with proper priors. The details are presented in Talts, et. al (see <a href="https://arxiv.org/abs/1804.06788" class="uri">https://arxiv.org/abs/1804.06788</a>).</p>
@@ -241,8 +70,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p>The <span class="math inline">\(S\)</span> ranks then form a uniform <span class="math inline">\(0-1\)</span> density and the count in each bin has a binomial distribution with probability of <span class="math display">\[p(r \in \mbox{Any Bin}) =\frac{(L+1)}{S}.\]</span></p>
 <div id="model-description-todo" class="section level2">
 <h2>Model description TODO</h2>
-<p>The fake data simulation function returns … TODO. Please refer to the <code>sbc_tools.R</code> and <code>make_reference_rankhist.R</code> R programs for the implementation details.</p>
-<p>The reference runs are created with <span class="math inline">\(L=1023\)</span> posterior draws for each replication and a total of <span class="math inline">\(S=10^4\)</span> replications are run per case. For the evaluation here the results are reduced to <span class="math inline">\(B=L&#39;+1=64\)</span> bins to ensure a sufficiently large sample size per bin.</p>
+<p>The fake data simulation function returns ... TODO. Please refer to the <code>sbc_tools.R</code> and <code>make_reference_rankhist.R</code> R programs for the implementation details.</p>
+<p>The reference runs are created with <span class="math inline">\(L=1023\)</span> posterior draws for each replication and a total of <span class="math inline">\(S=10^4\)</span> replications are run per case. For the evaluation here the results are reduced to <span class="math inline">\(B=L'+1=64\)</span> bins to ensure a sufficiently large sample size per bin.</p>
 </div>
 </div>
 <div id="sbc-results" class="section level1">
@@ -250,10 +79,19 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="sampler-diagnostics-overview" class="section level2">
 <h2>Sampler Diagnostics Overview</h2>
 <table>
+<colgroup>
+<col width="15%"></col>
+<col width="6%"></col>
+<col width="15%"></col>
+<col width="8%"></col>
+<col width="8%"></col>
+<col width="16%"></col>
+<col width="15%"></col>
+<col width="15%"></col>
+</colgroup>
 <thead>
 <tr class="header">
-<th align="left">model</th>
-<th align="left">problem</th>
+<th align="left">data_scenario</th>
 <th align="right">N</th>
 <th align="right">total_divergent</th>
 <th align="right">min_ess</th>
@@ -266,91 +104,43 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <tbody>
 <tr class="odd">
 <td align="left">combo2_EX</td>
-<td align="left">base</td>
-<td align="right">9950</td>
+<td align="right">10000</td>
 <td align="right">0</td>
-<td align="right">337</td>
+<td align="right">454</td>
 <td align="right">1.011</td>
 <td align="right">0</td>
-<td align="right">160</td>
-<td align="right">214</td>
-</tr>
-<tr class="even">
-<td align="left">combo2_EX</td>
-<td align="left">warmup_base</td>
-<td align="right">50</td>
-<td align="right">0</td>
-<td align="right">775</td>
-<td align="right">1.003</td>
-<td align="right">0</td>
-<td align="right">222</td>
-<td align="right">388</td>
-</tr>
-<tr class="odd">
-<td align="left">combo2_EXNEX</td>
-<td align="left">base</td>
-<td align="right">9950</td>
-<td align="right">0</td>
-<td align="right">37</td>
-<td align="right">1.071</td>
-<td align="right">0</td>
-<td align="right">64</td>
-<td align="right">177</td>
+<td align="right">117</td>
+<td align="right">164</td>
 </tr>
 <tr class="even">
 <td align="left">combo2_EXNEX</td>
-<td align="left">warmup_base</td>
-<td align="right">50</td>
+<td align="right">10000</td>
 <td align="right">0</td>
-<td align="right">209</td>
-<td align="right">1.014</td>
+<td align="right">32</td>
+<td align="right">1.081</td>
 <td align="right">0</td>
-<td align="right">252</td>
-<td align="right">390</td>
+<td align="right">145</td>
+<td align="right">151</td>
 </tr>
 <tr class="odd">
 <td align="left">combo3_EXNEX</td>
-<td align="left">base</td>
-<td align="right">9950</td>
+<td align="right">10000</td>
 <td align="right">0</td>
-<td align="right">51</td>
-<td align="right">1.061</td>
-<td align="right">0</td>
-<td align="right">118</td>
-<td align="right">229</td>
-</tr>
-<tr class="even">
-<td align="left">combo3_EXNEX</td>
-<td align="left">warmup_base</td>
-<td align="right">50</td>
-<td align="right">0</td>
-<td align="right">355</td>
-<td align="right">1.005</td>
-<td align="right">0</td>
-<td align="right">282</td>
-<td align="right">247</td>
-</tr>
-<tr class="odd">
-<td align="left">log2bayes_EXNEX</td>
-<td align="left">base</td>
-<td align="right">9950</td>
-<td align="right">0</td>
-<td align="right">44</td>
-<td align="right">1.022</td>
-<td align="right">0</td>
-<td align="right">23</td>
-<td align="right">128</td>
+<td align="right">12</td>
+<td align="right">1.216</td>
+<td align="right">1</td>
+<td align="right">78</td>
+<td align="right">217</td>
 </tr>
 <tr class="even">
 <td align="left">log2bayes_EXNEX</td>
-<td align="left">warmup_base</td>
-<td align="right">50</td>
+<td align="right">10000</td>
 <td align="right">0</td>
-<td align="right">1084</td>
-<td align="right">1.008</td>
+<td align="right">122</td>
+<td align="right">1.016</td>
 <td align="right">0</td>
-<td align="right">320</td>
-<td align="right">328</td>
+<td align="right">124</td>
+<td align="right">237</td>
 </tr>
 </tbody>
 </table>
@@ -370,63 +160,63 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <tbody>
 <tr class="odd">
 <td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
-<td align="right">35.917</td>
+<td align="right">23.354</td>
 <td align="right">31</td>
-<td align="right">0.249</td>
+<td align="right">0.836</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
-<td align="right">34.048</td>
+<td align="right">20.819</td>
 <td align="right">31</td>
-<td align="right">0.323</td>
+<td align="right">0.917</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
-<td align="right">43.955</td>
+<td align="right">16.774</td>
 <td align="right">31</td>
-<td align="right">0.062</td>
+<td align="right">0.982</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
-<td align="right">26.541</td>
+<td align="right">23.859</td>
 <td align="right">31</td>
-<td align="right">0.695</td>
+<td align="right">0.816</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
-<td align="right">25.722</td>
+<td align="right">41.146</td>
 <td align="right">31</td>
-<td align="right">0.735</td>
+<td align="right">0.105</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
-<td align="right">26.214</td>
+<td align="right">35.322</td>
 <td align="right">31</td>
-<td align="right">0.711</td>
+<td align="right">0.271</td>
 </tr>
 <tr class="odd">
 <td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
-<td align="right">33.965</td>
+<td align="right">18.554</td>
 <td align="right">31</td>
-<td align="right">0.327</td>
+<td align="right">0.962</td>
 </tr>
 <tr class="even">
 <td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
-<td align="right">31.654</td>
+<td align="right">18.893</td>
 <td align="right">31</td>
-<td align="right">0.434</td>
+<td align="right">0.957</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
-<td align="right">26.483</td>
+<td align="right">39.014</td>
 <td align="right">31</td>
-<td align="right">0.698</td>
+<td align="right">0.153</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
-<td align="right">47.706</td>
+<td align="right">20.672</td>
 <td align="right">31</td>
-<td align="right">0.028</td>
+<td align="right">0.920</td>
 </tr>
 </tbody>
 </table>
@@ -445,153 +235,153 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <tbody>
 <tr class="odd">
 <td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
-<td align="right">31.219</td>
+<td align="right">20.525</td>
 <td align="right">31</td>
-<td align="right">0.455</td>
+<td align="right">0.924</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
-<td align="right">37.530</td>
-<td align="right">31</td>
-<td align="right">0.195</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[A,I(log(drug_B/1)),intercept]</td>
-<td align="right">27.667</td>
-<td align="right">31</td>
-<td align="right">0.638</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[A,I(log(drug_B/1)),log_slope]</td>
-<td align="right">35.827</td>
-<td align="right">31</td>
-<td align="right">0.252</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
-<td align="right">23.910</td>
-<td align="right">31</td>
-<td align="right">0.814</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
-<td align="right">18.266</td>
-<td align="right">31</td>
-<td align="right">0.966</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[B,I(log(drug_B/1)),intercept]</td>
-<td align="right">37.408</td>
-<td align="right">31</td>
-<td align="right">0.198</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
-<td align="right">35.411</td>
-<td align="right">31</td>
-<td align="right">0.268</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
-<td align="right">33.338</td>
-<td align="right">31</td>
-<td align="right">0.354</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
 <td align="right">32.525</td>
 <td align="right">31</td>
 <td align="right">0.392</td>
 </tr>
 <tr class="odd">
-<td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
-<td align="right">29.203</td>
+<td align="left">beta_group[A,I(log(drug_B/1)),intercept]</td>
+<td align="right">23.245</td>
 <td align="right">31</td>
-<td align="right">0.559</td>
+<td align="right">0.840</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[A,I(log(drug_B/1)),log_slope]</td>
+<td align="right">24.518</td>
+<td align="right">31</td>
+<td align="right">0.789</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
+<td align="right">33.318</td>
+<td align="right">31</td>
+<td align="right">0.355</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
+<td align="right">25.427</td>
+<td align="right">31</td>
+<td align="right">0.748</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_B/1)),intercept]</td>
+<td align="right">38.221</td>
+<td align="right">31</td>
+<td align="right">0.174</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
+<td align="right">30.605</td>
+<td align="right">31</td>
+<td align="right">0.486</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
+<td align="right">35.334</td>
+<td align="right">31</td>
+<td align="right">0.271</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
+<td align="right">26.899</td>
+<td align="right">31</td>
+<td align="right">0.677</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
+<td align="right">42.854</td>
+<td align="right">31</td>
+<td align="right">0.076</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[C,I(log(drug_B/1)),log_slope]</td>
-<td align="right">45.958</td>
+<td align="right">28.621</td>
 <td align="right">31</td>
-<td align="right">0.041</td>
+<td align="right">0.589</td>
 </tr>
 <tr class="odd">
 <td align="left">eta_group[A,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">35.206</td>
+<td align="right">28.838</td>
 <td align="right">31</td>
-<td align="right">0.276</td>
+<td align="right">0.578</td>
 </tr>
 <tr class="even">
 <td align="left">eta_group[B,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">44.800</td>
+<td align="right">26.016</td>
 <td align="right">31</td>
-<td align="right">0.052</td>
+<td align="right">0.721</td>
 </tr>
 <tr class="odd">
 <td align="left">eta_group[C,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">41.005</td>
+<td align="right">29.837</td>
 <td align="right">31</td>
-<td align="right">0.108</td>
+<td align="right">0.526</td>
 </tr>
 <tr class="even">
 <td align="left">mu_eta[I(drug_A/1 * drug_B/1)]</td>
-<td align="right">30.336</td>
+<td align="right">33.990</td>
 <td align="right">31</td>
-<td align="right">0.500</td>
+<td align="right">0.326</td>
 </tr>
 <tr class="odd">
 <td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
-<td align="right">35.123</td>
+<td align="right">33.728</td>
 <td align="right">31</td>
-<td align="right">0.279</td>
+<td align="right">0.337</td>
 </tr>
 <tr class="even">
 <td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
-<td align="right">30.342</td>
+<td align="right">25.190</td>
 <td align="right">31</td>
-<td align="right">0.500</td>
+<td align="right">0.759</td>
 </tr>
 <tr class="odd">
 <td align="left">mu_log_beta[I(log(drug_B/1)),intercept]</td>
-<td align="right">34.835</td>
+<td align="right">39.085</td>
 <td align="right">31</td>
-<td align="right">0.290</td>
+<td align="right">0.151</td>
 </tr>
 <tr class="even">
 <td align="left">mu_log_beta[I(log(drug_B/1)),log_slope]</td>
-<td align="right">35.629</td>
+<td align="right">21.805</td>
 <td align="right">31</td>
-<td align="right">0.260</td>
+<td align="right">0.889</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">32.019</td>
+<td align="right">40.525</td>
 <td align="right">31</td>
-<td align="right">0.416</td>
+<td align="right">0.118</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
-<td align="right">38.432</td>
+<td align="right">31.955</td>
 <td align="right">31</td>
-<td align="right">0.168</td>
+<td align="right">0.419</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
-<td align="right">30.944</td>
+<td align="right">18.880</td>
 <td align="right">31</td>
-<td align="right">0.469</td>
+<td align="right">0.957</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),intercept]</td>
-<td align="right">32.397</td>
+<td align="right">38.266</td>
 <td align="right">31</td>
-<td align="right">0.398</td>
+<td align="right">0.173</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),log_slope]</td>
-<td align="right">31.782</td>
+<td align="right">29.824</td>
 <td align="right">31</td>
-<td align="right">0.427</td>
+<td align="right">0.526</td>
 </tr>
 </tbody>
 </table>
@@ -610,153 +400,153 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <tbody>
 <tr class="odd">
 <td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
-<td align="right">31.661</td>
+<td align="right">22.829</td>
 <td align="right">31</td>
-<td align="right">0.433</td>
+<td align="right">0.855</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
-<td align="right">24.518</td>
+<td align="right">34.042</td>
 <td align="right">31</td>
-<td align="right">0.789</td>
+<td align="right">0.323</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[A,I(log(drug_B/1)),intercept]</td>
-<td align="right">27.770</td>
+<td align="right">24.115</td>
 <td align="right">31</td>
-<td align="right">0.633</td>
+<td align="right">0.806</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[A,I(log(drug_B/1)),log_slope]</td>
-<td align="right">41.786</td>
+<td align="right">25.184</td>
 <td align="right">31</td>
-<td align="right">0.093</td>
+<td align="right">0.759</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
-<td align="right">42.701</td>
+<td align="right">18.861</td>
 <td align="right">31</td>
-<td align="right">0.079</td>
+<td align="right">0.957</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
-<td align="right">16.621</td>
+<td align="right">41.914</td>
 <td align="right">31</td>
-<td align="right">0.984</td>
+<td align="right">0.091</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[B,I(log(drug_B/1)),intercept]</td>
-<td align="right">20.742</td>
+<td align="right">20.672</td>
 <td align="right">31</td>
-<td align="right">0.919</td>
+<td align="right">0.920</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
-<td align="right">42.496</td>
+<td align="right">31.462</td>
 <td align="right">31</td>
-<td align="right">0.082</td>
+<td align="right">0.443</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
-<td align="right">47.667</td>
+<td align="right">28.986</td>
 <td align="right">31</td>
-<td align="right">0.028</td>
+<td align="right">0.570</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
-<td align="right">34.426</td>
+<td align="right">16.250</td>
 <td align="right">31</td>
-<td align="right">0.307</td>
+<td align="right">0.986</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
-<td align="right">29.715</td>
+<td align="right">25.299</td>
 <td align="right">31</td>
-<td align="right">0.532</td>
+<td align="right">0.754</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[C,I(log(drug_B/1)),log_slope]</td>
-<td align="right">17.517</td>
+<td align="right">29.811</td>
 <td align="right">31</td>
-<td align="right">0.975</td>
+<td align="right">0.527</td>
 </tr>
 <tr class="odd">
 <td align="left">eta_group[A,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">27.258</td>
+<td align="right">30.483</td>
 <td align="right">31</td>
-<td align="right">0.659</td>
+<td align="right">0.492</td>
 </tr>
 <tr class="even">
 <td align="left">eta_group[B,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">29.830</td>
+<td align="right">45.830</td>
 <td align="right">31</td>
-<td align="right">0.526</td>
+<td align="right">0.042</td>
 </tr>
 <tr class="odd">
 <td align="left">eta_group[C,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">25.357</td>
+<td align="right">30.714</td>
 <td align="right">31</td>
-<td align="right">0.752</td>
+<td align="right">0.481</td>
 </tr>
 <tr class="even">
 <td align="left">mu_eta[I(drug_A/1 * drug_B/1)]</td>
-<td align="right">24.435</td>
+<td align="right">34.867</td>
 <td align="right">31</td>
-<td align="right">0.792</td>
+<td align="right">0.289</td>
 </tr>
 <tr class="odd">
 <td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
-<td align="right">32.787</td>
+<td align="right">39.328</td>
 <td align="right">31</td>
-<td align="right">0.379</td>
+<td align="right">0.145</td>
 </tr>
 <tr class="even">
 <td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
-<td align="right">22.016</td>
+<td align="right">37.094</td>
 <td align="right">31</td>
-<td align="right">0.883</td>
+<td align="right">0.208</td>
 </tr>
 <tr class="odd">
 <td align="left">mu_log_beta[I(log(drug_B/1)),intercept]</td>
-<td align="right">25.120</td>
+<td align="right">27.059</td>
 <td align="right">31</td>
-<td align="right">0.762</td>
+<td align="right">0.669</td>
 </tr>
 <tr class="even">
 <td align="left">mu_log_beta[I(log(drug_B/1)),log_slope]</td>
-<td align="right">34.682</td>
+<td align="right">20.992</td>
 <td align="right">31</td>
-<td align="right">0.297</td>
+<td align="right">0.912</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">35.597</td>
+<td align="right">22.528</td>
 <td align="right">31</td>
-<td align="right">0.261</td>
+<td align="right">0.866</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
-<td align="right">26.886</td>
+<td align="right">36.141</td>
 <td align="right">31</td>
-<td align="right">0.678</td>
+<td align="right">0.241</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
-<td align="right">23.398</td>
+<td align="right">23.539</td>
 <td align="right">31</td>
-<td align="right">0.834</td>
+<td align="right">0.829</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),intercept]</td>
-<td align="right">36.723</td>
+<td align="right">28.960</td>
 <td align="right">31</td>
-<td align="right">0.221</td>
+<td align="right">0.571</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),log_slope]</td>
-<td align="right">14.682</td>
+<td align="right">27.264</td>
 <td align="right">31</td>
-<td align="right">0.994</td>
+<td align="right">0.659</td>
 </tr>
 </tbody>
 </table>
@@ -775,316 +565,316 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <tbody>
 <tr class="odd">
 <td align="left">beta_group[A,I(log(drug_A/1)),intercept]</td>
-<td align="right">30.918</td>
+<td align="right">23.078</td>
 <td align="right">31</td>
-<td align="right">0.470</td>
+<td align="right">0.846</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[A,I(log(drug_A/1)),log_slope]</td>
-<td align="right">27.078</td>
+<td align="right">32.550</td>
 <td align="right">31</td>
-<td align="right">0.668</td>
+<td align="right">0.390</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[A,I(log(drug_B/1)),intercept]</td>
-<td align="right">33.702</td>
+<td align="right">28.307</td>
 <td align="right">31</td>
-<td align="right">0.338</td>
+<td align="right">0.605</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[A,I(log(drug_B/1)),log_slope]</td>
-<td align="right">40.307</td>
+<td align="right">16.864</td>
 <td align="right">31</td>
-<td align="right">0.122</td>
+<td align="right">0.982</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[A,I(log(drug_C/1)),intercept]</td>
-<td align="right">33.965</td>
+<td align="right">27.296</td>
 <td align="right">31</td>
-<td align="right">0.327</td>
+<td align="right">0.657</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[A,I(log(drug_C/1)),log_slope]</td>
-<td align="right">33.792</td>
+<td align="right">46.285</td>
 <td align="right">31</td>
-<td align="right">0.334</td>
+<td align="right">0.038</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[B,I(log(drug_A/1)),intercept]</td>
-<td align="right">43.898</td>
+<td align="right">27.725</td>
 <td align="right">31</td>
-<td align="right">0.062</td>
+<td align="right">0.635</td>
 </tr>
 <tr class="even">
 <td align="left">beta_group[B,I(log(drug_A/1)),log_slope]</td>
-<td align="right">33.587</td>
+<td align="right">34.662</td>
 <td align="right">31</td>
-<td align="right">0.343</td>
+<td align="right">0.297</td>
 </tr>
 <tr class="odd">
 <td align="left">beta_group[B,I(log(drug_B/1)),intercept]</td>
-<td align="right">29.613</td>
-<td align="right">31</td>
-<td align="right">0.537</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
-<td align="right">21.894</td>
-<td align="right">31</td>
-<td align="right">0.886</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[B,I(log(drug_C/1)),intercept]</td>
-<td align="right">37.946</td>
-<td align="right">31</td>
-<td align="right">0.182</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[B,I(log(drug_C/1)),log_slope]</td>
-<td align="right">31.430</td>
-<td align="right">31</td>
-<td align="right">0.445</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
-<td align="right">26.842</td>
-<td align="right">31</td>
-<td align="right">0.680</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
-<td align="right">36.326</td>
-<td align="right">31</td>
-<td align="right">0.234</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
-<td align="right">41.862</td>
-<td align="right">31</td>
-<td align="right">0.092</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[C,I(log(drug_B/1)),log_slope]</td>
-<td align="right">41.677</td>
-<td align="right">31</td>
-<td align="right">0.095</td>
-</tr>
-<tr class="odd">
-<td align="left">beta_group[C,I(log(drug_C/1)),intercept]</td>
-<td align="right">32.077</td>
-<td align="right">31</td>
-<td align="right">0.413</td>
-</tr>
-<tr class="even">
-<td align="left">beta_group[C,I(log(drug_C/1)),log_slope]</td>
-<td align="right">38.048</td>
-<td align="right">31</td>
-<td align="right">0.179</td>
-</tr>
-<tr class="odd">
-<td align="left">eta_group[A,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
-<td align="right">19.930</td>
-<td align="right">31</td>
-<td align="right">0.937</td>
-</tr>
-<tr class="even">
-<td align="left">eta_group[A,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">22.221</td>
+<td align="right">22.214</td>
 <td align="right">31</td>
 <td align="right">0.876</td>
 </tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_B/1)),log_slope]</td>
+<td align="right">39.091</td>
+<td align="right">31</td>
+<td align="right">0.151</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[B,I(log(drug_C/1)),intercept]</td>
+<td align="right">35.136</td>
+<td align="right">31</td>
+<td align="right">0.278</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[B,I(log(drug_C/1)),log_slope]</td>
+<td align="right">33.184</td>
+<td align="right">31</td>
+<td align="right">0.361</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_A/1)),intercept]</td>
+<td align="right">31.302</td>
+<td align="right">31</td>
+<td align="right">0.451</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_A/1)),log_slope]</td>
+<td align="right">44.806</td>
+<td align="right">31</td>
+<td align="right">0.052</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_B/1)),intercept]</td>
+<td align="right">29.920</td>
+<td align="right">31</td>
+<td align="right">0.521</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_B/1)),log_slope]</td>
+<td align="right">20.403</td>
+<td align="right">31</td>
+<td align="right">0.927</td>
+</tr>
+<tr class="odd">
+<td align="left">beta_group[C,I(log(drug_C/1)),intercept]</td>
+<td align="right">32.595</td>
+<td align="right">31</td>
+<td align="right">0.388</td>
+</tr>
+<tr class="even">
+<td align="left">beta_group[C,I(log(drug_C/1)),log_slope]</td>
+<td align="right">27.923</td>
+<td align="right">31</td>
+<td align="right">0.625</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[A,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">21.242</td>
+<td align="right">31</td>
+<td align="right">0.905</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[A,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">30.253</td>
+<td align="right">31</td>
+<td align="right">0.504</td>
+</tr>
 <tr class="odd">
 <td align="left">eta_group[A,I(drug_A/1 * drug_C/1)]</td>
-<td align="right">34.272</td>
+<td align="right">24.979</td>
 <td align="right">31</td>
-<td align="right">0.314</td>
+<td align="right">0.769</td>
 </tr>
 <tr class="even">
 <td align="left">eta_group[A,I(drug_B/1 * drug_C/1)]</td>
-<td align="right">45.075</td>
+<td align="right">17.907</td>
 <td align="right">31</td>
-<td align="right">0.049</td>
+<td align="right">0.971</td>
 </tr>
 <tr class="odd">
 <td align="left">eta_group[B,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
-<td align="right">35.808</td>
-<td align="right">31</td>
-<td align="right">0.253</td>
-</tr>
-<tr class="even">
-<td align="left">eta_group[B,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">41.331</td>
-<td align="right">31</td>
-<td align="right">0.102</td>
-</tr>
-<tr class="odd">
-<td align="left">eta_group[B,I(drug_A/1 * drug_C/1)]</td>
-<td align="right">44.902</td>
-<td align="right">31</td>
-<td align="right">0.051</td>
-</tr>
-<tr class="even">
-<td align="left">eta_group[B,I(drug_B/1 * drug_C/1)]</td>
-<td align="right">25.338</td>
-<td align="right">31</td>
-<td align="right">0.752</td>
-</tr>
-<tr class="odd">
-<td align="left">eta_group[C,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
-<td align="right">29.728</td>
-<td align="right">31</td>
-<td align="right">0.531</td>
-</tr>
-<tr class="even">
-<td align="left">eta_group[C,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">33.568</td>
-<td align="right">31</td>
-<td align="right">0.344</td>
-</tr>
-<tr class="odd">
-<td align="left">eta_group[C,I(drug_A/1 * drug_C/1)]</td>
-<td align="right">21.018</td>
-<td align="right">31</td>
-<td align="right">0.911</td>
-</tr>
-<tr class="even">
-<td align="left">eta_group[C,I(drug_B/1 * drug_C/1)]</td>
-<td align="right">21.530</td>
-<td align="right">31</td>
-<td align="right">0.897</td>
-</tr>
-<tr class="odd">
-<td align="left">mu_eta[I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
-<td align="right">30.349</td>
-<td align="right">31</td>
-<td align="right">0.499</td>
-</tr>
-<tr class="even">
-<td align="left">mu_eta[I(drug_A/1 * drug_B/1)]</td>
-<td align="right">30.522</td>
-<td align="right">31</td>
-<td align="right">0.490</td>
-</tr>
-<tr class="odd">
-<td align="left">mu_eta[I(drug_A/1 * drug_C/1)]</td>
-<td align="right">42.867</td>
-<td align="right">31</td>
-<td align="right">0.076</td>
-</tr>
-<tr class="even">
-<td align="left">mu_eta[I(drug_B/1 * drug_C/1)]</td>
-<td align="right">22.637</td>
-<td align="right">31</td>
-<td align="right">0.862</td>
-</tr>
-<tr class="odd">
-<td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
-<td align="right">32.378</td>
-<td align="right">31</td>
-<td align="right">0.399</td>
-</tr>
-<tr class="even">
-<td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
-<td align="right">43.642</td>
-<td align="right">31</td>
-<td align="right">0.066</td>
-</tr>
-<tr class="odd">
-<td align="left">mu_log_beta[I(log(drug_B/1)),intercept]</td>
-<td align="right">38.118</td>
-<td align="right">31</td>
-<td align="right">0.177</td>
-</tr>
-<tr class="even">
-<td align="left">mu_log_beta[I(log(drug_B/1)),log_slope]</td>
-<td align="right">31.674</td>
-<td align="right">31</td>
-<td align="right">0.433</td>
-</tr>
-<tr class="odd">
-<td align="left">mu_log_beta[I(log(drug_C/1)),intercept]</td>
-<td align="right">17.843</td>
-<td align="right">31</td>
-<td align="right">0.972</td>
-</tr>
-<tr class="even">
-<td align="left">mu_log_beta[I(log(drug_C/1)),log_slope]</td>
-<td align="right">35.930</td>
-<td align="right">31</td>
-<td align="right">0.248</td>
-</tr>
-<tr class="odd">
-<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
-<td align="right">23.264</td>
-<td align="right">31</td>
-<td align="right">0.839</td>
-</tr>
-<tr class="even">
-<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1)]</td>
-<td align="right">24.346</td>
-<td align="right">31</td>
-<td align="right">0.796</td>
-</tr>
-<tr class="odd">
-<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_C/1)]</td>
-<td align="right">27.584</td>
+<td align="right">27.578</td>
 <td align="right">31</td>
 <td align="right">0.643</td>
 </tr>
 <tr class="even">
-<td align="left">tau_eta[STRAT,I(drug_B/1 * drug_C/1)]</td>
-<td align="right">24.525</td>
+<td align="left">eta_group[B,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">27.392</td>
 <td align="right">31</td>
-<td align="right">0.789</td>
+<td align="right">0.652</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[B,I(drug_A/1 * drug_C/1)]</td>
+<td align="right">29.018</td>
+<td align="right">31</td>
+<td align="right">0.568</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[B,I(drug_B/1 * drug_C/1)]</td>
+<td align="right">36.538</td>
+<td align="right">31</td>
+<td align="right">0.227</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[C,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">18.701</td>
+<td align="right">31</td>
+<td align="right">0.960</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[C,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">34.176</td>
+<td align="right">31</td>
+<td align="right">0.318</td>
+</tr>
+<tr class="odd">
+<td align="left">eta_group[C,I(drug_A/1 * drug_C/1)]</td>
+<td align="right">20.538</td>
+<td align="right">31</td>
+<td align="right">0.924</td>
+</tr>
+<tr class="even">
+<td align="left">eta_group[C,I(drug_B/1 * drug_C/1)]</td>
+<td align="right">28.538</td>
+<td align="right">31</td>
+<td align="right">0.593</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_eta[I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">23.053</td>
+<td align="right">31</td>
+<td align="right">0.847</td>
+</tr>
+<tr class="even">
+<td align="left">mu_eta[I(drug_A/1 * drug_B/1)]</td>
+<td align="right">34.976</td>
+<td align="right">31</td>
+<td align="right">0.285</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_eta[I(drug_A/1 * drug_C/1)]</td>
+<td align="right">16.595</td>
+<td align="right">31</td>
+<td align="right">0.984</td>
+</tr>
+<tr class="even">
+<td align="left">mu_eta[I(drug_B/1 * drug_C/1)]</td>
+<td align="right">24.288</td>
+<td align="right">31</td>
+<td align="right">0.799</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_A/1)),intercept]</td>
+<td align="right">21.075</td>
+<td align="right">31</td>
+<td align="right">0.910</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_A/1)),log_slope]</td>
+<td align="right">24.320</td>
+<td align="right">31</td>
+<td align="right">0.797</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_B/1)),intercept]</td>
+<td align="right">25.222</td>
+<td align="right">31</td>
+<td align="right">0.758</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_B/1)),log_slope]</td>
+<td align="right">37.722</td>
+<td align="right">31</td>
+<td align="right">0.189</td>
+</tr>
+<tr class="odd">
+<td align="left">mu_log_beta[I(log(drug_C/1)),intercept]</td>
+<td align="right">36.640</td>
+<td align="right">31</td>
+<td align="right">0.223</td>
+</tr>
+<tr class="even">
+<td align="left">mu_log_beta[I(log(drug_C/1)),log_slope]</td>
+<td align="right">29.862</td>
+<td align="right">31</td>
+<td align="right">0.524</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1 * drug_C/1)]</td>
+<td align="right">21.312</td>
+<td align="right">31</td>
+<td align="right">0.903</td>
+</tr>
+<tr class="even">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_B/1)]</td>
+<td align="right">29.587</td>
+<td align="right">31</td>
+<td align="right">0.539</td>
+</tr>
+<tr class="odd">
+<td align="left">tau_eta[STRAT,I(drug_A/1 * drug_C/1)]</td>
+<td align="right">45.664</td>
+<td align="right">31</td>
+<td align="right">0.043</td>
+</tr>
+<tr class="even">
+<td align="left">tau_eta[STRAT,I(drug_B/1 * drug_C/1)]</td>
+<td align="right">19.475</td>
+<td align="right">31</td>
+<td align="right">0.946</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),intercept]</td>
-<td align="right">20.576</td>
+<td align="right">38.144</td>
 <td align="right">31</td>
-<td align="right">0.923</td>
+<td align="right">0.176</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_A/1)),log_slope]</td>
-<td align="right">19.795</td>
+<td align="right">29.056</td>
 <td align="right">31</td>
-<td align="right">0.940</td>
+<td align="right">0.566</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),intercept]</td>
-<td align="right">28.608</td>
+<td align="right">26.995</td>
 <td align="right">31</td>
-<td align="right">0.590</td>
+<td align="right">0.672</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_B/1)),log_slope]</td>
-<td align="right">28.800</td>
+<td align="right">25.050</td>
 <td align="right">31</td>
-<td align="right">0.580</td>
+<td align="right">0.765</td>
 </tr>
 <tr class="odd">
 <td align="left">tau_log_beta[STRAT,I(log(drug_C/1)),intercept]</td>
-<td align="right">14.541</td>
+<td align="right">34.086</td>
 <td align="right">31</td>
-<td align="right">0.995</td>
+<td align="right">0.321</td>
 </tr>
 <tr class="even">
 <td align="left">tau_log_beta[STRAT,I(log(drug_C/1)),log_slope]</td>
-<td align="right">27.795</td>
+<td align="right">46.528</td>
 <td align="right">31</td>
-<td align="right">0.632</td>
+<td align="right">0.036</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div id="session-info" class="section level2">
 <h2>Session Info</h2>
-<pre><code>## R version 3.6.3 (2020-02-29)
+<pre><code>## R version 4.1.0 (2021-05-18)
 ## Platform: x86_64-pc-linux-gnu (64-bit)
-## Running under: Ubuntu 18.04.5 LTS
+## Running under: Ubuntu 20.04.3 LTS
 ## 
 ## Matrix products: default
-## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.7.1
-## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.7.1
+## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.9.0
+## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.9.0
 ## 
 ## locale:
 ##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
@@ -1099,28 +889,20 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 ## [8] base     
 ## 
 ## other attached packages:
-##  [1] mvtnorm_1.1-0      tibble_3.0.0       rstan_2.19.3       StanHeaders_2.19.2
-##  [5] abind_1.4-5        Formula_1.2-3      checkmate_2.0.0    OncoBayes2_0.8-2  
-##  [9] testthat_3.0.3     devtools_2.3.0     usethis_1.6.0      ggplot2_3.3.0     
-## [13] broom_0.5.5        tidyr_1.0.2        dplyr_0.8.5        assertthat_0.2.1  
-## [17] knitr_1.28         rmarkdown_2.1     
+## [1] ggplot2_3.3.5    broom_0.7.9      tidyr_1.1.3      dplyr_1.0.7     
+## [5] assertthat_0.2.1 knitr_1.33       rmarkdown_2.11  
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] Rcpp_1.0.4.6       lattice_0.20-44    prettyunits_1.1.1  ps_1.6.0          
-##  [5] rprojroot_1.3-2    digest_0.6.25      plyr_1.8.6         R6_2.4.1          
-##  [9] ggridges_0.5.2     backports_1.1.6    stats4_3.6.3       evaluate_0.14     
-## [13] highr_0.8          pillar_1.4.3       rlang_0.4.11       rstudioapi_0.11   
-## [17] callr_3.7.0        desc_1.2.0         stringr_1.4.0      loo_2.2.0         
-## [21] munsell_0.5.0      compiler_3.6.3     xfun_0.13          pkgconfig_2.0.3   
-## [25] pkgbuild_1.0.6     rstantools_2.1.1   htmltools_0.4.0    tidyselect_1.0.0  
-## [29] gridExtra_2.3      codetools_0.2-18   matrixStats_0.56.0 crayon_1.3.4      
-## [33] withr_2.4.2        grid_3.6.3         nlme_3.1-152       gtable_0.3.0      
-## [37] lifecycle_0.2.0    magrittr_1.5       scales_1.1.0       RcppParallel_5.1.4
-## [41] cli_2.5.0          stringi_1.4.6      fs_1.4.1           remotes_2.1.1     
-## [45] ellipsis_0.3.0     generics_0.0.2     vctrs_0.2.4        glue_1.4.0        
-## [49] purrr_0.3.4        processx_3.5.2     pkgload_1.0.2      parallel_3.6.3    
-## [53] yaml_2.2.1         inline_0.3.15      colorspace_1.4-1   sessioninfo_1.1.1 
-## [57] bayesplot_1.7.1    memoise_1.1.0</code></pre>
+##  [1] pillar_1.6.2      bslib_0.2.5.1     compiler_4.1.0    jquerylib_0.1.4  
+##  [5] highr_0.9         digest_0.6.27     jsonlite_1.7.2    evaluate_0.14    
+##  [9] lifecycle_1.0.0   tibble_3.1.3      gtable_0.3.0      pkgconfig_2.0.3  
+## [13] rlang_0.4.11      DBI_1.1.1         yaml_2.2.1        xfun_0.25        
+## [17] withr_2.4.2       stringr_1.4.0     generics_0.1.0    vctrs_0.3.8      
+## [21] sass_0.4.0        grid_4.1.0        tidyselect_1.1.1  glue_1.4.2       
+## [25] R6_2.5.1          fansi_0.5.0       purrr_0.3.4       magrittr_2.0.1   
+## [29] backports_1.2.1   scales_1.1.1      ellipsis_0.3.2    htmltools_0.5.1.1
+## [33] colorspace_2.0-2  utf8_1.2.2        stringi_1.7.3     munsell_0.5.0    
+## [37] crayon_1.4.1</code></pre>
 </div>
 </div>
 

@@ -39,7 +39,7 @@ according to the fitted model.
 .user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1,
                             OncoBayes2.MC.save_warmup=FALSE)
 
-example_model("single_agent")
+example_model("single_agent", silent=TRUE)
 
 predictive_interval(blrmfit)
 

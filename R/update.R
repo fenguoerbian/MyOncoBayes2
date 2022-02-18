@@ -17,7 +17,7 @@
 #'
 #' @template start-example
 #' @examples
-#' example_model("single_agent")
+#' example_model("single_agent", silent=TRUE)
 #'
 #' library(tibble)
 #' new_cohort <- tibble(group_id="trial_A", drug_A=50, num_patients=4, num_toxicities=1)
