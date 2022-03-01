@@ -30,7 +30,8 @@ example_model <- function(topic, envir=parent.frame(), silent=FALSE) {
     assert_that(topic %in% names(example_cache), msg="Unkown example. For a list of examples call example_model().")
         ex_str <- example_cache[[topic]]
     if(silent) {
-        suppressMessages(capture.output(eval(parse(text=ex_str), envir=envir)))
+        ex_str <- c("suppressMessages(capture.output({ ", ex_str, "}))")
+        eval(parse(text=ex_str), envir=envir)
     } else {
         message("Running ", topic, " example:\n")
         message(paste(c(ex_str, ""), collapse="\n"))

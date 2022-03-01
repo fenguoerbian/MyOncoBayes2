@@ -122,10 +122,12 @@ critical value \eqn{x_c} the equality holds
 
 \deqn{p = \int_{\pi_1}^{\pi_2} p(\pi | x_c) \, d\pi .}
 
-A solution is only guranteed to exist whenever a tail probability
-is calculated. In case an interval probability is specified, then
-the solution may not necessarily exist and the root finding is
-confined to the range specified in \code{interval.x}.
+Note that a solution not guranteed to exist under all
+circumstances. However, for a single agent model and when
+requesting a tail probability then a solution does exist. In case
+an interval probability is specified, then the solution may not
+necessarily exist and the root finding is confined to the range
+specified in \code{interval.x}.
 
 In case the solution is requested for the predictive distribution
 (\code{predictive=TRUE}), then the respective problem solved leads
