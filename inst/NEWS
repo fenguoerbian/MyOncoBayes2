@@ -1,3 +1,11 @@
+May 2nd, 2022 (0.8-6)
+
+* allow cmdstanr as new backend for blrm_exnex. The Stan model file is
+  written with the function cmdstanr::write_stan_file to disk such
+  that the model binaries can be cached if the user defines the global
+  option cmdstanr_write_stan_file_dir. See ?cmdstanr::write_stan_file
+  (requires cmdstanr >= 0.5.0)
+
 February 28th, 2022 (0.8-5)
 
 * fix issue with example_model not exposing properly objects when

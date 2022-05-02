@@ -27,7 +27,10 @@
 #' @aliases posterior_interval
 #' @export
 posterior_interval.blrmfit <- function(object, prob=0.95, ...) {
-    post <- as.matrix(object$stanfit, pars=c("mu_log_beta", "tau_log_beta", "rho_log_beta", "mu_eta", "tau_eta", "Sigma_corr_eta", "beta_group", "eta_group"))
+    pars <- c("mu_log_beta", "tau_log_beta", "rho_log_beta",  "beta_group")
+    if(object$has_inter)
+        pars <- c(pars, c("mu_eta", "tau_eta", "Sigma_corr_eta", "eta_group"))
+    post <- as.matrix(object$stanfit, pars=pars)
     rstantools::posterior_interval(post, prob=prob)
 }
 

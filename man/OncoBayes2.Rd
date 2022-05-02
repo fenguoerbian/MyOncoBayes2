@@ -24,6 +24,7 @@ Option \tab Default \tab Description \cr
 \code{OncoBayes2.MC.thin} \tab 1 \tab MCMC thinning \cr
 \code{OncoBayes2.MC.control} \tab \code{list(adapt_delta=0.99,} \tab sets \code{control} argument for Stan call\cr
  \tab \code{stepsize=0.1}) \tab \cr
+\code{OncoBayes2.MC.backend} \tab rstan \tab Backend used to run Stan (\code{rstan} or \code{cmdstanr}) \cr
 \code{OncoBayes2.abbreviate.min} \tab 0 \tab Minimal length of variable names \cr
    \tab \tab when abbreviating variable names. \cr
    \tab \tab The default 0 disables abbreviation.\cr

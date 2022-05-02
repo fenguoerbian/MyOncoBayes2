@@ -35,6 +35,7 @@ blrm_exnex(
   chains = getOption("OncoBayes2.MC.chains", 4),
   cores = getOption("mc.cores", 1L),
   control = getOption("OncoBayes2.MC.control", list()),
+  backend = getOption("OncoBayes2.MC.backend", "rstan"),
   prior_PD = FALSE,
   verbose = FALSE
 )
@@ -134,7 +135,10 @@ heterogeniety parameters. Choices are 0=fixed to it's mean,
 
 \item{warmup}{number of warmup iterations.}
 
-\item{save_warmup}{save warmup samples (\code{TRUE} / \code{FALSE}). Only if set to \code{TRUE}, then all random variables are saved in the posterior. This substantially increases the storage needs of the posterior.}
+\item{save_warmup}{save warmup samples (\code{TRUE} /
+\code{FALSE}). Only if set to \code{TRUE}, then all random
+variables are saved in the posterior. This substantially
+increases the storage needs of the posterior.}
 
 \item{thin}{period of saving samples.}
 
@@ -146,7 +150,10 @@ unconstrained space for random initialization. See
 
 \item{cores}{number of cores for parallel sampling of chains.}
 
-\item{control}{additional sampler parameters for NuTS algorithm}
+\item{control}{additional sampler parameters for NuTS algorithm.}
+
+\item{backend}{sets Stan backend to be used. Possible choices are
+\code{"rstan"} (default) or \code{"cmdstanr"}.}
 
 \item{prior_PD}{Logical flag (defaults to \code{FALSE}) indicating
 if to sample the prior predictive distribution instead of

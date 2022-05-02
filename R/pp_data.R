@@ -42,7 +42,10 @@ pp_data <- function(object, newdata, draws, re.form) {
                       group=group_idx,
                       stratum=stratum_idx)
 
-    post <- rstan::extract(object$stanfit, c("beta_group", "eta_group"))
+    if(has_inter)
+        post <- rstan::extract(object$stanfit, c("beta_group", "eta_group"))
+    else
+        post <- rstan::extract(object$stanfit, c("beta_group"))
     names(post) <- sub("_group", "", names(post))
 
     num_post_draws <- dim(post$beta)[1]

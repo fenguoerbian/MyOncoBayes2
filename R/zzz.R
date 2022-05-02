@@ -4,6 +4,11 @@
     for (m in modules) loadModule(m, what = TRUE)
 }
 
+## define globally cmdstanr model object as being undefined, it will
+## be instantiated upon the first use of cmdstanr as backend
+pkg_env <- new.env()
+pkg_env$.cmdstanr_blrm_exnex_model <- NULL
+
 .onAttach <- function(...) {
     ver <- utils::packageVersion("OncoBayes2")
     packageStartupMessage("This is OncoBayes2 version ", ver)

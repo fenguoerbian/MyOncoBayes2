@@ -369,6 +369,7 @@ blrm_exnex <- function(formula,
                        chains=getOption("OncoBayes2.MC.chains", 4),
                        cores=getOption("mc.cores", 1L),
                        control=getOption("OncoBayes2.MC.control", list()),
+                       backend=getOption("OncoBayes2.MC.backend", "rstan"),
                        prior_PD=FALSE,
                        verbose=FALSE
                        )
@@ -607,6 +608,8 @@ blrm_exnex <- function(formula,
     assert_logical(prior_is_EXNEX_comp, any.missing=FALSE, len=num_comp)
     assert_logical(prior_is_EXNEX_inter, any.missing=FALSE, len=num_inter)
 
+    assert_choice(backend, c("rstan", "cmdstanr"))
+
     assert_number(prior_tau_dist, lower=0, upper=2)
 
     assert_logical(prior_PD, any.missing=FALSE, len=1)
@@ -661,21 +664,75 @@ blrm_exnex <- function(formula,
                                               "beta", "eta",
                                               "beta_EX_prob", "eta_EX_prob"))
 
-    stan_msg <- capture.output(stanfit <- rstan::sampling(stanmodels$blrm_exnex,
-                                                          data=stan_data,
-                                                          warmup=warmup,
-                                                          iter=iter,
-                                                          chains=chains,
-                                                          cores=cores,
-                                                          thin=thin,
-                                                          init=init,
-                                                          control=control_sampling,
-                                                          algorithm = "NUTS",
-                                                          open_progress=FALSE,
-                                                          save_warmup=save_warmup,
-                                                          include=FALSE,
-                                                          pars=exclude_pars
-                                                          ))
+    if(backend == "rstan") {
+        stan_msg <- capture.output(stanfit <- rstan::sampling(stanmodels$blrm_exnex,
+                                                              data=stan_data,
+                                                              warmup=warmup,
+                                                              iter=iter,
+                                                              chains=chains,
+                                                              cores=cores,
+                                                              thin=thin,
+                                                              init=init,
+                                                              control=control_sampling,
+                                                              algorithm = "NUTS",
+                                                              open_progress=FALSE,
+                                                              save_warmup=save_warmup,
+                                                              include=FALSE,
+                                                              pars=exclude_pars
+                                                              ))
+    } else if(backend == "cmdstanr") {
+        if (!requireNamespace("cmdstanr", quietly = TRUE)) {
+            stop("Please install the cmdstanr package.")
+        }
+        stan_msg <- c()
+        if(is.null(pkg_env$.cmdstanr_blrm_exnex_model)) {
+            ##stan_model_file <- tempfile("blrm_exnex-", fileext=".stan")
+            ##cat(.get_cmdstan_model(), file=stan_model_file)
+            stan_model_file <- cmdstanr::write_stan_file(.get_cmdstan_model())
+            ## good optimization options for cmdstanr installation are
+            ## STAN_NO_RANGE_CHECKS=TRUE
+            ## STAN_THREADS=FALSE (not so important)
+            ## CXXFLAGS_OPTIM=-mtune=native -march=native -DNDEBUG -DEIGEN_NO_DEBUG
+            ## CXXFLAGS_OPTIM_TBB=-mtune=native -march=native -DNDEBUG -DEIGEN_NO_DEBUG
+            ## CXXFLAGS_OPTIM_SUNDIALS=-mtune=native -march=native -DNDEBUG -DEIGEN_NO_DEBUG
+            pkg_env$.cmdstanr_blrm_exnex_model <- cmdstanr::cmdstan_model(stan_model_file, quiet=!verbose)
+        }
+
+        ## serialize out data to json file and manually delete after
+        ## inference (cmdstanr does not do this instantly)
+        stan_data_file <- tempfile(pattern="stan-data-", fileext=".json")
+        cmdstanr::write_stan_json(stan_data, stan_data_file)
+        stan_msg <- c(stan_msg,
+                      capture.output(cmdstanfit <- pkg_env$.cmdstanr_blrm_exnex_model$sample(
+                                                                                          data=stan_data_file,
+                                                                                          iter_warmup=warmup,
+                                                                                          iter_sampling=iter - warmup,
+                                                                                          seed = sample.int(.Machine$integer.max, 1),
+                                                                                          chains=chains,
+                                                                                          parallel_chains=cores,
+                                                                                          thin=thin,
+                                                                                          init=init,
+                                                                                          adapt_delta=control_sampling$adapt_delta,
+                                                                                          step_size=control_sampling$stepsize,
+                                                                                          max_treedepth=control_sampling$max_treedepth,
+                                                                                          metric=control_sampling$metric,
+                                                                                          save_warmup=save_warmup
+                                                                                      ))
+                      )
+
+        ## TODO: make sure we exclude all those un-necessary
+        ## parameters from the posterior! This is right now not
+        ## supported by cmdstanr such that we may need to skip this
+        ## optimization or process the csv file ourself. This may
+        ## require to use the posterior package to store the model
+        ## posterior, which should be evaluated.  Only
+        ## read_cmdstan_csv supports variable subsetting.  One may
+        ## convert cmdstan samples to the draws format from posterior.
+        stanfit <- rstan::read_stan_csv(cmdstanfit$output_files())
+
+        unlink(stan_data_file)
+    }
+
     ## only display Stan messages in verbose mode
     if(verbose) {
         cat(paste(c(stan_msg, ""), collapse="\n"))
@@ -724,6 +781,18 @@ blrm_exnex <- function(formula,
         labels=labels
     )
     structure(out, class="blrmfit")
+}
+
+## need to fix some division operators due to abilities in newer Stan
+## versions
+#' @keywords internal
+.get_cmdstan_model <- function() {
+    model <- strsplit(rstan::get_stancode(stanmodels$blrm_exnex), "\n")[[1]]
+    line1 <- grep("current / base", model)
+    model[line1] <- sub(" / ", " %/% ", model[line1])
+    line2 <- grep("\\(left_ind \\+ right_ind\\) / 2", model)
+    model[line2] <- sub(" / ", " %/% ", model[line2])
+    paste(c(model, ""), collapse="\n")
 }
 
 

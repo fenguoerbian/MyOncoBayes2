@@ -18,6 +18,7 @@
 #' \code{OncoBayes2.MC.thin} \tab 1 \tab MCMC thinning \cr
 #' \code{OncoBayes2.MC.control} \tab \code{list(adapt_delta=0.99,} \tab sets \code{control} argument for Stan call\cr
 #'  \tab \code{stepsize=0.1}) \tab \cr
+#' \code{OncoBayes2.MC.backend} \tab rstan \tab Backend used to run Stan (\code{rstan} or \code{cmdstanr}) \cr
 #' \code{OncoBayes2.abbreviate.min} \tab 0 \tab Minimal length of variable names \cr
 #'    \tab \tab when abbreviating variable names. \cr
 #'    \tab \tab The default 0 disables abbreviation.\cr
@@ -38,7 +39,7 @@
 #' @import methods
 #' @import Rcpp
 #' @importFrom RcppParallel RcppParallelLibs CxxFlags
-#' @importFrom rstan sampling get_sampler_params summary stanc_builder
+#' @importFrom rstan sampling get_sampler_params summary stanc_builder get_stancode
 #' @importFrom utils capture.output modifyList combn head
 #' @importFrom stats delete.response ftable median model.frame model.matrix model.response quantile rbinom sd terms model.matrix.default setNames update update.default .getXlevels as.formula na.fail qlogis dbinom uniroot
 #' @import assertthat

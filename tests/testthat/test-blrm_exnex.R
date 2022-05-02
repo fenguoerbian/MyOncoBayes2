@@ -72,6 +72,30 @@ test_that("blrm_exnex data handling consistency combo2",
 test_that("blrm_exnex data handling consistency combo3",
           check_model_basic(combo3$blrmfit, combo3))
 
+test_that("blrm_exnex data handling consistency single-agent with cmdstanr backend", {
+          skip_on_cran()
+          opts <- options(OncoBayes2.MC.backend="cmdstanr")
+          single_agent_cmdstanr  <- run_example("single_agent")
+          check_model_basic(single_agent_cmdstanr$blrmfit, single_agent_cmdstanr)
+          options(opts)
+          })
+
+test_that("blrm_exnex data handling consistency combo2 with cmdstanr backend", {
+          skip_on_cran()
+          opts <- options(OncoBayes2.MC.backend="cmdstanr")
+          combo2_cmdstanr  <- run_example("combo2")
+          check_model_basic(combo2_cmdstanr$blrmfit, combo2_cmdstanr)
+          options(opts)
+          })
+
+test_that("blrm_exnex data handling consistency combo3 with cmdstanr backend", {
+          skip_on_cran()
+          opts <- options(OncoBayes2.MC.backend="cmdstanr")
+          combo3_cmdstanr  <- run_example("combo3")
+          check_model_basic(combo3_cmdstanr$blrmfit, combo3_cmdstanr)
+          options(opts)
+          })
+
 test_that("interval probabilites are consistent", {
   skip_on_cran()
   combo2_sens  <- combo2

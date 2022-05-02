@@ -4,8 +4,13 @@ library(Formula)
 library(abind)
 library(rstan)
 
-set_sampling_default  <- function(iter, warmup, chains, cores=getOption("mc.cores", 1), save_warmup=FALSE) {
-    options(OncoBayes2.MC.iter=iter, OncoBayes2.MC.warmup=warmup, OncoBayes2.MC.chains=chains, mc.cores=cores, OncoBayes2.MC.save_warmup=save_warmup)
+set_sampling_default  <- function(iter, warmup, chains, cores=getOption("mc.cores", 1), save_warmup=FALSE, backend="rstan") {
+    options(OncoBayes2.MC.iter=iter,
+            OncoBayes2.MC.warmup=warmup,
+            OncoBayes2.MC.chains=chains,
+            mc.cores=cores,
+            OncoBayes2.MC.save_warmup=save_warmup,
+            OncoBayes2.MC.backend=backend)
 }
 
 very_fast_sampling <- function() {
