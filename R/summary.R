@@ -67,10 +67,10 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
     probs <- sort(unique(c(0.5, 0.5- prob/2, 0.5+ prob/2)))
 
     ## use the SAS defintion for quantiles whenever the output are
-    ## discrete as for the predictive which is type 7. Type 3 is the
+    ## discrete as for the predictive which is type 2. Type 7 is the
     ## default in R which gives non-integer outputs for integer only
     ## data.
-    quantile_type <- ifelse(predictive, 7, 3)
+    quantile_type <- ifelse(predictive, 2, 7)
 
     if(predictive) {
         sizes <- pp_binomial_trials(object, newdata=newdata)
@@ -92,7 +92,7 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
             Pr <- matrix(post_prob[,r], nrow=nor, ncol=draws, byrow=TRUE)
             pred_lpmf[seq_len(nor),r] <- apply(dbinom(outcomes_row, sizes[r], prob=Pr, log=TRUE), 1, log_mean_exp)
             ## normalize to sum-to-one per column
-            pred_lpmf[seq_len(nor),r] <- pred_lpmf[seq_len(nor),r] - log_sum_exp(pred_lpmf[seq_len(nor),r])
+            pred_lpmf[seq_len(nor),r] <- pred_lpmf[seq_len(nor),r] - matrixStats::logSumExp(pred_lpmf[seq_len(nor),r])
             pred_pmf[,r] <- exp(pred_lpmf[,r])
             pred_cpmf[seq_len(nor),r] <- cumsum(pred_pmf[seq_len(nor),r])
             ## ensure that largest number is truly 1.0
@@ -143,6 +143,7 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
 
     } else {
         post <- posterior_linpred(object, transform=transform, newdata=newdata)
+        S <- nrow(post)
 
         if (ncol(post) > 0) {
           out_sum <- as.data.frame(t(apply(post, 2, function(l) {
@@ -165,11 +166,10 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
 
             if (ncol(post) > 0)
             {
-              out_interval <- as.data.frame(t(apply(post, 2, function(l) .proportions(table(cut(l, breaks=c(-Inf, interval_prob, Inf)))))))
+              out_interval <- as.data.frame(t(apply(post, 2, function(l) table(cut(l, breaks=c(-Inf, interval_prob, Inf)))/S )))
             } else {
               out_interval <- data.frame(0.0 * matrix(ncol = (1+length(interval_prob)), nrow = 0))
               colnames(out_interval) <- levels(cut(numeric(0), breaks=c(-Inf, interval_prob, Inf)))
-
             }
 
             out_interval <- out_interval[,-c(1,ncol(out_interval)), drop=FALSE]
@@ -193,18 +193,47 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
 #'   \item{}{\code{blrm_exnex_call}: blrm_exnex call used to create the \code{blrmfit} object}
 #'   \item{}{\code{drug_info}: drug_info for the trial, contains drugs, reference doses and units}
 #'   \item{}{\code{dose_info}: dose_info that were defined}
-#'   \item{}{\code{dose_prediction} prediction for the defined dose_info}
+#'   \item{}{\code{dose_prediction} prediction for the defined \code{dose_info}}
 #'   \item{}{\code{data}: data that were observed}
 #'   \item{}{\code{data_prediction}: prediction for the observed data}
-#'   \item{}{\code{newdata_prediction}: prediction for data provided with the newdata= argument}
-#'   \item{}{\code{dimensionality}: numeric vector with entries "num_components",
-#'     "num_interaction_terms", "num_groups", "num_strata"}
+#'   \item{}{\code{newdata_prediction}: prediction for data provided with the \code{newdata} argument}
+#'   \item{}{\code{dimensionality}: numeric vector with entries \code{"num_components"},
+#'     \code{"num_interaction_terms"}, \code{"num_groups"}, \code{"num_strata"}}
 #'   \item{}{\code{interval_prob}: interval probabilities reported in the standard outputs}
 #'   \item{}{\code{interval_max_mass}: named vector defining for each interval of the
 #'     \code{interval_prob} vector a maxmimal admissable
 #'     probability mass for a given dose level}
+#'   \item{}{\code{ewoc_check}: MCMC diagnostic and precision estimates of ewoc defining metrics for the defined doses in \code{dose_info} (default) or for the doses provided in the \code{newdata} argument. Please refer to the details for reported diagnostics.}
 #' }
-#' @param ... further arguments for summary.blrmfit
+#' @param ... further arguments for \code{\link{summary.blrmfit}}
+#'
+#' @details The \code{ewoc_check} summary routine allows to assess the
+#'     accuracy and reliability of the ewoc criterion with respect to
+#'     MCMC sampling noise. The returned summary provides detailled
+#'     MCMC convergence and precision estimates for all criteria
+#'     defined by \code{interval_prob} and \code{interval_max_mass}
+#'     which contribute to EWOC metric. That is, for each interval
+#'     probability with a maximal mass of less than unity the routine
+#'     will return these columns:
+#' \describe{
+#' \item{\code{est}}{the MCMC estimate defining the critical value. For intervals defined by a tail probability this corresponds to the respective critical quantile while for interval probabilites this is equal to the interval probability.}
+#' \item{\code{stat}}{centered and standardized test quantity. The estimate is centered by the critical value and scaled by the Monte-Carlo standard error (MCSE) of the estimate. Hence, negative (positive) values correspond to the constraint being (not) fulfilled. The standardization with the MCSE allows to compare the values to standard normal quantiles accordingly.}
+#' \item{\code{mcse}}{the Monte-Carlo standard error of the estimate determined with \code{\link[posterior]{mcse_quantile}} (tail probability) or \code{\link[posterior]{mcse_mean}} (interval probability) functions.}
+#' \item{\code{ess}}{the Monte-Carlo effective sample size of the estimate determined with \code{\link[posterior]{ess_quantile}} (tail probability) or \code{\link[posterior]{ess_mean}} (interval probability) functions.}
+#' \item{\code{rhat}}{the Monte-Carlo non-convergence diagnostic Rhat as determined with the \code{\link[posterior]{rhat} function}.}
+#' }
+#'
+#' For the common case of requiring that 33\% DLT probability is not
+#' exceeded by more than 25\% of the posterior probability mass, the
+#' estimate column \code{est} contains the 75\% quantile
+#' \eqn{q_{75\%}}{q75\%} and the standardized statistic \code{stat} is
+#' defined as:
+#'
+#' \deqn{\mbox{stat} = \frac{q_{75\%} - 33\%}{\mbox{mcse}_{q_{75\%}}}}{stat = (q75\% - 33\%)/mcse_q75\%}
+#'
+#' The statistic is approximately distributed as a standard normal
+#' variate. The \code{ewoc_check} summary can be used to ensure that
+#' the MCMC estimation accuracy is sufficient.
 #'
 #' @template start-example
 #' @examples
@@ -218,6 +247,17 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
 #'
 #' # extract blrm_call to see setup of the prior as passed to blrm_exnex
 #' summary(combo2_trial_setup, "blrm_exnex_call")
+#'
+#' # extract ewoc precision accuracy
+#' ec <- summary(combo2_trial_setup, "ewoc_check")
+#'
+#' # find any ewoc metrics which are within 95% MCMC error of the threshold
+#' # these are counted as "imprecise" when printing blrm_trial objects
+#' subset(ec, abs(prob_overdose_stat) < qnorm(0.975))
+#'
+#' # ensure that the ewoc metric only flags "ok" whenever the MCMC error
+#' # is with 95% below the threshold
+#' ewoc_ok <- ec$prob_overdose_stat < qnorm(0.025)
 #'
 #' @template stop-example
 #'
@@ -236,7 +276,8 @@ summary.blrm_trial <- function(
     "newdata_prediction",
     "dimensionality",
     "interval_prob",
-    "interval_max_mass"
+    "interval_max_mass",
+    "ewoc_check"
   ),
   ...
 )
@@ -254,7 +295,7 @@ summary.blrm_trial <- function(
 
 
 
-  if (summarize %in% c("blrmfit", "blrm_exnex_call", "dose_prediction", "data_prediction", "newdata_prediction")) {
+  if (summarize %in% c("blrmfit", "blrm_exnex_call", "dose_prediction", "data_prediction", "newdata_prediction", "ewoc_check")) {
     .assert_is_blrm_trial_and_prior_is_set(object)
   } else {
     .assert_is_blrm_trial(object)
@@ -274,6 +315,27 @@ summary.blrm_trial <- function(
     do.call(".blrm_trial_predict", c(list(object, args[["newdata"]]), args_without_newdata))
   }
 
+  ewoc_check <- function() {
+      if(!("newdata" %in% names(args))) {
+          .blrm_trial_ewoc_check(object, object$ewoc_check)
+          return(object$ewoc_check)
+      }
+
+      args[["newdata"]] <- .blrm_trial_sanitize_data(
+          trial=object,
+          data=args[["newdata"]],
+          warning_if_dose_not_prespecified = FALSE,
+          require_num_patients = FALSE,
+          require_num_toxicities = FALSE
+      )
+
+      args_without_newdata <- args
+      args_without_newdata[["newdata"]] <- NULL
+      ewoc_check <- do.call(".blrm_trial_compute_ewoc_check", c(list(object, newdata=args[["newdata"]]), args_without_newdata))
+      .blrm_trial_ewoc_check(object, ewoc_check)
+      ewoc_check
+  }
+
   switch(summarize,
     blrmfit = summary(object$blrmfit, ...),
     blrm_exnex_call = object$blrmfit$call,
@@ -285,43 +347,7 @@ summary.blrm_trial <- function(
     newdata_prediction = newdata_predict(),
     dimensionality = object[c("num_components", "num_interaction_terms", "num_groups", "num_strata")],
     interval_prob = object$interval_prob,
-    interval_max_mass = object$interval_max_mass
+    interval_max_mass = object$interval_max_mass,
+    ewoc_check = ewoc_check()
   )
-}
-
-
-#' Backport from R 4
-#' @param x object to summarise
-#' @param margin margin over which to marginalize
-#' @keywords internal
-.marginSums <- function (x, margin = NULL)
-{
-    if (!is.array(x))
-        if (is.numeric(x))
-            dim(x) <- length(x)
-        else stop("'x' is not an array")
-    if (length(margin)) {
-        z <- apply(x, margin, sum)
-        if (!is.array(z)) {
-            if (is.character(margin))
-                margin <- match(margin, names(dimnames(x)))
-            dim(z) <- dim(x)[margin]
-            dimnames(z) <- dimnames(x)[margin]
-        }
-        class(z) <- oldClass(x)
-        z
-    }
-    else sum(x)
-}
-
-
-#' Backport from R 4
-#' @param x object to summarise
-#' @param margin margin over which to marginalize
-#' @keywords internal
-.proportions <- function (x, margin = NULL)
-{
-    if (length(margin))
-        sweep(x, margin, .marginSums(x, margin), "/", check.margin = FALSE)
-    else x/sum(x)
 }

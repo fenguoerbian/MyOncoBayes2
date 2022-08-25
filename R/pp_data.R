@@ -33,37 +33,25 @@ pp_data <- function(object, newdata, draws, re.form) {
 
     num_obs <- dim(X_comp)[2]
 
-
     group_idx  <- as.integer(unclass(strata_group_fct$group_fct))
     stratum_idx  <- as.integer(unclass(strata_group_fct$strata_fct))
 
-    pred_data <- list(X_comp=X_comp,
-                      X_inter=X_inter,
-                      group=group_idx,
-                      stratum=stratum_idx)
-
-    if(has_inter)
-        post <- rstan::extract(object$stanfit, c("beta_group", "eta_group"))
-    else
-        post <- rstan::extract(object$stanfit, c("beta_group"))
-    names(post) <- sub("_group", "", names(post))
-
-    num_post_draws <- dim(post$beta)[1]
-    if(!has_inter) {
-        num_groups_fitted <- dim(post$beta)[2]
-        post$eta <- array(NA, dim=c(num_post_draws, num_groups_fitted, 0))
-        post$eta_map <- array(NA, dim=c(num_post_draws, num_groups_fitted, 0))
+    if(has_inter) {
+        post_rv <- as_draws_rvars(as.array(object$stanfit, pars=c("beta_group", "eta_group")))
+    } else {
+        post_rv <- as_draws_rvars(as.array(object$stanfit, pars=c("beta_group")))
+        post_rv$eta_group <- rvar(0)
     }
 
     if(!missing(draws))
-        post <- extract_draw(post, seq_len(draws))
+        post_rv <- resample_draws(post_rv, method="deterministic", ndraws=draws)
 
-    ##pp <- posterior_simulate(post, blrm_logit_grouped, envir=list2env(pred_data))
-    pp <- posterior_simulate(post, blrm_logit_grouped_vec, vectorized=TRUE, envir=list2env(pred_data))
+    pp <- blrm_logit_grouped_rv(group_idx, X_comp, X_inter, post_rv$beta_group, post_rv$eta_group)
     colnames(pp) <- rownames(data)
     pp
 }
 
+#' @keywords internal
 .validate_factor <- function(test, expected, name) {
     expected_levels  <- levels(expected)
     if(is.factor(test)) {
@@ -86,32 +74,13 @@ pp_data <- function(object, newdata, draws, re.form) {
 #' Numerically stable summation of log inv logit
 #' @keywords internal
 log_inv_logit <- function(mat) {
-    - ifelse(is.finite(mat) & (mat < 0), log1p(exp(mat)) - mat, log1p(exp(-mat)))
+    ##- ifelse(is.finite(mat) & (mat < 0), log1p(exp(mat)) - mat, log1p(exp(-mat)))
+    ##idx <- is.finite(mat) & (mat < 0)
+    idx <- mat < 0
+    mat[idx] <- mat[idx] - log1p(exp(mat[idx]))
+    mat[!idx] <- -1*log1p(exp(-mat[!idx]))
+    mat
 }
-
-
-
-## blrm_logit_grouped <- function(group, stratum, X_comp, X_inter, beta, eta) {
-##     num_comp <- dim(X_comp)[1]
-##     num_inter <- dim(X_inter)[2]
-##     num_obs <- length(group)
-##     mu <- rep(NA, num_obs)
-##     for(i in 1:num_obs) {
-##         g <- group[i]
-##         s <- stratum[i]
-##         log_p0_nr <- 0
-##         for(j in 1:num_comp) {
-##             ##log_p0_nr <- log_p0_nr + log(1 - inv_logit(X_comp[j,i,] %*% beta[g,j,]))
-##             log_p0_nr <- log_p0_nr + log_inv_logit(-1 * adrop(X_comp[j,i,,drop=FALSE], drop=1:2) %*% beta[g,j,,drop=TRUE])
-##         }
-        ##mu[i] <- log(1 - exp(log_p0_nr)) - log_p0_nr
-##         mu[i] <- log1p(-exp(log_p0_nr)) - log_p0_nr
-##         if(num_inter > 0) {
-##             mu[i] <- mu[i] + adrop(X_inter[i,,drop=FALSE], drop=1) %*% eta[g,,drop=TRUE]
-##         }
-##     }
-##     mu
-## }
 
 ## numerically stable version of log1m_exp(x) = log(1-exp(x)) for x < 0
 log1m_exp_max0  <- function(x) {
@@ -119,32 +88,43 @@ log1m_exp_max0  <- function(x) {
     x - qlogis(x, log.p=TRUE)
 }
 
-## vectorized version
-blrm_logit_grouped_vec <- function(group, stratum, X_comp, X_inter, beta, eta) {
+blrm_logit_grouped_rv <- function(group, X_comp, X_inter, beta, eta) {
+    ## respective Stan declarations:
+    ## vector[2] beta_group[num_groups,num_comp];
+    ## vector[num_inter] eta_group[num_groups];
+    ## matrix[num_obs,2] X_comp[num_comp];
     num_comp <- dim(X_comp)[1]
     num_inter <- dim(X_inter)[2]
     num_obs <- length(group)
-    S <- dim(beta)[1]
+    abeta <- draws_of(beta)
+    aeta <- draws_of(eta)
+    ## dropping dimnames speeds up subsetting below
+    dimnames(abeta) <- NULL
+    dimnames(aeta) <- NULL
+    dimnames(X_comp) <- NULL
+    dimnames(X_inter) <- NULL
+    S <- dim(abeta)[1]
     mu <- matrix(0.0*NA, S, num_obs)
+    ##log_p0_nr_comp  <- matrix(0.0*NA, S, num_comp) ## obsolete definition
     for (i in seq_len(num_obs)) { # LW: patched to NOT run if num_obs
         g <- group[i]
-        s <- stratum[i]
-        log_p0_nr <- 0
+        log_p0_nr <- numeric(S)
         for(j in seq_len(num_comp)) {
-            ##log_p0_nr <- log_p0_nr + log(1 - inv_logit(X_comp[j,i,] %*% beta[g,j,]))
-            log_p0_nr <- log_p0_nr + log_inv_logit(-1 * adrop(X_comp[j,i,,drop=FALSE], drop=1) %*% t(matrix(beta[,g,j,,drop=FALSE], S, 2)))
+            ##log_p0_nr_comp[,j] <- log_inv_logit(-1 * tcrossprod(adrop(X_comp[j,i,,drop=FALSE], drop=1), adrop(abeta[,g,j,,drop=FALSE], c(2,3))))
+            log_p0_nr <- log_p0_nr + log_inv_logit_fast(adrop(abeta[,g,j,,drop=FALSE], c(2,3)) %*% (-1*X_comp[j,i,,drop=FALSE]) )
         }
-        ##mu[i] <- log(1 - exp(log_p0_nr)) - log_p0_nr
-        ##mu[,i] <- log1p(-exp(log_p0_nr)) - log_p0_nr
-        mu[,i] <- log1m_exp_max0(log_p0_nr) - log_p0_nr
         if(num_inter > 0) {
-            mu[,i] <- mu[,i] + X_inter[i,,drop=FALSE] %*% t(matrix(eta[,g,,drop=FALSE], S, num_inter))
+            ##mu[,i] <- log1m_exp_max0(log_p0_nr) - log_p0_nr + tcrossprod(X_inter[i,,drop=FALSE], adrop(aeta[,g,,drop=FALSE], 2))
+            ##mu[,i] <- -qlogis(log_p0_nr, log.p=TRUE) + adrop(aeta[,g,,drop=FALSE], 2) %*% X_inter[i,,drop=TRUE]
+            mu[,i] <- log1m_exp_max0_fast(log_p0_nr) - log_p0_nr + adrop(aeta[,g,,drop=FALSE], 2) %*% X_inter[i,,drop=TRUE]
+        } else {
+            ##mu[,i] <- log1m_exp_max0(log_p0_nr) - log_p0_nr
+            ##mu[,i] <- -qlogis(log_p0_nr, log.p=TRUE)
+            mu[,i] <- log1m_exp_max0_fast(log_p0_nr) - log_p0_nr
         }
     }
     mu
 }
-
-
 
 pp_binomial_trials <- function(object, newdata) {
     data <- object$data

@@ -12,7 +12,7 @@ suppressPackageStartupMessages(library(dplyr))
 check_basic  <- function(example){
   expect_class(blrm_trial(example$histdata, example$dose_info, example$drug_info),
               "blrm_trial")
-  
+
   # No warning should be produced
   expect_failure(expect_warning(blrm_trial(example$histdata, example$dose_info, example$drug_info), regexp = "does not correspond to a pre-specified dose"))
 }
@@ -60,7 +60,7 @@ check_trial_summary  <- function(example) {
     expect_tibble(summary(trial, summarize="data"))
     expect_tibble(summary(trial, summarize="drug_info"))
     expect_tibble(summary(trial, summarize="dose_info"))
-    
+
     expect_numeric(summary(trial, summarize="interval_prob"))
     expect_numeric(summary(trial, summarize="interval_max_mass"))
   })
@@ -81,27 +81,32 @@ check_trial_with_prior_summary  <- function(example) {
     expect_tibble(summary(trial, summarize="dose_prediction"))
     expect_numeric(summary(trial, summarize="interval_prob"))
     expect_numeric(summary(trial, summarize="interval_max_mass"))
-    
+    expect_tibble(summary(trial, summarize="ewoc_check"))
+
     newdata_summary <- summary(trial, summarize="newdata_prediction", newdata = histdata)
     expect_tibble(newdata_summary)
     expect(nrow(histdata) == nrow(newdata_summary))
-    
+
+    newdata_summary <- summary(trial, summarize="ewoc_check", newdata = histdata)
+    expect_tibble(newdata_summary)
+    expect(nrow(histdata) == nrow(newdata_summary))
+
     # num_patients and num_toxicities should not be required columns in newdata
     newdata <- summary(trial, "dose_info") %>%
       slice(1:(nrow(.) - 1))
     newdata_summary <- summary(trial, summarize="newdata_prediction", newdata = newdata)
     expect_tibble(newdata_summary)
     expect(nrow(newdata) == nrow(newdata_summary))
-    
+
     # newdata_prediction should not give warning if dose is not provisional dose
     newdata <- tibble(
       group_id = levels(summary(trial, "dose_info")$group_id[0])[1]
     )
-    
+
     newdata[1, summary(trial, "drug_info")$drug_name] <- runif(1)
-    
-    expect_failure(expect_warning(summary(trial, "newdata_prediction", newdata = newdata), regexp = "does not correspond to a pre-specified dose")) 
-    
+
+    expect_failure(expect_warning(summary(trial, "newdata_prediction", newdata = newdata), regexp = "does not correspond to a pre-specified dose"))
+
   })
 }
 
@@ -180,26 +185,26 @@ check_character_group_id  <- function(example) {
 check_character_factor_group_id  <- function(example) {
   with(example, {
     levs <- unique(c(histdata$group_id, dose_info$group_id))
-    
+
     histdata_fct <- mutate(histdata, group_id = factor(group_id, levels=levs))
     dose_info_fct <- mutate(dose_info, group_id = factor(group_id, levels=levs))
-    
+
     expect_warning(
       blrm_trial(histdata, dose_info_fct, drug_info)
     )
-    
+
     trial_dose_info_fct <- blrm_trial(histdata, dose_info_fct, drug_info)
     expect_equal(levels(summary(trial_dose_info_fct, summarize="data")$group_id),      levels(dose_info_fct$group_id))
     expect_equal(levels(summary(trial_dose_info_fct, summarize="dose_info")$group_id), levels(dose_info_fct$group_id))
-    
+
     expect_warning(
       blrm_trial(histdata_fct, dose_info, drug_info)
     )
-    
+
     trial_histdata_fct <- blrm_trial(histdata_fct, dose_info, drug_info)
     expect_equal(levels(summary(trial_histdata_fct, summarize="data")$group_id),      levels(histdata_fct$group_id))
     expect_equal(levels(summary(trial_histdata_fct, summarize="dose_info")$group_id), levels(histdata_fct$group_id))
-    
+
     expect_error(blrm_trial(mutate(histdata, group_id = "this group_id does not exist in the dose_info_fct group_id factor"), dose_info_fct, drug_info))
     expect_error(blrm_trial(histdata_fct, mutate(dose_info, group_id = "this group_id does not exist in the histdata_fct group_id factor"), drug_info))
   })
@@ -312,22 +317,22 @@ check_character_stratum_id  <- function(example){
 check_character_factor_stratum_id  <- function(example) {
   with(example, {
     levs <- unique(c(histdata$stratum_id, dose_info$stratum_id))
-    
+
     histdata_fct <- mutate(histdata, stratum_id = factor(stratum_id, levels=levs))
     dose_info_fct <- mutate(dose_info, stratum_id = factor(stratum_id, levels=levs))
-    
+
     expect_warning(blrm_trial(histdata, dose_info_fct, drug_info))
-    
+
     trial_dose_info_fct <- blrm_trial(histdata, dose_info_fct, drug_info)
     expect_equal(levels(summary(trial_dose_info_fct, summarize="data")$stratum_id), levels(dose_info_fct$stratum_id))
     expect_equal(levels(summary(trial_dose_info_fct, summarize="dose_info")$stratum_id), levels(dose_info_fct$stratum_id))
-    
+
     expect_warning(blrm_trial(histdata_fct, dose_info, drug_info))
-    
+
     trial_histdata_fct <- blrm_trial(histdata_fct, dose_info, drug_info)
     expect_equal(levels(summary(trial_histdata_fct, summarize="data")$stratum_id), levels(histdata_fct$stratum_id))
     expect_equal(levels(summary(trial_histdata_fct, summarize="dose_info")$stratum_id), levels(histdata_fct$stratum_id))
-    
+
     expect_error(blrm_trial(mutate(histdata, stratum_id = "this stratum_id does not exist in the dose_info_fct stratum_id factor"), dose_info_fct, drug_info))
     expect_error(blrm_trial(histdata_fct, mutate(dose_info, stratum_id = "this stratum_id does not exist in the histdata_fct stratum_id factor"), drug_info))
   })
@@ -357,22 +362,22 @@ check_for_group_being_in_multiple_strata <- function() {
     num_toxicities = c(0, 1, 1, 0, 1, 0),
     num_patients = c(2, 6, 3, 4, 9, 29)
   )
-  
+
   dose_info <- tibble(
     group_id = as.factor(c(rep("trial_a",2),rep("trial_b",2), rep("trial_c",1))),
     stratum_id = as.factor(c(rep("reg1",2),rep("reg2",1), "reg3", rep("reg1",1))),
     drug = c(20*5, 30*5, 20*14, 30*14, 45*7)
   )
-  
+
   drug_info = tibble::tibble(
     drug_name = "drug",
     dose_ref  = 1,
     dose_unit = "ngogn",
     reference_p_dlt = 0.1
   )
-  
+
   expect_error(
-    trial <- blrm_trial(hist_data, dose_info, drug_info), 
+    trial <- blrm_trial(hist_data, dose_info, drug_info),
     "^Inconsistent.*"
   )
 }
@@ -493,14 +498,14 @@ check_blrm_trial_update <- function(example, formula_generator)
 
     trial_with_replaced_data <- update(trial, data=new_trial_data)
     expect_equal(new_trial_data, summary(trial_with_replaced_data, "data"))
-    
+
     # Test data aggregation works correctly
     trial_with_new_data_2 <- update(trial_with_new_data, add_data=new_data)
     new_trial_data_2 <- summary(trial_with_new_data_2, "data", prob = c(0.95, 0.5))
-    
+
     # Data should have increased by one row
-    expect_equal(nrow(new_trial_data_2), nrow(new_trial_data) + nrow(new_data))   
-    
+    expect_equal(nrow(new_trial_data_2), nrow(new_trial_data) + nrow(new_data))
+
     # Check for internal consistency with blrmfit data
     blrmfit_data <- trial_with_new_data$blrmfit$data
     blrmfit_data_2 <- trial_with_new_data_2$blrmfit$data
@@ -510,16 +515,16 @@ check_blrm_trial_update <- function(example, formula_generator)
     expect_equal(internal_trial_data$num_toxicities, new_data$num_toxicities)
     expect_equal(internal_data$num_patients, new_data$num_patients)
     expect_equal(internal_data$num_toxicities, new_data$num_toxicities)
-    
+
     internal_data_2 <- filter(blrmfit_data_2, group_id == new_data$group_id, drug1 == new_data$drug1)
     internal_trial_data_2 <- filter(new_trial_data_2, group_id == new_data$group_id, drug1 == new_data$drug1)
     expect_equal(sum(internal_trial_data_2$num_patients), 2*new_data$num_patients)
     expect_equal(sum(internal_trial_data_2$num_toxicities), 2*new_data$num_toxicities)
     expect_equal(internal_data_2$num_patients, 2*new_data$num_patients)
     expect_equal(internal_data_2$num_toxicities, 2*new_data$num_toxicities)
-    
+
     # Number of rows should not increase if same data is added twice
-    expect_equal(nrow(blrmfit_data_2), nrow(blrmfit_data))   
+    expect_equal(nrow(blrmfit_data_2), nrow(blrmfit_data))
   })
 }
 
@@ -532,7 +537,7 @@ test_that("update function for blrm_trial adds data with add_data= and replaces 
 check_ewoc_criterion_defaults <- function(example) {
   with(example, {
     ## create basic blrm trial
-    trial <- blrm_trial(histdata, dose_info, drug_info)
+    trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = T )
 
 
     # Test EWOC criterion is computed correctly
@@ -579,7 +584,8 @@ check_ewoc_criterion_intervals <- function(example) {
       trial <- blrm_trial(
         histdata, dose_info, drug_info,
         interval_prob = interval_prob,
-        interval_max_mass = interval_max_mass
+        interval_max_mass = interval_max_mass,
+        simplified_prior = T
       )
 
       # Test EWOC criterion is computed correctly
@@ -726,17 +732,17 @@ check_update_additional_column <- function(example) {
     dose_info_foo <- mutate(dose_info, foo = "bar")
     histdata_foo <- mutate(histdata, foo = "bar")
     setup <- blrm_trial(histdata_foo, dose_info_foo, drug_info, simplified_prior = TRUE)
-    
+
     result_colnames <- colnames(summary(setup, "dose_prediction"))
     expect("foo" %in% result_colnames, failure_message = "Additional column shall be present in result")
     expect(!("foo.x" %in% result_colnames), failure_message = "Additional column shall not be duplicated")
-    
+
     trial <- update(setup, add_data=histdata_foo)
-    
+
     result_colnames <- colnames(summary(trial, "dose_prediction"))
     expect("foo" %in% result_colnames, failure_message = "Additional column shall be present in result after update")
     expect(!("foo.x" %in% result_colnames), failure_message = "Additional column shall not be duplicated  after update")
-    
+
   })
 }
 
@@ -815,7 +821,7 @@ check_simplified_prior_no_hist_data <- function(example, formula_generator) {
   with(example, {
     trial <- blrm_trial(data = NULL, dose_info = dose_info, drug_info = drug_info, simplified_prior = TRUE, formula_generator = formula_generator)
     expect_tibble(summary(trial, "dose_prediction"))
-    
+
     # Summary of trial should not error
     expect_tibble(summary(trial))
   })
@@ -824,50 +830,50 @@ check_simplified_prior_no_hist_data <- function(example, formula_generator) {
 check_full_prior_with_update <- function(example, formula_generator) {
   with(example, {
     trial <- blrm_trial(histdata, dose_info, drug_info, formula_generator = formula_generator)
-    
+
     dims <- summary(trial, "dimensionality")
-    
+
     prior_EX_mu_mean_comp  <- cbind(logit(0.1), rep(0, dims[["num_components"]]))
     prior_EX_mu_sd_comp    <- matrix(c(2, 1), nrow = dims[["num_components"]], ncol = 2, byrow=TRUE)
-    
+
     ## Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}}
     prior_EX_tau_mean_comp <- matrix(log(c(0.5, 0.25)), nrow = dims[["num_components"]], ncol = 2, byrow=TRUE)
     prior_EX_tau_sd_comp <- matrix(log(4)/1.96, nrow = dims[["num_components"]], ncol = 2)
-    
+
     # Prior mean and sd on mu_{eta}
     prior_EX_mu_mean_inter  <- rep(0,   dims[["num_interaction_terms"]])
     prior_EX_mu_sd_inter    <- rep(0.5, dims[["num_interaction_terms"]])
     prior_EX_tau_mean_inter <- matrix(log(0.5)   , nrow = dims[["num_strata"]], ncol = dims[["num_interaction_terms"]])
     prior_EX_tau_sd_inter   <- matrix(log(4)/1.96, nrow = dims[["num_strata"]], ncol = dims[["num_interaction_terms"]])
-    
+
     prior_is_EXNEX_comp <- rep(FALSE, dims[["num_components"]])
     prior_EX_prob_comp <- matrix(1, nrow = dims[["num_groups"]], ncol = dims[["num_components"]])
     prior_is_EXNEX_inter <- rep(FALSE, dims[["num_interaction_terms"]])
     prior_EX_prob_inter <- matrix(1, nrow = dims[["num_groups"]], ncol = dims[["num_interaction_terms"]])
-    
+
     prior_tau_dist <- 1
-    
-    trial <- update(trial, 
+
+    trial <- update(trial,
       prior_EX_mu_mean_comp = prior_EX_mu_mean_comp,
       prior_EX_mu_sd_comp = prior_EX_mu_sd_comp,
-      
+
       prior_EX_tau_mean_comp = prior_EX_tau_mean_comp,
       prior_EX_tau_sd_comp = prior_EX_tau_sd_comp,
-      
+
       prior_EX_mu_mean_inter = prior_EX_mu_mean_inter,
       prior_EX_mu_sd_inter = prior_EX_mu_sd_inter,
       prior_EX_tau_mean_inter = prior_EX_tau_mean_inter,
       prior_EX_tau_sd_inter = prior_EX_tau_sd_inter,
-      
+
       prior_is_EXNEX_comp = prior_is_EXNEX_comp,
       prior_EX_prob_comp = prior_EX_prob_comp,
-      
+
       prior_is_EXNEX_inter = prior_is_EXNEX_inter,
       prior_EX_prob_inter = prior_EX_prob_inter,
-      
+
       prior_tau_dist = prior_tau_dist
     )
-    
+
     expect_tibble(summary(trial, "data_prediction"))
   })
 }
@@ -879,49 +885,49 @@ check_full_prior_direct <- function(formula_generator) {
       num_interaction_terms = 0,
       num_groups = 4,
       num_strata = 1)
-    
+
     prior_EX_mu_mean_comp  <- cbind(logit(0.1), rep(0, dims[["num_components"]]))
     prior_EX_mu_sd_comp    <- matrix(c(2, 1), nrow = dims[["num_components"]], ncol = 2, byrow=TRUE)
-    
+
     ## Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}}
     prior_EX_tau_mean_comp <- matrix(log(c(0.5, 0.25)), nrow = dims[["num_components"]], ncol = 2, byrow=TRUE)
     prior_EX_tau_sd_comp <- matrix(log(4)/1.96, nrow = dims[["num_components"]], ncol = 2)
-    
+
     # Prior mean and sd on mu_{eta}
     prior_EX_mu_mean_inter  <- rep(0,   dims[["num_interaction_terms"]])
     prior_EX_mu_sd_inter    <- rep(0.5, dims[["num_interaction_terms"]])
     prior_EX_tau_mean_inter <- matrix(log(0.5)   , nrow = dims[["num_strata"]], ncol = dims[["num_interaction_terms"]])
     prior_EX_tau_sd_inter   <- matrix(log(4)/1.96, nrow = dims[["num_strata"]], ncol = dims[["num_interaction_terms"]])
-    
+
     prior_is_EXNEX_comp <- rep(FALSE, dims[["num_components"]])
     prior_EX_prob_comp <- matrix(1, nrow = dims[["num_groups"]], ncol = dims[["num_components"]])
     prior_is_EXNEX_inter <- rep(FALSE, dims[["num_interaction_terms"]])
     prior_EX_prob_inter <- matrix(1, nrow = dims[["num_groups"]], ncol = dims[["num_interaction_terms"]])
-    
-    prior_tau_dist <- 1    
 
-    trial <- blrm_trial(histdata, dose_info, drug_info, 
+    prior_tau_dist <- 1
+
+    trial <- blrm_trial(histdata, dose_info, drug_info,
       prior_EX_mu_mean_comp = prior_EX_mu_mean_comp,
       prior_EX_mu_sd_comp = prior_EX_mu_sd_comp,
-      
+
       prior_EX_tau_mean_comp = prior_EX_tau_mean_comp,
       prior_EX_tau_sd_comp = prior_EX_tau_sd_comp,
-      
+
       prior_EX_mu_mean_inter = prior_EX_mu_mean_inter,
       prior_EX_mu_sd_inter = prior_EX_mu_sd_inter,
       prior_EX_tau_mean_inter = prior_EX_tau_mean_inter,
       prior_EX_tau_sd_inter = prior_EX_tau_sd_inter,
-      
+
       prior_is_EXNEX_comp = prior_is_EXNEX_comp,
       prior_EX_prob_comp = prior_EX_prob_comp,
-      
+
       prior_is_EXNEX_inter = prior_is_EXNEX_inter,
       prior_EX_prob_inter = prior_EX_prob_inter,
-      
+
       prior_tau_dist = prior_tau_dist,
       formula_generator = formula_generator
     )
-    
+
     expect_tibble(summary(trial, "data_prediction"))
   })
 }
@@ -966,10 +972,10 @@ test_that("update function for blrm_trial adds data with add_data= and replaces 
 # Test custom interaction terms with saturating model -------------------------
 test_that("simplified prior specification works with custom saturating model (combo2)",
           check_simplified_prior(
-            examples$combo2, 
+            examples$combo2,
             function(ref_doses) {
               blrm_formula_saturating(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(c("drug1", "drug2"))
               )
             }
@@ -978,10 +984,10 @@ test_that("simplified prior specification works with custom saturating model (co
 
 test_that("simplified prior specification works with custom saturating model (combo3)",
           check_simplified_prior(
-            examples$combo3, 
+            examples$combo3,
             function(ref_doses) {
               blrm_formula_saturating(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(c("drug1", "drug2"))
               )
             }
@@ -993,7 +999,7 @@ test_that("zero length specific_interaction_terms should lead to an error with s
           with(examples$combo3, {
             custom_formula_generator <- function(ref_doses) {
               blrm_formula_saturating(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(character())
               )
             }
@@ -1006,7 +1012,7 @@ test_that("Duplicated specific_interaction_terms should lead to an error with sa
           with(examples$combo3, {
             custom_formula_generator <- function(ref_doses) {
               blrm_formula_linear(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(c("drug1", "drug2"),
                                                   c("drug1", "drug2"))
               )
@@ -1021,10 +1027,10 @@ test_that("Duplicated specific_interaction_terms should lead to an error with sa
 # Test custom interaction terms with linear model -------------------------
 test_that("simplified prior specification works with custom linear model (combo2)",
           check_simplified_prior(
-            examples$combo2, 
+            examples$combo2,
             function(ref_doses) {
               blrm_formula_linear(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(c("drug1", "drug2"))
               )
             }
@@ -1033,10 +1039,10 @@ test_that("simplified prior specification works with custom linear model (combo2
 
 test_that("simplified prior specification works with custom linear model (combo3)",
           check_simplified_prior(
-            examples$combo3, 
+            examples$combo3,
             function(ref_doses) {
               blrm_formula_linear(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(c("drug1", "drug2"))
               )
             }
@@ -1048,7 +1054,7 @@ test_that("zero length specific_interaction_terms should lead to an error with l
           with(examples$combo3, {
             custom_formula_generator <- function(ref_doses) {
               blrm_formula_linear(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(character())
               )
             }
@@ -1061,7 +1067,7 @@ test_that("Duplicated specific_interaction_terms should lead to an error with li
           with(examples$combo3, {
             custom_formula_generator <- function(ref_doses) {
               blrm_formula_linear(
-                ref_doses, 
+                ref_doses,
                 specific_interaction_terms = list(c("drug1", "drug2"),
                                                   c("drug1", "drug2"))
               )
@@ -1072,7 +1078,7 @@ test_that("Duplicated specific_interaction_terms should lead to an error with li
 )
 
 # Test sorting in .blrm_trial_merge_data ------------------------------------------------------
-set_prior <- function(trial, mu_sd_inter = 0.5) 
+set_prior <- function(trial, mu_sd_inter = 0.5)
 {
   dims <- summary(trial, "dimensionality")
 
@@ -1081,8 +1087,8 @@ set_prior <- function(trial, mu_sd_inter = 0.5)
     # Prior mean and sd on mu_{alpha_i}, mu_{beta_i}
     prior_EX_mu_mean_comp  = matrix(c(logit(0.10), 0), nrow = dims$num_components, ncol = 2, TRUE),
     prior_EX_mu_sd_comp    = matrix(c(2, 1), nrow = dims$num_components, ncol = 2, TRUE),
-    
-    # Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}} 
+
+    # Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}}
     prior_EX_tau_mean_comp = do.call("abind", c(
       replicate(dims$num_strata, matrix(c(0, 0), nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
       list(along = 0))
@@ -1091,34 +1097,34 @@ set_prior <- function(trial, mu_sd_inter = 0.5)
       replicate(dims$num_strata, matrix(0, nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
       list(along = 0))
     ),
-    
+
     # Prior mean and sd on mu_{eta}
     prior_EX_mu_mean_inter  = rep(0,   dims$num_interaction_terms),
-    prior_EX_mu_sd_inter    = rep(mu_sd_inter, dims$num_interaction_terms), 
+    prior_EX_mu_sd_inter    = rep(mu_sd_inter, dims$num_interaction_terms),
     prior_EX_tau_mean_inter = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
     prior_EX_tau_sd_inter   = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
-    
+
     prior_is_EXNEX_comp = rep(FALSE, dims$num_components),
     prior_EX_prob_comp = matrix(1, nrow = dims$num_groups, ncol = dims$num_components),
-    
+
     prior_is_EXNEX_inter = rep(FALSE, dims$num_interaction_terms),
     prior_EX_prob_inter = matrix(1, nrow = dims$num_groups, ncol = dims$num_interaction_terms),
-    
+
     prior_tau_dist = 0
   )
 }
 
-set_prior_EXNEX <- function(trial, mu_sd_inter = 0.5) 
+set_prior_EXNEX <- function(trial, mu_sd_inter = 0.5)
 {
   dims <- summary(trial, "dimensionality")
-  
+
   update(
     trial,
     # Prior mean and sd on mu_{alpha_i}, mu_{beta_i}
     prior_EX_mu_mean_comp  = matrix(c(logit(0.10), 0), nrow = dims$num_components, ncol = 2, TRUE),
     prior_EX_mu_sd_comp    = matrix(c(2, 1), nrow = dims$num_components, ncol = 2, TRUE),
-    
-    # Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}} 
+
+    # Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}}
     prior_EX_tau_mean_comp = do.call("abind", c(
       replicate(dims$num_strata, matrix(c(0, 0), nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
       list(along = 0))
@@ -1127,19 +1133,19 @@ set_prior_EXNEX <- function(trial, mu_sd_inter = 0.5)
       replicate(dims$num_strata, matrix(0, nrow = dims$num_components, ncol = 2, TRUE), simplify=FALSE),
       list(along = 0))
     ),
-    
+
     # Prior mean and sd on mu_{eta}
     prior_EX_mu_mean_inter  = rep(0,   dims$num_interaction_terms),
-    prior_EX_mu_sd_inter    = rep(mu_sd_inter, dims$num_interaction_terms), 
+    prior_EX_mu_sd_inter    = rep(mu_sd_inter, dims$num_interaction_terms),
     prior_EX_tau_mean_inter = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
     prior_EX_tau_sd_inter   = matrix(0, nrow = dims$num_strata, ncol = dims$num_interaction_terms),
-    
+
     prior_is_EXNEX_comp = rep(TRUE, dims$num_components),
     prior_EX_prob_comp = matrix(0.8, nrow = dims$num_groups, ncol = dims$num_components),
-    
+
     prior_is_EXNEX_inter = rep(TRUE, dims$num_interaction_terms),
     prior_EX_prob_inter = matrix(0.8, nrow = dims$num_groups, ncol = dims$num_interaction_terms),
-    
+
     prior_tau_dist = 0
   )
 }
@@ -1148,17 +1154,17 @@ check_data_sorting <- function(example) {
   with(example, {
     trial <- blrm_trial(histdata, dose_info, drug_info)
     trial <- set_prior(trial)
-    
+
     new_data <- filter(summary(trial, "dose_info"))
     new_data <- mutate(new_data, num_patients = 2*dose_id)
     new_data$num_toxicities <- 1
     new_data <- arrange(new_data, dose_id)
-    
+
     rev_new_data <- arrange(new_data, desc(dose_id))
-    
+
     trial_2 <- update(trial, add_data = new_data)
     trial_2_rev <- update(trial, add_data = rev_new_data)
-    
+
     expect_equal(trial_2$blrmfit$data, trial_2_rev$blrmfit$data)
   })
 }
@@ -1184,8 +1190,8 @@ test_that("Try EXNEX with one group, but multiple components / interactions",
 check_trial_with_duplicate_dose_ids <- function(example) {
   with(example, {
     dose_info$dose_id <- 1
-    histdata$dose_id <- 1 
-    
+    histdata$dose_id <- 1
+
     expect_error(blrm_trial(histdata, dose_info, drug_info), ".*inconsistent.*")
   })
 }
@@ -1197,12 +1203,12 @@ test_that("Ensure duplicate dose_ids fail when instantiating a trial",
 check_trial_with_duplication_through_additional_column <- function(example) {
   with(example, {
     expect_error(blrm_trial(histdata, bind_rows(dose_info, dose_info), drug_info), ".*must contain unique entries.*")
-    
+
     dose_info_2 <- bind_rows(
       mutate(dose_info, foo = "a"),
       mutate(dose_info, foo = "b")
     )
-    
+
     expect_error(blrm_trial(histdata, dose_info_2, drug_info), ".*must contain unique entries.*")
   })
 }
@@ -1214,10 +1220,10 @@ test_that("Ensure duplicate dose / group / stratum fails when instantiating a tr
 check_trial_update_with_duplicate_dose_ids <- function(example) {
   with(example, {
     trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE)
-    
+
     # At least two unique rows of data must be present in the example
     assert_that(nrow(unique(dplyr::select(histdata, -num_patients, -num_toxicities))) >= 2)
-    
+
     # Overwrite dose_id
     histdata_2 <- histdata
     histdata_2$dose_id <- 1
@@ -1235,45 +1241,137 @@ check_trial_update_with_mismatching_additional_columns <- function(example) {
     # Test without dose_id
     dose_info_foo <- mutate(dose_info, foo = "foo")
     trial <- blrm_trial(histdata, dose_info_foo, drug_info, simplified_prior = TRUE)
-    
+
     foo_cohort <- mutate(
       dose_info_foo[1, ],
       num_patients = 10,
       num_toxicities = 1
     )
-    
+
     trial <- update(trial, add_data = foo_cohort)
-    
+
     bar_cohort <- mutate(
       foo_cohort,
       foo = "bar"
     )
-    
+
     expect_error(update(trial, add_data = bar_cohort), ".*does not uniquely resolve.*")
-    
+
     # Test with dose_id
     trial <- blrm_trial(histdata, dose_info_foo, drug_info, simplified_prior = TRUE)
 
     dose_info_foo_with_dose_id <- summary(trial, "dose_info")
-    
+
     foo_cohort <- mutate(
       dose_info_foo_with_dose_id[1, ],
       num_patients = 10,
       num_toxicities = 1
     )
-    
+
     trial <- update(trial, add_data = foo_cohort)
-    
+
     bar_cohort <- mutate(
       foo_cohort,
       foo = "bar"
     )
-    
+
     expect_error(update(trial, add_data = bar_cohort), ".*dose_id inconsistent with dose combinations.*")
-    
+
   })
 }
 
 test_that("Ensure trial update with mismatching additional columns fails",
           check_trial_update_with_mismatching_additional_columns(examples$single_agent))
+
+check_ewoc_warnings <- function(example) {
+    with(example, {
+        dose_info2 <- dose_info[1,]
+        dose_info2[,drug_info$drug_name] <- lapply(dose_info2[,drug_info$drug_name], as.numeric)
+        main_drug <- drug_info$drug_name[1]
+        main_drug_interval <- range(dose_info[,main_drug])
+        dose_info2[,drug_info$drug_name[-1]] <- 0
+        dose_info2
+        hd <- mutate(histdata, num_patients=20, num_toxicities=5)
+        hd[,drug_info$drug_name[-1]] <- 0
+
+        suppressWarnings(trial <- blrm_trial(hd, dose_info2, drug_info, simplified_prior = TRUE, iter=200, warmup=100, chains=1))
+
+        ## set main drug to EWOC boundary dose which needs to trigger EWOC imprecise warnings
+        main_drug_crit_dose <- critical_quantile(trial, x=main_drug, interval.x=main_drug_interval)
+
+        dose_info_test_fail <- summary(trial, summarize="dose_info")[1,]
+        dose_info_test_fail[,main_drug] <- main_drug_crit_dose
+        dose_info_test_fail[,main_drug] <- NULL
+        dose_info_test_fail <- expand_grid(dose_info_test_fail, main_drug=seq(main_drug_crit_dose/4, main_drug_crit_dose*4, length=11))
+        names(dose_info_test_fail)[names(dose_info_test_fail) == "main_drug"] <- main_drug
+        dose_info_test_fail$dose_id <- NULL
+        dose_info_test_ok <- dose_info_test_fail
+        dose_info_test_ok[,main_drug] <- dose_info_test_ok[,main_drug] / 100.0
+
+        expect_warning(ec_fail <- summary(trial, summarize="ewoc_check", newdata=dose_info_test_fail), regexp="ewoc metrics are within the")
+
+        expect_silent(ec_ok <- summary(trial, summarize="ewoc_check", newdata=dose_info_test_ok))
+
+        nd_fail <- summary(trial, summarize="newdata_prediction", prob=0.5, transform=TRUE, newdata=dose_info_test_fail)
+        nd_ok <- summary(trial, summarize="newdata_prediction", prob=0.5, transform=TRUE, newdata=dose_info_test_ok)
+
+        expect_equal(ec_ok$prob_overdose_est, nd_ok$`75%`)
+        expect_equal(ec_fail$prob_overdose_est, nd_fail$`75%`)
+
+        ## check consistency of the estimate after and update to test
+        ## that things get updated
+        ec <- summary(trial, summarize="ewoc_check")
+        s <- summary(trial, summarize="dose_prediction", prob=0.5)
+        expect_equal(ec$prob_overdose_est, s$`75%`)
+
+        suppressWarnings(upd_trial <- update(trial, add_data=mutate(dose_info2, num_patients=12, num_toxicities=3)))
+        upd_ec <- summary(upd_trial, summarize="ewoc_check")
+        upd_s <- summary(upd_trial, summarize="dose_prediction", prob=0.5)
+        expect_equal(upd_ec$prob_overdose_est, upd_s$`75%`)
+    })
+}
+
+test_that("ewoc_check issues warnings (single-agent)",
+          check_ewoc_warnings(examples$single_agent))
+
+test_that("ewoc_check issues warnings (combo2)",
+          check_ewoc_warnings(examples$combo2))
+
+test_that("ewoc_check issues warnings (combo3)",
+          check_ewoc_warnings(examples$combo3))
+
+
+check_ewoc_check_fields <- function(example, interval_prob, interval_max_mass) {
+    with(example, {
+        suppressWarnings(trial <- blrm_trial(histdata, dose_info, drug_info, simplified_prior = TRUE,
+                                             interval_prob=interval_prob,
+                                             interval_max_mass=interval_max_mass))
+
+        ec <- summary(trial, summarize="ewoc_check")
+
+        crit_interval_names <- names(interval_max_mass)[interval_max_mass != 1]
+        postfix <- c("est", "stat", "mcse", "ess", "rhat")
+
+        fields <- expand.grid(interval=crit_interval_names, est=postfix)
+        fields <- paste(fields$interval, fields$est, sep="_")
+
+        expect_subset(sapply(paste0(postfix, "$"), grep, x=names(ec), value=TRUE), fields)
+    })
+}
+
+
+test_that("ewoc_check contains all columns needed 1 (single-agent)",
+          check_ewoc_check_fields(examples$single_agent, c(0, 0.16, 0.33, 1), c(prob_under=1, target=0.9, over=0.5)))
+
+test_that("ewoc_check contains all columns needed 2 (single-agent)",
+          check_ewoc_check_fields(examples$single_agent, c(0, 0.16, 0.33, 1), c(prob_under=0.2, target=1.0, over=0.5)))
+
+test_that("ewoc_check contains all columns needed 3 (single-agent)",
+          check_ewoc_check_fields(examples$single_agent, c(0.4, 1), c(over=0.5)))
+
+test_that("ewoc_check contains all columns needed (combo2)",
+          check_ewoc_check_fields(examples$combo2, c(0, 0.16, 0.33, 1), c(prob_under=1, target=0.9, over=0.5)))
+
+test_that("ewoc_check contains all columns needed (combo3)",
+          check_ewoc_check_fields(examples$combo3, c(0, 0.16, 0.33, 1), c(prob_under=1, target=0.9, over=0.5)))
 

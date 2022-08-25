@@ -254,11 +254,11 @@ blrm_trial <- function(
       dose_info[["stratum_id"]] <- factor(dose_info[["stratum_id"]])
     }
     list_args[["stratum_id"]] <- dose_info[["stratum_id"]][0]
-     
+
 
     if (!is.factor(dose_info[["group_id"]])) {
       dose_info[["group_id"]] <- factor(dose_info[["group_id"]])
-    } 
+    }
     list_args[["group_id"]] <- dose_info[["group_id"]][0]
 
     list_args[["num_patients"]] <- numeric(0)
@@ -328,7 +328,7 @@ blrm_trial <- function(
           )
         )
         all_level_strings <- all_level_df[[variable_name]]
-        
+
         all_factor_levels <- factor(all_level_strings, levels=all_level_strings)
       }
     }
@@ -362,14 +362,14 @@ blrm_trial <- function(
     drug_names = trial$drug_info$drug_name
   )
   trial$data <- data
-  
+
   # Save group and stratum factor levels
   trial$group_id_factor <- trial$data[["group_id"]][0]
   trial$stratum_id_factor <- trial$data[["stratum_id"]][0]
-  
+
   trial$data <- .blrm_trial_sanitize_data(
-    trial, 
-    trial$data, 
+    trial,
+    trial$data,
     trial_is_being_constructed = TRUE, # Do not test for blrm_trial object yet
     warning_if_dose_not_prespecified = FALSE # Hist data does not need to be pre-specified
   )
@@ -512,6 +512,10 @@ print.blrm_trial <- function(x, ...)
     cat("BLRM prior undefined!\n")
   }
 
+  if (has_name(x, "ewoc_check")) {
+      .blrm_trial_ewoc_check(x, x$ewoc_check)
+  }
+
 
 }
 
@@ -520,7 +524,7 @@ print.blrm_trial <- function(x, ...)
 # Internal functions ------------------------------------------------------
 
 .blrm_trial_compute_ewoc <- function(trial, trial_est) {
-  .assert_is_blrm_trial(trial)
+  .assert_is_blrm_trial_and_prior_is_set(trial)
 
   trial_est_ewoc <- trial_est
 
@@ -538,20 +542,128 @@ print.blrm_trial <- function(x, ...)
 
     interval_max <- as_tibble(as.list(interval_max_mass))
     interval_max <- interval_max[rep(1, times=nrow(trial_est_ewoc)),]
-    
-    
+
+
     if (nrow(interval_max) > 0)
     {
       trial_est_ewoc$ewoc_ok <- rowSums( trial_est_intervals > interval_max ) == 0
     } else {
       trial_est_ewoc$ewoc_ok <- logical(0)
     }
-    
+
   } else {
     trial_est_ewoc$ewoc_ok <- TRUE
   }
 
   trial_est_ewoc
+}
+
+.blrm_trial_compute_ewoc_check <- function(trial, newdata) {
+    .assert_is_blrm_trial_and_prior_is_set(trial)
+
+    if(missing(newdata))
+        newdata <- trial$dose_info
+
+    assert_tibble(newdata)
+
+    std_delta_crit <- function(x, qc_low, qc_high, p_max) {
+        x_in_interval <- unname(1 * ((x > qc_low) & (x <= qc_high)))
+        prob_interval <- mean(x_in_interval)
+        se_prob_interval <- mcse_mean(x_in_interval, names=FALSE)
+        stat <- unname((prob_interval - p_max) / se_prob_interval)
+        ess <- ess_mean(x_in_interval, names=FALSE)
+        rh <- posterior::rhat(x_in_interval)
+        c(est=prob_interval, stat=stat, mcse=se_prob_interval, ess=ess, rhat=rh)
+    }
+
+    std_delta_crit_tail <- function(x, qc, p_max, lower.tail=TRUE) {
+        if(lower.tail)
+            p_max <- 1-p_max
+        xc <- x-qc
+        q_est <- unname(quantile(x, p_max))
+        se_q_delta_pmax <- mcse_quantile(xc, p_max, names=FALSE)
+        stat <- unname((q_est - qc) / se_q_delta_pmax)
+        ess <- ess_quantile(xc, p_max, names=FALSE)
+        rh <- posterior::rhat(xc)
+        c(est=q_est, stat=stat, mcse=se_q_delta_pmax, ess=ess, rhat=rh)
+    }
+
+    check_fn <- list()
+    prefix_names <- function(x, prefix) setNames(x, paste(prefix, names(x), sep="_"))
+    for(i in seq_len(length(trial$interval_names))) {
+        n <- trial$interval_names[i]
+        rl <- trial$interval_prob[i]
+        rh <- trial$interval_prob[i+1]
+        m <- trial$interval_max_mass[i]
+        ## in this case there is no restriction due to the criterion => drop
+        if (m == 1)
+            next
+        ##cat(paste(n, "/", rl, " - ", rh, "/", m, "\n"))
+        pars <- list(rl=rl, rh=rh, m=m, n=n)
+        if(rh == 1) {
+            check_fn[[n]] <- eval(substitute(function(x) {
+                prefix_names(std_delta_crit_tail(x, rl, m, TRUE), n)
+            }), pars)
+        } else if(rl == 0) {
+            check_fn[[n]] <- eval(substitute(function(x) {
+                prefix_names(std_delta_crit_tail(x, rh, m, FALSE), n)
+            }), pars)
+        } else {
+            check_fn[[n]] <- eval(substitute(function(x) {
+                prefix_names(std_delta_crit(x, rl, rh, m), n)
+            }), pars)
+        }
+    }
+
+    ## need to convert via rvar to draws matrix to have chains
+    ## property kept, see
+    ## https://github.com/stan-dev/posterior/issues/251 (should get
+    ## fixed soon)
+    post <- as_draws_matrix(rvar(posterior_linpred(trial, transform=TRUE, newdata=newdata),
+                                 nchains=trial$blrmfit$stanfit@sim$chains))
+
+    check_sum <- summarise_draws(post, check_fn)
+    check_sum$variable <- NULL
+    bind_cols(newdata, check_sum)
+}
+
+.blrm_trial_ewoc_check <- function(trial, ewoc_check) {
+    .assert_is_blrm_trial_and_prior_is_set(trial)
+
+    if(missing(ewoc_check))
+        ewoc_check <- trial$ewoc_check
+
+    assert_tibble(ewoc_check)
+
+    active_checks <- trial$interval_max_mass < 1
+    stat_cols <- paste(trial$interval_names[active_checks], "stat", sep="_")
+    rhat_cols <- paste(trial$interval_names[active_checks], "rhat", sep="_")
+
+    # warn on ewoc decisions where the 95% interval such that more
+    # iterations are needed possibly
+    imprecise_stat <- abs(ewoc_check[,stat_cols,drop=TRUE]) < qnorm(0.975)
+    # warn if some ewoc metrics have not converged
+    rhat_large <- ewoc_check[,rhat_cols,drop=TRUE] > 1.1
+
+    if (any(rhat_large, na.rm=TRUE)) {
+        warning(sum(rhat_large, na.rm=TRUE), " out of ", length(rhat_large), " ewoc metrics have not converged (some Rhats are > 1.1).\n",
+                "Be careful when analysing the results! It is recommended to run\n",
+                "more iterations and/or setting stronger priors.\n",
+                "You may call \"summary(trial, summarize='ewoc_check', ...)\" for more diagnostic details.\n",
+                "Please call \"help('blrm_trial', help_type='summary')\" for further documentation.",
+                call.=FALSE
+                )
+    }
+    if (any(imprecise_stat, na.rm = TRUE)) {
+      warning(
+          sum(imprecise_stat, na.rm=TRUE), " out of ", length(imprecise_stat), " ewoc metrics are within the 95% MCMC error of the decision boundary.\n",
+          "Be careful when using the imprecise ewoc estimates! It is recommended to run\n",
+          "more iterations and review doses close to critical thresholds.\n",
+          "You may call \"summary(trial, summarize='ewoc_check', ...)\" for more diagnostic details.\n",
+          "Please call \"help('blrm_trial', help_type='summary')\" for further documentation.",
+          call.=FALSE
+      )
+    }
 }
 
 .blrm_trial_predict <- function(trial, newdata, ...)
@@ -589,16 +701,7 @@ print.blrm_trial <- function(x, ...)
   }
 
   newdata_prediction <- cbind(newdata_prediction, trial_est)
-
-  #
-  ## Enrichment cohort predictive distribution - compute probability of P(>= 2 DLTs in cohort of size 10)
-  #enrichment_data <- mutate(newdata, num_toxicities = 0, num_patients = 10)
-  #enrichment_cohort_DLTs <- posterior_predict(blrmfit, newdata=enrichment_data)
-  #
-  # Enrichment is okay if P(>= 2 DLTs in cohort of size 10) <= 30%
-  #enrichment_is_okay <- colMeans(enrichment_cohort_DLTs >= 2) <= 0.3
-  #newdata_prediction <- mutate(newdata_prediction, enrichment_ok = enrichment_is_okay)
-
+  
   as_tibble(newdata_prediction)
 }
 
@@ -609,7 +712,7 @@ print.blrm_trial <- function(x, ...)
   EX_prob_comp_hist,
   EX_prob_comp_new,
   EXNEX_inter,
-  EX_prob_inter, 
+  EX_prob_inter,
   ...
 )
 {
@@ -627,18 +730,18 @@ print.blrm_trial <- function(x, ...)
   ## Prior mean and sd on log mu_{alpha_i}, log mu_{beta_i}
   ref_p_dlt  <- trial$drug_info$reference_p_dlt
   names(ref_p_dlt)  <- trial$drug_info$drug_name
-  prior_EX_mu_mean_comp  <- substitute(cbind(logit(refs), rep(0, trial[["num_components"]])), list(refs=ref_p_dlt))
-  prior_EX_mu_sd_comp    <- substitute(matrix(c(2, 0.7), nrow = trial[["num_components"]], ncol = 2, byrow=TRUE))
+  prior_EX_mu_mean_comp  <- substitute(cbind(logit(refs), rep(0, num_components)), list(refs=ref_p_dlt, num_components=trial[["num_components"]]))
+  prior_EX_mu_sd_comp    <- substitute(matrix(c(2, 0.7), nrow = num_components, ncol = 2, byrow=TRUE), list(num_components=trial[["num_components"]]))
 
   ## Prior mean and sd on tau_{alpha_{s,i}}, tau{beta_{s,i}}
-  prior_EX_tau_mean_comp <- substitute(matrix(log(c(0.25, 0.125)), nrow = trial[["num_components"]], ncol = 2, byrow=TRUE))
-  prior_EX_tau_sd_comp <- substitute(matrix(log(c(4, 2))/1.96, nrow = trial[["num_components"]], ncol = 2))
+  prior_EX_tau_mean_comp <- substitute(matrix(log(c(0.25, 0.125)), nrow = num_components, ncol = 2, byrow=TRUE), list(num_components=trial[["num_components"]]))
+  prior_EX_tau_sd_comp <- substitute(matrix(log(c(4, 2))/1.96, nrow = num_components, ncol = 2), list(num_components=trial[["num_components"]]))
 
   # Prior mean and sd on mu_{eta}
-  prior_EX_mu_mean_inter  <- substitute(rep(0,   trial[["num_interaction_terms"]]))
-  prior_EX_mu_sd_inter    <- substitute(rep(1.5, trial[["num_interaction_terms"]]))
-  prior_EX_tau_mean_inter <- substitute(matrix(log(0.5)   , nrow = trial[["num_strata"]], ncol = trial[["num_interaction_terms"]]))
-  prior_EX_tau_sd_inter   <- substitute(matrix(log(2)/1.96, nrow = trial[["num_strata"]], ncol = trial[["num_interaction_terms"]]))
+  prior_EX_mu_mean_inter  <- substitute(rep(0,   num_interaction_terms), list(num_interaction_terms=trial[["num_interaction_terms"]]))
+  prior_EX_mu_sd_inter    <- substitute(rep(1.5, num_interaction_terms), list(num_interaction_terms=trial[["num_interaction_terms"]]))
+  prior_EX_tau_mean_inter <- substitute(matrix(log(0.5)   , nrow = num_strata, ncol = num_interaction_terms), list(num_strata=trial[["num_strata"]], num_interaction_terms=trial[["num_interaction_terms"]]))
+  prior_EX_tau_sd_inter   <- substitute(matrix(log(2)/1.96, nrow = num_strata, ncol = num_interaction_terms), list(num_strata=trial[["num_strata"]], num_interaction_terms=trial[["num_interaction_terms"]]))
 
   prior_is_EXNEX_comp <- rep(EXNEX_comp, trial[["num_components"]])
 
@@ -661,13 +764,13 @@ print.blrm_trial <- function(x, ...)
   }
 
   prior_is_EXNEX_inter <- rep(EXNEX_inter, trial[["num_interaction_terms"]])
-  
+
   if (EXNEX_inter) {
     prior_EX_prob_inter <- matrix(EX_prob_inter, nrow = trial[["num_groups"]], ncol = trial[["num_interaction_terms"]])
   } else {
     prior_EX_prob_inter <- matrix(1, nrow = trial[["num_groups"]], ncol = trial[["num_interaction_terms"]])
   }
-  
+
 
   prior_tau_dist <- 1
   ## Compute prior and return resulting trial object
@@ -783,7 +886,7 @@ print.blrm_trial <- function(x, ...)
   if (!trial_is_being_constructed) {
     .assert_is_blrm_trial(trial)
   }
-  
+
   assert_tibble(data)
 
   ## make R CMD check happy
@@ -820,7 +923,7 @@ print.blrm_trial <- function(x, ...)
   ## Data must have columns that correspond to drug name
   ## Note: all() is needed for assertthat 0.2.0 compatibility
   assert_that(all(has_name(data, colnames(trial$ref_doses))))
-  
+
   ## Check that dose_id is consistent
   if(has_name(data, "dose_id")) {
     colnames_for_join <- c("dose_id", "group_id", "stratum_id", trial$drug_info$drug_name)
@@ -832,9 +935,9 @@ print.blrm_trial <- function(x, ...)
     data_consistent_with_dose_info_final <- inner_join(data, trial$dose_info, by=colnames_for_final_join)
     assert_that(nrow(filter(data, !is.na(dose_id))) == nrow(data_consistent_with_dose_info_final),
                 msg="dose_id inconsistent with dose combinations. dose_id must be a unique identifier for dose_combo / group_id / stratum_id!")
-    
+
     if (any(is.na(data$dose_id))) {
-      
+
       warning("dose_id NA was provided - cannot check consistency of new data with pre-specified dose_info")
     }
   } else {
@@ -850,7 +953,7 @@ print.blrm_trial <- function(x, ...)
     data_consistent_with_dose_info_final <- left_join(data, trial$dose_info, by=colnames_for_final_join)
 
     if(
-      any(is.na(data_consistent_with_dose_info_final$dose_id)) && 
+      any(is.na(data_consistent_with_dose_info_final$dose_id)) &&
       warning_if_dose_not_prespecified
     ) {
       warning("Data that was provided does not correspond to a pre-specified dose!")

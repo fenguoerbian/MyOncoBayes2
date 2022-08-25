@@ -658,11 +658,15 @@ blrm_exnex <- function(formula,
     ## - raw parameters
     ## - correlation cholesky factors
     ## - NEX / EX paramters (only store by-group estimates)
-    exclude_pars <- ifelse(save_warmup, "", c("log_beta_raw", "eta_raw",
-                                              "tau_log_beta_raw", "tau_eta_raw",
-                                              "L_corr_log_beta", "L_corr_eta",
-                                              "beta", "eta",
-                                              "beta_EX_prob", "eta_EX_prob"))
+    if(save_warmup) {
+        exclude_pars <- c()
+    } else {
+        exclude_pars <- c("log_beta_raw", "eta_raw",
+                          "tau_log_beta_raw", "tau_eta_raw",
+                          "L_corr_log_beta", "L_corr_eta",
+                          "beta", "eta",
+                          "beta_EX_prob", "eta_EX_prob")
+    }
 
     if(backend == "rstan") {
         stan_msg <- capture.output(stanfit <- rstan::sampling(stanmodels$blrm_exnex,
@@ -714,20 +718,17 @@ blrm_exnex <- function(formula,
                                                                                           init=init,
                                                                                           adapt_delta=control_sampling$adapt_delta,
                                                                                           step_size=control_sampling$stepsize,
+                                                                                          term_buffer=control_sampling$adapt_term_buffer,
+                                                                                          init_buffer=control_sampling$adapt_init_buffer,
+                                                                                          window=control_sampling$adapt_window,
                                                                                           max_treedepth=control_sampling$max_treedepth,
                                                                                           metric=control_sampling$metric,
                                                                                           save_warmup=save_warmup
                                                                                       ))
                       )
 
-        ## TODO: make sure we exclude all those un-necessary
-        ## parameters from the posterior! This is right now not
-        ## supported by cmdstanr such that we may need to skip this
-        ## optimization or process the csv file ourself. This may
-        ## require to use the posterior package to store the model
-        ## posterior, which should be evaluated.  Only
-        ## read_cmdstan_csv supports variable subsetting.  One may
-        ## convert cmdstan samples to the draws format from posterior.
+        ## note: this will not exclude any variables as this is not
+        ## possible, maybe we can prune the stanfit object directly??
         stanfit <- rstan::read_stan_csv(cmdstanfit$output_files())
 
         unlink(stan_data_file)
@@ -737,9 +738,6 @@ blrm_exnex <- function(formula,
     if(verbose) {
         cat(paste(c(stan_msg, ""), collapse="\n"))
     }
-
-    if(attributes(stanfit)$mode != 0)
-        stop("Stan sampler did not run successfully!")
 
     ## label parameters of stanfit object
     labels <- list()
@@ -822,6 +820,7 @@ blrm_exnex <- function(formula,
 #' @template args-prob
 #' @method print blrmfit
 #' @export
+#'
 print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
     cat("Bayesian Logistic Regression Model with EXchangeability-NonEXchangeability\n\n")
     cat("Number of observations:", x$standata$num_obs, "\n")
@@ -924,9 +923,29 @@ print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
         cat("\nNo interaction model posterior specified.\n")
     }
 
+    if(x$stanfit@stan_args[[1]]$algorithm == "NUTS") {
+        div_trans <- sum(rstan::get_divergent_iterations(x$stanfit))
+        num_sim <- nsamples(x)
+        if (div_trans > 0) {
+            warning(
+                "The sampler detected ", div_trans, " out of ", num_sim, " transitions ending in a divergence after warmup.\n",
+                "Increasing 'adapt_delta' closer to 1 may help to avoid these. Use for example: \n",
+                paste0("options(OncoBayes2.MC.control=list(adapt_delta=0.995))"),
+                call.=FALSE
+            )
+        }
+    }
+    Rhats <- rhat(x)
+    if (any(Rhats > 1.1, na.rm = TRUE)) {
+      warning(
+        "Parts of the model have not converged (some Rhats are > 1.1).\n",
+        "Be careful when analysing the results! It is recommend to run\n",
+        "more iterations and/or setting stronger priors.", call.=FALSE
+      )
+    }
+
     invisible(x)
 }
-
 
 ## internal -----
 
@@ -961,6 +980,9 @@ print.blrmfit <- function(x, ..., prob=0.95, digits=2) {
     names(stanfit)[idx] <- paste0(par, "[", do.call(paste, c(idx_str[labs], list(sep=","))), "]")
     stanfit
 }
+
+
+
 
 .abbreviate_label <- function(label) {
     minlength <- getOption("OncoBayes2.abbreviate.min", 0)

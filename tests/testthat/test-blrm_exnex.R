@@ -11,6 +11,7 @@ single_agent  <- run_example("single_agent")
 combo2  <- run_example("combo2")
 combo3  <- run_example("combo3")
 
+suppressPackageStartupMessages(library(rstan))
 suppressPackageStartupMessages(library(dplyr))
 
 ## perform some basic checks on the shape of outputs
@@ -385,6 +386,7 @@ test_that("blrm_exnex rejects wrongly nested stratum/group combinations in data 
 
 
 test_that("update.blrmfit grows the data set", {
+
     single_agent_new  <- single_agent
     single_agent_new$new_cohort_SA <- data.frame(group_id="trial_A", num_patients=4, num_toxicities=2, drug_A=50)
     single_agent_new$new_blrmfit_1 <- with(single_agent_new, update(blrmfit, add_data=new_cohort_SA))
@@ -420,10 +422,18 @@ test_that("update.blrmfit grows the data set", {
 
     ## test if the log-likelihood is the same for parameter-vector 0
     ## on unconstrained space
-    num_pars  <- rstan::get_num_upars(new_blrmfit_3$stanfit)
+    get_stanfit <- function(blrmfit) {
+        capture.output(model <- sampling(OncoBayes2:::stanmodels$blrm_exnex, data=blrmfit$standata, chains=0))
+        model
+    }
+
+    new_blrmfit_3_stanfit <- get_stanfit(new_blrmfit_3)
+    new_blrmfit_3_with_dummy_stanfit <- get_stanfit( new_blrmfit_3_with_dummy)
+
+    num_pars  <- rstan::get_num_upars(new_blrmfit_3_stanfit)
     theta_uconst <- rep(0.0, num_pars)
-    log_prob_group <- rstan::log_prob(new_blrmfit_3$stanfit, theta_uconst, gradient=FALSE)
-    log_prob_group_and_dummy  <- rstan::log_prob(new_blrmfit_3_with_dummy$stanfit, theta_uconst, gradient=FALSE)
+    log_prob_group <- rstan::log_prob(new_blrmfit_3_stanfit, theta_uconst, gradient=FALSE)
+    log_prob_group_and_dummy  <- rstan::log_prob(new_blrmfit_3_with_dummy_stanfit, theta_uconst, gradient=FALSE)
     expect_equal(log_prob_group, log_prob_group_and_dummy)
 
 
@@ -438,11 +448,14 @@ test_that("update.blrmfit grows the data set", {
 
     ## test if the log-likelihood is the same for parameter-vector 0
     ## on unconstrained space
-    num_pars  <- rstan::get_num_upars(new_blrmfit_with_empty_group$stanfit)
+    new_blrmfit_with_empty_group_stanfit <- get_stanfit(new_blrmfit_with_empty_group)
+    num_pars  <- rstan::get_num_upars(new_blrmfit_with_empty_group_stanfit)
     theta_uconst <- rep(0.0, num_pars)
-    log_prob_prob_ref  <- rstan::log_prob(combo2_new$blrmfit$stanfit, theta_uconst, gradient=FALSE)
-    log_prob_empty_group <- rstan::log_prob(new_blrmfit_with_empty_group$stanfit, theta_uconst, gradient=FALSE)
-    log_prob_empty_group_and_dummy  <- rstan::log_prob(new_blrmfit_with_empty_group_and_dummy$stanfit, theta_uconst, gradient=FALSE)
+    combo2_new_blrmfit_stanfit <- get_stanfit(combo2_new$blrmfit)
+    log_prob_prob_ref  <- rstan::log_prob(combo2_new_blrmfit_stanfit, theta_uconst, gradient=FALSE)
+    log_prob_empty_group <- rstan::log_prob(new_blrmfit_with_empty_group_stanfit, theta_uconst, gradient=FALSE)
+    new_blrmfit_with_empty_group_and_dummy_stanfit <- get_stanfit(new_blrmfit_with_empty_group_and_dummy)
+    log_prob_empty_group_and_dummy  <- rstan::log_prob(new_blrmfit_with_empty_group_and_dummy_stanfit, theta_uconst, gradient=FALSE)
     expect_equal(log_prob_prob_ref, log_prob_empty_group)
     expect_equal(log_prob_prob_ref, log_prob_empty_group_and_dummy)
 
@@ -647,3 +660,82 @@ test_that("blrm_exnex properly warns/errors if prior_is_EXNEX is inconsistent fr
                           ), "*is_EXNEX*")
 
 })
+
+
+test_that("blrm_exnex posterior predictons are not randomly shuffled in their order", {
+    ## as some MCMC diagnostics rely on the original order of the MCMC
+    ## chain, we test here for the intercept that no permutation is
+    ## being done
+    post_rv <- posterior::as_draws_rvars(as.array(single_agent$blrmfit$stanfit, pars="beta_group"))
+    post_pl <- posterior_linpred(single_agent$blrmfit, newdata=mutate(hist_SA, drug_A=single_agent$dref)[1,])
+    apost_rv <- posterior::draws_of(post_rv$beta_group, TRUE)
+    iter <- posterior::niterations(post_rv)
+    for(i in seq_len(posterior::nchains(post_rv))) {
+        expect_true(all(rank(apost_rv[,i,1,1,1]) == rank(post_pl[seq( iter * (i-1), iter * i - 1) + 1,])))
+        expect_true(all(abs(apost_rv[,i,1,1,1] - post_pl[seq( iter * (i-1), iter * i - 1) + 1,]) < eps), "Draws per chain must match with high accuracy (pp_data may slightly modify floating-point representation of number).")
+    }
+})
+
+check_inter_linpred_consistency <- function(example, model_data, logit_pref) {
+    example$model_data <- model_data
+    example$logit_pref <- logit_pref
+    with(example, {
+        fake_fit <- sample_prior_mean(blrmfit)
+        drugs <- grep("^drug", names(model_data), value=TRUE)
+        nr <- nrow(model_data)
+        dcomp <- expand.grid(lapply(dref, c, 0))
+        names(dcomp) <- drugs
+        ## returns per term the log(1-p(DLT))
+        drug_log_inverse_p_term <- function(term) {
+            if(term==0)
+                return(0)
+            return(log(inv_logit(-logit_pref)))
+        }
+        for(i in 1:nrow(dcomp)) {
+            log_pNo <- sum(sapply(dcomp[i,], drug_log_inverse_p_term))
+            ref <- logit(1-exp(log_pNo))
+            nd <- model_data
+            nd[,drugs] <- 0
+            nd[,drugs] <- dcomp[i,]
+            pp <- posterior_linpred(fake_fit, newdata=nd, transform=FALSE)
+            expect_equal(as.vector(pp[1,]), rep(ref, times=nr))
+        }
+    })
+}
+
+test_that("posterior_linpred is consistent at reference dose (single-agent)", check_inter_linpred_consistency(single_agent, hist_SA, 0))
+test_that("posterior_linpred is consistent at reference dose (combo2)", check_inter_linpred_consistency(combo2, codata_combo2, logit(0.2)))
+test_that("posterior_linpred is consistent at reference dose (combo3)", check_inter_linpred_consistency(combo3, hist_combo3, logit(1/3)))
+
+check_slope_linpred_consistency <- function(example, model_data, logit_pref) {
+    example$model_data <- model_data
+    example$logit_pref <- logit_pref
+    with(example, {
+        fake_fit <- sample_prior_mean(blrmfit)
+        drugs <- grep("^drug", names(model_data), value=TRUE)
+        nr <- nrow(model_data)
+        dcomp <- expand.grid(lapply(exp(1) * dref, c, 0))
+        names(dcomp) <- drugs
+        ## returns per term the log(1-p(DLT))
+        drug_log_inverse_p_term <- function(term) {
+            if(term==0)
+                return(0)
+            ## we assume that the prior mean for the slope is 1 here
+            return(log(inv_logit(-logit_pref - 1)))
+        }
+        for(i in 1:nrow(dcomp)) {
+            log_pNo <- sum(sapply(dcomp[i,], drug_log_inverse_p_term))
+            ref <- logit(1-exp(log_pNo))
+            nd <- model_data
+            nd[,drugs] <- 0
+            nd[,drugs] <- dcomp[i,]
+            pp <- posterior_linpred(fake_fit, newdata=nd, transform=FALSE)
+            expect_equal(as.vector(pp[1,]), rep(ref, times=nr))
+        }
+    })
+}
+
+test_that("posterior_linpred is consistent at exp(1) times reference dose (single-agent)", check_slope_linpred_consistency(single_agent, hist_SA, 0))
+test_that("posterior_linpred is consistent at exp(1) times reference dose (combo2)", check_slope_linpred_consistency(combo2, codata_combo2, logit(0.2)))
+test_that("posterior_linpred is consistent at exp(1) times reference dose (combo3)", check_slope_linpred_consistency(combo3, hist_combo3, logit(1/3)))
+

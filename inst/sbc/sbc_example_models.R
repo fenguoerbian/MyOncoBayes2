@@ -122,15 +122,16 @@ example_models <- lapply(
           prior_NEX_mu_mean_inter = rep(0, num_inter),
           prior_NEX_mu_sd_inter = rep(log(2)/1.96, num_inter),
 
-          ##iter = 1000 + 1000,
-          ##warmup = 1000,
           iter = 1000 + 1000,
           warmup = 1000,
+          ##iter = 200 + 600,
+          ##warmup = 200,
           control = list(
               stepsize=0.5,
               adapt_init_buffer=75,
               adapt_window=25,
-              adapt_term_buffer=2*50 ## run twice as normal terminal window
+              adapt_term_buffer=4*50, ## run longer as normal terminal window
+              adapt_delta=0.8
               ),
           ##iter = 150,
           ##warmup = 50,
@@ -153,9 +154,10 @@ example_models <- lapply(
                                                 list(warmup=1000, iter=1000+1000,
                                                      init=NULL,
                                                      control=list(
-                                                         adapt_init_buffer=75,  ## make sure we are really in the typical set
+                                                         adapt_init_buffer=75,  ## default
                                                          adapt_window=25,       ## default
-                                                         adapt_term_buffer=100  ## final terminal buffer
+                                                         adapt_term_buffer=4*50,  ## longer final terminal buffer
+                                                         adapt_delta=0.8
                                                          )
                                                      )
                                                 )

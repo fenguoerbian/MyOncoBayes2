@@ -2,11 +2,14 @@
 
 start_time  <- Sys.time()
 
+here::i_am("inst/sbc/make_reference_rankhist.R")
+library(here)
+
 library(pkgbuild)
 ## ensure that the current dev version of OncoBayes2 is loaded
-pkgbuild::compile_dll("../..")
+pkgbuild::compile_dll(here())
 
-pkg <- c("assertthat", "rstan", "mvtnorm", "checkmate", "Formula", "abind", "dplyr", "tidyr")
+pkg <- c("assertthat", "rstan", "mvtnorm", "checkmate", "Formula", "abind", "dplyr", "tidyr", "posterior", "here", "bayesplot")
 sapply(pkg, require, character.only=TRUE)
 
 library(clustermq)
@@ -16,13 +19,12 @@ set.seed(453453)
 
 ## load utilities and current dev version of OncoBayes2
 sbc_tools <- new.env()
-source("sbc_tools.R", local=sbc_tools)
-source("lkj.R", local=sbc_tools)
+source(here("inst", "sbc", "sbc_tools.R"), local=sbc_tools)
+source(here("inst", "sbc", "lkj.R"), local=sbc_tools)
 sbc_tools$load_OB2_dev()
 
 #' Evaluate dense and sparse data-scenario
-source("sbc_example_models.R", local=sbc_tools)
-
+source(here("inst", "sbc", "sbc_example_models.R"), local=sbc_tools)
 
 scheduler <- getOption("clustermq.scheduler")
 
@@ -31,9 +33,11 @@ if(is.null(scheduler)) {
     options(clustermq.scheduler="multiprocess")
 }
 
+## used for debugging
+##options(clustermq.scheduler="LOCAL")
+
 scheduler <- getOption("clustermq.scheduler")
 
-##options(clustermq.scheduler="LOCAL")
 n_jobs <- 1
 if(scheduler == "multiprocess") {
     ## on a local machine we only use as many CPUs as available
@@ -49,6 +53,8 @@ cat("Using clustermq backend", scheduler, "with", n_jobs, "concurrent jobs.\n")
 ## replications to use
 S <- 1E4
 ##S <- 1E3
+##S <- 5E2
+##S <- 2
 
 scenarios <- expand.grid(repl=1:S, data_scenario=names(sbc_tools$example_models), stringsAsFactors=FALSE)
 scenarios <- cbind(job.id=1:nrow(scenarios), scenarios)
@@ -120,10 +126,13 @@ extract_results <- function(x) c(rank=as.list(x$rank),
                                  list(job.id=x$job.id,
                                       time.running=x$time.running,
                                       n_divergent=x$n_divergent,
-                                      min_Neff=x$min_Neff,
+                                      min_Neff_bulk=x$min_Neff_bulk,
+                                      min_Neff_tail=x$min_Neff_tail,
                                       max_Rhat=x$max_Rhat,
                                       lp_ess_bulk = x$lp_ess_bulk,
-                                      lp_ess_tail = x$lp_ess_tail
+                                      lp_ess_tail = x$lp_ess_tail,
+                                      stepsize = x$stepsize,
+                                      accept_stat = x$accept_stat
                                       ))
 
 calibration_data <- bind_rows(lapply(sim_result_warmup,  extract_results), lapply(sim_result_main,  extract_results)) %>%
@@ -134,25 +143,27 @@ calibration_data <- bind_rows(lapply(sim_result_warmup,  extract_results), lappl
 assert_that(nrow(calibration_data) == num_simulations)
 
 ## collect sampler diagnostics
-sampler_diagnostics <- calibration_data %>%
+sampler_diagnostics_summary <- calibration_data %>%
     group_by(data_scenario) %>%
     summarize(N=n(),
               total_divergent=sum(n_divergent),
-              min_ess=min(min_Neff),
+              min_ess_bulk=min(min_Neff_bulk),
+              min_ess_tail=min(min_Neff_tail),
               max_Rhat=max(max_Rhat),
-              total_large_Rhat=sum(max_Rhat > 1.2),
+              total_large_Rhat=sum(max_Rhat > 1.1),
               min_lp_ess_bulk=min(lp_ess_bulk),
-              min_lp_ess_tail=min(lp_ess_tail))
+              min_lp_ess_tail=min(lp_ess_tail)
+              )
 
 
 cat("\nSampler diagnostics:\n\n")
-kable(sampler_diagnostics, digits=3)
+kable(sampler_diagnostics_summary, digits=3)
 cat("\n")
 
-if(sum(sampler_diagnostics$total_divergent) != 0) {
+if(sum(sampler_diagnostics_summary$total_divergent) != 0) {
     warning("There were some divergent transitions!")
 }
-if(any(sampler_diagnostics$max_Rhat > 1.2) ) {
+if(any(sampler_diagnostics_summary$max_Rhat > 1.1) ) {
     warning("There were some parameters with large Rhat!")
 }
 
@@ -164,7 +175,7 @@ rank_params <- names(calibration_data)[grepl(names(calibration_data), pattern = 
 calibration_data_binned <- calibration_data %>%
   mutate(across(starts_with("rank"), function(x) ceiling((x + 1) / (1024 / B) - 1)))
 
-head(calibration_data_binned)
+##head(calibration_data_binned)
 
 names(calibration_data_binned) <- gsub(
   names(calibration_data_binned),
@@ -175,7 +186,7 @@ names(calibration_data_binned) <- gsub(
 params <- gsub(rank_params, pattern = "rank[.]", replacement = "")
 
 calibration_binned <- calibration_data_binned %>%
-  dplyr::select(-job.id, - n_divergent, - min_Neff) %>%
+  dplyr::select(-job.id, - n_divergent, - min_Neff_bulk, -min_Neff_tail) %>%
   tidyr::gather(key = "param", value = "bin", - data_scenario) %>%
   group_by(data_scenario, param, bin) %>%
   tally() %>%
@@ -205,18 +216,18 @@ created_str <- format(created, "%F %T %Z", tz="UTC")
 
 calibration <- list(raw = calibration_data,
                     data = calibration_binned,
-                    sampler_diagnostics = sampler_diagnostics,
+                    sampler_diagnostics = sampler_diagnostics_summary,
                     S = S,
                     B = B,
                     git_hash = git_hash,
                     created = created)
 
-saveRDS(calibration, file = "calibration.rds")
+saveRDS(calibration, file = here("inst", "sbc", "calibration.rds"))
 
 library(tools)
-md5 <- md5sum("calibration.rds")
+md5 <- md5sum(here("inst", "sbc", "calibration.rds"))
 cat(paste0("Created:  ", created_str, "\ngit hash: ", git_hash, "\nMD5:      ", md5, "\n"),
-    file="calibration.md5")
+    file=here("inst", "sbc", "calibration.md5"))
 
 
 #'
@@ -224,12 +235,21 @@ cat(paste0("Created:  ", created_str, "\ngit hash: ", git_hash, "\nMD5:      ", 
 #'
 job_report <- calibration_data[c("job.id", "repl", "data_scenario", "time.running")]
 job_report$time.running  <- job_report$time.running/60
+job_report$phase <- factor(idx_warmup, c(TRUE, FALSE), c("warmup", "main"))
+
+runtime_by_problem_phase  <- job_report %>%
+    group_by(data_scenario, phase) %>%
+    summarize(total=sum(time.running), mean=mean(time.running), max=max(time.running)) %>%
+    pivot_wider("data_scenario", "phase", values_from=c("total", "mean", "max"))
 
 runtime_by_problem  <- job_report %>%
     group_by(data_scenario) %>%
     summarize(total=sum(time.running), mean=mean(time.running), max=max(time.running))
 
 cat("Summary on job runtime on cluster:\n\n")
+
+cat("\nRuntime by data scenario and phase:\n")
+kable(runtime_by_problem_phase, digits=2)
 
 cat("\nRuntime by data scenario:\n")
 kable(runtime_by_problem, digits=2)

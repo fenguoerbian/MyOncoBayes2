@@ -1,4 +1,26 @@
-May 2nd, 2022 (0.8-6)
+# OncoBayes2 0.8-7 - August 24th, 2022
+
+## Enhancements
+
+* add warning messages when printing `blrmfit` objects for divergent
+  transitions or non-convergence of parameters
+* add diagnostic extraction functions `nuts_params`, `rhat`, `log_posterior`
+  and `neff_ratio` for `blrmfit` objects as defined in `bayesplot`
+* speedup `pp_data` by about 25% which is used in all posterior
+  summary functions
+* add `ewoc_check` summary routine for `blrm_trial` objects. The
+  returned summary contains MCMC diagnostics and accuracy estimates of
+  the EWOC metric as defined for the trial. This allows to assess the
+  MCMC estimation error for EWOC.
+* added warning for imprecise estimates of the EWOC metric whenever
+  `blrm_trial` objects are printed.
+
+## Bug fixes
+
+* fix broken exclusion of unnecessary random variables whenever
+  `save_warmup=FALSE`.
+
+# OncoBayes2 0.8-6 - May 2nd, 2022
 
 * allow cmdstanr as new backend for blrm_exnex. The Stan model file is
   written with the function cmdstanr::write_stan_file to disk such
@@ -6,12 +28,12 @@ May 2nd, 2022 (0.8-6)
   option cmdstanr_write_stan_file_dir. See ?cmdstanr::write_stan_file
   (requires cmdstanr >= 0.5.0)
 
-February 28th, 2022 (0.8-5)
+# OncoBayes2 0.8-5 - February 28th, 2022
 
 * fix issue with example_model not exposing properly objects when
   running with silent=TRUE
 
-February 18th, 2022 (0.8-4)
+# OncoBayes2 0.8-4 - February 18th, 2022
 
 * Switch SBC runs to use clustermq in lieu of batchtools. Also now use
   L'Ecuyer CMG as rng engine during SBC runs.
@@ -19,22 +41,22 @@ February 18th, 2022 (0.8-4)
 * add critical_quantile function allowing to calculate critical doses
   which fulfill conditions like EWOC.
 
-October 7th, 2021 (0.8-3)
+# OncoBayes2 0.8-3 - October 7th, 2021
 
 * Make Stan model compile with 2.27+ (lupmf postfix for variables is
   not allowed)
 
-September 13th, 2021 (0.8-2)
+# OncoBayes2 0.8-2 - September 13th, 2021
 
 * Drop unneccessary random variables from the posterior whenever
   save_warmup=FALSE. This decreases the size of the posterior in
   memory by ~60% for the combo2 example.
 
-September 1st, 2021 (0.8-1)
+# OncoBayes2 0.8-1 - September 1st, 2021
 
 * Address CRAN comments
 
-August 31st, 2021 (0.8-0)
+# OncoBayes2 0.8-0 - August 31st, 2021
 
 * Significantly speedup Stan model by dropping normalization of binomial
 * The default interaction model for blrm_trial is now saturating
@@ -61,7 +83,7 @@ August 31st, 2021 (0.8-0)
   respective functions. This prevents that changes to global variables
   (like dref) have any effect whenever the fitted data only is used.
 
-May 7th, 2021 (0.7-0)
+# OncoBayes2 0.7-0 - May 7th, 2021
 
 * Catch data specification errors for wrongly nested groups/strata
 * BLRM trials now also print toxicity probability intervals and the EWOC setting
@@ -73,33 +95,33 @@ May 7th, 2021 (0.7-0)
   the need for additional sampling for predictive summaries.
 * Add plotting methods for blrmfit and blrm_trial objects.
 
-May 7th, 2020 (0.6-5)
+# OncoBayes2 0.6-5 - May 7th, 2020
 
 * Drop RBesT dependency
 * Avoid setting the ggplot2 theme upon package load
 * Enhance SBC runs to monitor and report sampler diagnostics
 
-April 7th, 2020 (0.6-4)
+# OncoBayes2 0.6-4 - April 7th, 2020
 
 * Add Operation Qualification script (run-oq.R in inst/extra)
 * Add saturating interaction model (blrm_formula_saturating) and associated tests
 
-March 18th, 2020 (0.6-3)
+# OncoBayes2 0.6-3 - March 18th, 2020
 
 * 2nd attempt to work around issues found by clang sanitizer in Stan model.
 
-March 9th, 2020 (0.6-2)
+# OncoBayes2 0.6-2 - March 9th, 2020
 
 * Work around issues found by clang sanitizer in Stan model.
 
-March 4th, 2020 (0.6-1)
+# OncoBayes2 0.6-1 - March 4th, 2020
 
 * Fix issue with upcoming R 4.0 which changes stringsAsFactors default
   to FALSE
 * Fix for upcoming tibble 3.0 upgrade which changes conventions of
   growing factors within tibbles
 
-February 11th, 2020 (0.6-0)
+# OncoBayes2 0.6-0 - February 11th, 2020
 
 * Fix issue with model outputs when EXNEX is being used. We recommend
   all users to upgrade to this version. The SBC runs now include
@@ -107,7 +129,7 @@ February 11th, 2020 (0.6-0)
 * Correct printing of prior information wrt. to summaries of number of
   strata and groups.
 
-December 12th, 2019 (0.5-8)
+# OncoBayes2 0.5-8 - December 12th, 2019
 
 * Merge data with same group and dosing in blrm_trial before passing
   into blrm_exnex for improved performance
@@ -117,26 +139,26 @@ December 12th, 2019 (0.5-8)
 * correct blrm_exnex documentation to reflect correctly exchangability
   model used for the interaction model
 
-December 9th, 2019 (0.5-7)
+# OncoBayes2 0.5-7 - December 9th, 2019
 
 * Improve numerical stability of log_inv_logit function, preventing
   NaNs in the output of pp_data and resulting errors in summary()
 
-November 29th, 2019 (0.5-6)
+# OncoBayes2 0.5-6 - November 29th, 2019
 
 * Support summary.blrm_trial(...) syntax passing into summary.blrmfit()
 
-November 22nd, 2019 (0.5-5)
+# OncoBayes2 0.5-5 - November 22nd, 2019
 
 * Fixed Roxygen for posterior_predict
 
-November 18th, 2019 (0.5-4)
+# OncoBayes2 0.5-4 - November 18th, 2019
 
 * fix vignette documentation
 * correct blrm trial co-data example
 * fix test issues per CRAN checks on macosx-old-r run
 
-November 15th, 2019 (0.5-3)
+# OncoBayes2 0.5-3 - November 15th, 2019
 
 * new blrm_trial function which facilitates dose-escalation trial
   conduct by combining key trial design features
@@ -144,11 +166,11 @@ November 15th, 2019 (0.5-3)
   model objects of class blrmfit or blrm_trial
 * various smaller bug fixes
 
-August 28th, 2019 (0.4-4)
+# OncoBayes2 0.4-4 - August 28th, 2019
 
 * run in all examples the example code (remove dontrun sections)
 
-August 27th, 2019 (0.4-3)
+# OncoBayes2 0.4-3 - August 27th, 2019
 
 * use message instead of cat in functions using printing except
   summary or print
@@ -156,18 +178,18 @@ August 27th, 2019 (0.4-3)
   verbose=TRUE
 * make examples run with very short sampling
 
-August 27th, 2019 (0.4-2)
+# OncoBayes2 0.4-2 - August 27th, 2019
 
 * Correct loading and exporting of methods
 * Add tidybayes example for continuous use and visutalization of model
 * Allow multiple central probability widths in prob argument of
   summary method
 
-July 31st, 2019 (0.3-0)
+# OncoBayes2 0.3-0 - July 31st, 2019
 
 * Correct external package loading in examples
 
-July 27th, 2019 (0.2-0)
+# OncoBayes2 0.2-0 - July 27th, 2019
 
 * Added function prior_summary
 * Restructured print output
@@ -176,6 +198,6 @@ July 27th, 2019 (0.2-0)
 * New vignette on standard use case of blrm_exnex in Oncology
 * Qualified blrm_exnex model with Simulation Based Calibration
 
-May 15th, 2018 (0.1-0)
+# OncoBayes2 0.1-0 - May 15th, 2018
 
 * Initial release

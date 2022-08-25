@@ -11,10 +11,34 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// log_inv_logit_fast
+NumericVector log_inv_logit_fast(const NumericVector& l);
+RcppExport SEXP _OncoBayes2_log_inv_logit_fast(SEXP lSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type l(lSEXP);
+    rcpp_result_gen = Rcpp::wrap(log_inv_logit_fast(l));
+    return rcpp_result_gen;
+END_RCPP
+}
+// log1m_exp_max0_fast
+NumericVector log1m_exp_max0_fast(const NumericVector& l);
+RcppExport SEXP _OncoBayes2_log1m_exp_max0_fast(SEXP lSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type l(lSEXP);
+    rcpp_result_gen = Rcpp::wrap(log1m_exp_max0_fast(l));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP _rcpp_module_boot_stan_fit4blrm_exnex_mod();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_OncoBayes2_log_inv_logit_fast", (DL_FUNC) &_OncoBayes2_log_inv_logit_fast, 1},
+    {"_OncoBayes2_log1m_exp_max0_fast", (DL_FUNC) &_OncoBayes2_log1m_exp_max0_fast, 1},
     {"_rcpp_module_boot_stan_fit4blrm_exnex_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4blrm_exnex_mod, 0},
     {NULL, NULL, 0}
 };

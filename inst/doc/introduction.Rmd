@@ -30,13 +30,10 @@ is_CRAN <- !identical(Sys.getenv("NOT_CRAN", "false"), "true")
 .user_mc_options <- list()
 
 if (is_CRAN) {
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1, OncoBayes2.MC.save_warmup=FALSE)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1, OncoBayes2.MC.save_warmup=FALSE, mc.cores=1)
 } else {
-.user_mc_options <- options(OncoBayes2.MC.warmup=500, OncoBayes2.MC.iter=1000, OncoBayes2.MC.chains=4, OncoBayes2.MC.save_warmup=FALSE)
-options(mc.cores=parallel::detectCores(logical=FALSE))
+.user_mc_options <- options(OncoBayes2.MC.warmup=500, OncoBayes2.MC.iter=1000, OncoBayes2.MC.chains=4, OncoBayes2.MC.save_warmup=FALSE, mc.cores=1)
 }
-
-##options(warn = -1)
 
 ```
 
@@ -276,6 +273,58 @@ posterior probability that each dose is excessively toxic (column
 encoded in the `blrm_trial` object through the `interval_prob` argument),
 and take as eligible doses only those where this probability does not
 exceed 25% (column `ewoc_ok`).
+
+### Posterior accuracy of EWOC estimation
+
+Since the posterior is represented with a large sample of the target
+density, any estimate derived from it is subject to finite sampling
+error. The sampling error is determined by the posterior sample size
+and the quality of the used Markov chain Monte Carlo (MCMC). Hence, it
+is required to ensure that the MCMC chains have converged and that the
+number of samples representing the posterior is large enough to
+estimate desired quantities of interest with sufficient accuracy. The
+`OncoBayes2` package automatically warns in case of non-convergence as
+indicated by the Rhat diagnostic [5]. All model parameters must have an
+Rhat of less than $1.1$ (values much larger than $1.0$ indicate
+non-convergence).
+
+As the primary objective for a BLRM is to determine a safe set of
+doses via estimation of EWOC, the key quantities defining EWOC are
+monitored for convergence and sufficient accuracy for each pre-defined
+dose as well. These diagnostics can be obtained for the pre-defined
+set of doses via the `ewoc_check` summary routine as:
+
+
+```{r}
+kable(summary(combo2_trial_start, "ewoc_check"), digits = 3)
+```
+
+For the standard EWOC criterion, the `prob_overdose_est` column
+contains the 75% quantile of the posterior DLT probability, which must
+be smaller than 33%. The `prob_overdose_stat` column is centered by
+33% and standardized with the Monte-Carlo standard error
+(mcse). Therefore, negative values correspond to safe doses and since
+the quantity is approximately distributed as a standard normal random
+variate, the statistic can be compared with quantiles of the standard
+normal distribution. `OncoBayes2` will warn for an imprecise EWOC
+estimate whenever the statistic is within the range of the central 95%
+interval of $(-1.96,1.96)$. Whenever this occurs it can be useful to
+increase the number of iterations in order to decrease the mcse, which
+scales with the inverse of the square root of the MC ess. The MC ess
+is the number of independent samples the posterior corresponds to
+(recall that MCMC results in correlated samples). For more information
+please refer to the help of the `summary.blrm_trial` function (see
+`help("blrm_trial", help_type="summary")`).
+
+```{r, include=FALSE}
+po <- summary(combo2_trial_start, "ewoc_check")$prob_overdose_stat
+min_stat <- po[which.min(abs(po))]
+```
+
+We can see that for the pre-defined doses of the trial the EWOC
+decision can be determined with more than enough accuracy given that
+the statistic closest to $0$ is $`r round(min_stat, 2)`$.
+
 
 ### Posterior predictive summaries
 
@@ -545,6 +594,11 @@ in medicine, 27(13), 2420-2439.
 Wandel, S. Bailey, Stuart. (2014). A Bayesian Industry Approach to
 Phase I Combination Trials in Oncology. In Statistical methods in drug
 combination studies (Vol. 69). CRC Press.
+
+[5] Vehtari, A., Gelman, A., Simpson, D., Carpenter, B., Bürkner,
+P. C. (2021). Rank-Normalization, Folding, and Localization: An
+Improved ($\hat{R}$) for Assessing Convergence of MCMC,
+Bayesian Analysis, 16 (2), 667–718. https://doi.org/10.1214/20-BA1221
 
 ## Session Info
 

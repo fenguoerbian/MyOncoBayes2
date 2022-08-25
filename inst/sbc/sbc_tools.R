@@ -3,12 +3,13 @@
 #'
 
 load_OB2_dev <- function() {
+    here::i_am("inst/sbc/sbc_tools.R")
     if(!("OncoBayes2" %in% .packages())) {
-        cat("OncoBayes2 not yet loaded, bringing up local dev version.\n")
-        devtools::load_all("../..")
+        message("OncoBayes2 not yet loaded, bringing up local dev version.\n")
+        devtools::load_all(here())
         options(OncoBayes2.abbreviate.min = 0)
     } else {
-        cat("OncoBayes2 is already loaded.\n")
+        message("OncoBayes2 is already loaded.\n")
     }
 }
 
@@ -26,6 +27,24 @@ setup_lecuyer_seeds <- function(lecuyer_seed, num) {
     job_seeds
 }
 
+stan_adaptation_phases <- function(warmup=1000, init=75, window=25, term=50) {
+    iter <- 0
+    iter <- iter + init
+    total_learn_cov <- warmup - iter - term
+    phases <- list(init=init, mass_matrix=c(), term=term)
+    i  <- 1
+    cur_window <- window
+    while(total_learn_cov-cur_window > 0) {
+        phases$mass_matrix <- c(phases$mass_matrix, cur_window)
+        total_learn_cov <- total_learn_cov - cur_window
+        cur_window <- 2*cur_window
+        i  <- i + 1
+    }
+    if(total_learn_cov > 0)
+        phases$mass_matrix  <- c(phases$mass_matrix, total_learn_cov)
+    ##phases$mass_matrix[i-1] <- phases$mass_matrix[i-1] - sum(c(init, term, phases$mass_matrix[- (i-1)]))
+    phases
+}
 
 ## Sample prior
 
@@ -231,12 +250,17 @@ sample_prior <- function(model) {
 #'
 simulate_fake <- function(scenario) {
 
-  prior_draw  <- sample_prior(scenario)
+    prior_draw  <- sample_prior(scenario)
 
-  standata  <- scenario$base_fit$standata
+    beta_group_rv <- as_rvar(adrop(prior_draw$draw_beta, drop=1))
+    eta_group_rv <- as_rvar(adrop(prior_draw$draw_eta, drop=1))
 
-  ## logit by data-row
-  draw_mu <- with(standata, blrm_logit_grouped_vec(group, stratum, X_comp, X_inter, prior_draw$draw_beta, prior_draw$draw_eta))
+    standata  <- scenario$base_fit$standata
+
+    ## logit by data-row
+    ##draw_mu <- with(standata, blrm_logit_grouped_vec(group, stratum, X_comp, X_inter, prior_draw$draw_beta, prior_draw$draw_eta))
+
+    draw_mu <- with(standata, blrm_logit_grouped_rv(group, X_comp, X_inter, beta_group_rv, eta_group_rv))
 
   num_trials <- standata$r + standata$nr
 
@@ -244,13 +268,6 @@ simulate_fake <- function(scenario) {
 
   list(yrep = yrep, draw = prior_draw)
 
-}
-
-extract_draws <- function(sims, draw) lapply(sims, asub, idx=draw, dim=1, drop=FALSE)
-
-extract_one_draw <- function(sims, draw) {
-    assert_that(length(draw) == 1)
-    lapply(lapply(sims, asub, idx=draw, dim=1, drop=FALSE), adrop, drop=1, one.d.array=TRUE)
 }
 
 restore_draw_dims <- function(standata, draw) {
@@ -284,11 +301,19 @@ restore_draw_dims <- function(standata, draw) {
 #' averaged together to obtain less noisy estimates.
 learn_warmup_info <- function(standata, stanfit) {
     gmean <- function(x) exp(mean(log(x)))
-    post <- rstan::extract(stanfit)[1:8]
-    S <- NROW(post[[1]])
-    draws  <- lapply(seq(1,S,length=10), extract_one_draw, sims=post)
-    ##draws  <- lapply(seq(1,S,length=10), OncoBayes2:::extract_draw, sims=post)
-    warmup_info  <- extract_warmup_info(stanfit)
+    have_inter <- standata$num_inter > 0
+    sampled_params <- c("log_beta_raw", "mu_log_beta", "tau_log_beta_raw", "L_corr_log_beta")
+    if(have_inter)
+        sampled_params  <- c(sampled_params, "eta_raw", "mu_eta", "tau_eta_raw", "L_corr_eta")
+    posterior_draws <- merge_chains(as_draws_rvars(as.array(stanfit, pars=sampled_params)))
+    s <- floor(seq.int(1, ndraws(posterior_draws), length=10))
+    draws <- list()
+    for(i in s) {
+        init <- subset_draws(posterior_draws, iteration=i)
+        init <- lapply(lapply(init, draws_of), adrop, drop=1, one.d.array=TRUE)
+        draws <- c(draws, list(init))
+    }
+    warmup_info <- extract_adaptation_info_stanfit(stanfit)
     warmup_info$stepsize  <- gmean(warmup_info$stepsize)
     warmup_info$inv_metric  <- apply(warmup_info$inv_metric, 1, gmean)
     c(warmup_info, list(draws=lapply(draws, restore_draw_dims, standata=standata)))
@@ -337,31 +362,40 @@ fit_exnex <- function(yrep, draw, scenario, ..., save_fit=FALSE) {
                   warmup = blrm_args$warmup,
                   chains = blrm_args$chains,
                   control = blrm_args$control,
-                  verbose=TRUE,
+                  verbose=FALSE,
                   save_warmup=!have_warmup_info
                   )
 
-    sampler_params <- rstan::get_sampler_params(fit$stanfit, inc_warmup=FALSE)
-    n_divergent <- sum(sapply(sampler_params, function(x) sum(x[,'divergent__'])) )
+    np <- nuts_params(fit, inc_warmup=FALSE)
 
-    params <- c("mu_log_beta", "tau_log_beta", "beta_group")
+    n_divergent <- sum(subset(np, Parameter == "divergent__")$Value)
+    accept_stat <- mean(subset(np, Parameter == "accept_stat__")$Value)
+
+    params_comp <- c("mu_log_beta", "tau_log_beta", "beta_group")
+    params_inter <- c()
     if(fit$has_inter)
-        params <- c(params, "mu_eta", "tau_eta", "eta_group")
-    fit_sum <- rstan::summary(fit$stanfit)$summary
-    samp_diags <- fit_sum[apply(sapply(params, grepl, x = rownames(fit_sum)), 1, any), c("n_eff", "Rhat")]
-    min_Neff <- ceiling(min(samp_diags[, "n_eff"], na.rm=TRUE))
-    max_Rhat <- max(samp_diags[, "Rhat"], na.rm=TRUE)
+        params_inter <- c("mu_eta", "tau_eta", "eta_group")
+    params <- c(params_comp, params_inter)
 
-    post <- rstan::extract(fit$stanfit, pars = params, inc_warmup = FALSE)
+    samp_diags_sum  <- summarise_draws(as.array(fit$stanfit, pars=params), "rhat", "ess_bulk", "ess_tail") %>%
+        summarize(max_rhat=max(rhat), min_ess_bulk=min(ess_bulk), min_ess_tail=min(ess_tail))
 
-    lp_ess  <- as.numeric(rstan::monitor(as.array(fit$stanfit, pars="lp__"), print=FALSE)[1, c("Bulk_ESS", "Tail_ESS")])
+    samp_diags_lp_sum  <- summarise_draws(as.array(fit$stanfit, pars="lp__"), "rhat", "ess_bulk", "ess_tail")
 
-    post_thin <- lapply(post, function(A) {
-        assert_that(dim(A)[1] > 1023)
-        asub(A, idx = seq(1, dim(A)[1], length = 1024-1), dims = 1, drop = FALSE)
-    })
+    assert_that(nsamples(fit) > 1023)
+    suppressMessages(post_thin <- subset_draws(as_draws_rvars(as.array(fit$stanfit, pars=params)), draw=seq(1, nsamples(fit), length=1024-1)))
 
-    calc_rank  <- function(sample, draw) {
+    dim(post_thin$tau_eta)
+    lapply(post_thin, dim)
+
+    if(fit$has_inter) {
+        ## BUG in posterior??!!
+        ## the last dimension gets dropped for tau_eta
+        dim(post_thin$tau_eta) <- c(fit$standata$num_strata, fit$standata$num_inter)
+    }
+
+    calc_rank  <- function(sample_rv, draw) {
+        sample <- draws_of(sample_rv)
         sdims  <- dim(sample)
         assert_that(all(sdims[-1] == dim(draw)))
         draw_margins  <- 2:length(sdims)
@@ -371,14 +405,14 @@ fit_exnex <- function(yrep, draw, scenario, ..., save_fit=FALSE) {
     }
 
     rank1 <- mapply(calc_rank,
-                    post_thin[params[1:3]],
+                    post_thin[params_comp],
                     c(draw[c("EX_mu_comp", "EX_tau_comp")], list(beta_group=group_draws$draw_beta)),
                     SIMPLIFY=FALSE)
 
     if(fit$has_inter) {
         rank1 <- c(rank1,
                    mapply(calc_rank,
-                          post_thin[params[4:6]],
+                          post_thin[params_inter],
                           c(draw[c("EX_mu_inter", "EX_tau_inter")], list(eta_group=group_draws$draw_eta)),
                           SIMPLIFY=FALSE)
                    )
@@ -401,11 +435,12 @@ fit_exnex <- function(yrep, draw, scenario, ..., save_fit=FALSE) {
     rank_wide <- bind_cols(mapply(flatten_array, rank1, names(rank1), SIMPLIFY=FALSE))
 
     res <- list(rank = rank_wide,
-                min_Neff = min_Neff,
+                min_Neff_bulk = pull(samp_diags_sum, "min_ess_bulk"),
+                min_Neff_tail = pull(samp_diags_sum, "min_ess_tail"),
                 n_divergent = n_divergent,
-                max_Rhat=max_Rhat,
-                lp_ess_bulk = lp_ess[1],
-                lp_ess_tail = lp_ess[2]
+                max_Rhat = pull(samp_diags_sum, "max_rhat"),
+                lp_ess_bulk = pull(samp_diags_lp_sum, "ess_bulk"),
+                lp_ess_tail = pull(samp_diags_lp_sum, "ess_tail")
                 )
 
     if(save_fit)
@@ -415,32 +450,19 @@ fit_exnex <- function(yrep, draw, scenario, ..., save_fit=FALSE) {
         res <- c(res, learn_warmup_info(fit$standata, fit$stanfit))
     }
 
+    res$stepsize <- exp(mean(log(subset(np, Parameter=="stepsize__" & Iteration==1)$Value)))
+    res$accept_stat <- accept_stat
+
     return(res)
 }
 
-
-extract_warmup_info <- function(fit) {
-    info  <- sapply(get_adaptation_info(fit), strsplit, "\n")
-    ex_stepsize <- function(chain_info) {
-        stepsize_line <- which(grepl("Step size", chain_info))
-        as.numeric(strsplit(chain_info[stepsize_line], " = ")[[1]][2])
-    }
-    ex_mass <- function(chain_info) {
-        metric_line <- which(grepl("inverse mass matrix", chain_info)) + 1
-        as.numeric(strsplit(sub("^#", "", chain_info[metric_line]), ", ")[[1]])
-    }
-    stepsize <- sapply(info, ex_stepsize)
-    inv_metric <- do.call(cbind, lapply(info, ex_mass))
-    colnames(inv_metric) <- names(stepsize) <- paste0("chain_", seq_along(info))
-    list(stepsize=stepsize, inv_metric=inv_metric)
-}
 
 run_sbc_case <- function(job.id, repl, data_scenario, base_scenarios, seeds) {
     RNGkind("L'Ecuyer-CMRG")
     .Random.seed <<- seeds[[job.id]]
 
     runtime <- system.time({
-        load_OB2_dev()
+        suppressMessages(load_OB2_dev())
         scenario <- base_scenarios[[data_scenario]]
         fake <- simulate_fake(scenario)
         fit <- fit_exnex(fake$yrep, fake$draw, scenario)
@@ -521,4 +543,24 @@ auto_submit <- function(jobs, registry, resources=list(), max_num_tries = 10) {
   }
 
   invisible(all_jobs_finished)
+}
+
+
+#' extract for a stanfit object from rstan the adaptation information
+#' @param fit cmdstanr fit
+#' @keywords internal
+extract_adaptation_info_stanfit <- function(fit) {
+    info  <- sapply(rstan::get_adaptation_info(fit), strsplit, "\n")
+    ex_stepsize <- function(chain_info) {
+        stepsize_line <- which(grepl("Step size", chain_info))
+        as.numeric(strsplit(chain_info[stepsize_line], " = ")[[1]][2])
+    }
+    ex_mass <- function(chain_info) {
+        metric_line <- which(grepl("inverse mass matrix", chain_info)) + 1
+        as.numeric(strsplit(sub("^#", "", chain_info[metric_line]), ", ")[[1]])
+    }
+    stepsize <- sapply(info, ex_stepsize)
+    inv_metric <- do.call(cbind, lapply(info, ex_mass))
+    colnames(inv_metric) <- names(stepsize) <- paste0("chain_", seq_along(info))
+    list(stepsize=stepsize, inv_metric=inv_metric)
 }

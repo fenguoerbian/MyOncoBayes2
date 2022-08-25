@@ -8,7 +8,7 @@
   object,
   summarize = c("blrmfit", "blrm_exnex_call", "data", "drug_info", "dose_info",
     "dose_prediction", "data_prediction", "newdata_prediction", "dimensionality",
-    "interval_prob", "interval_max_mass"),
+    "interval_prob", "interval_max_mass", "ewoc_check"),
   ...
 )
 }
@@ -21,22 +21,52 @@
   \item{}{\code{blrm_exnex_call}: blrm_exnex call used to create the \code{blrmfit} object}
   \item{}{\code{drug_info}: drug_info for the trial, contains drugs, reference doses and units}
   \item{}{\code{dose_info}: dose_info that were defined}
-  \item{}{\code{dose_prediction} prediction for the defined dose_info}
+  \item{}{\code{dose_prediction} prediction for the defined \code{dose_info}}
   \item{}{\code{data}: data that were observed}
   \item{}{\code{data_prediction}: prediction for the observed data}
-  \item{}{\code{newdata_prediction}: prediction for data provided with the newdata= argument}
-  \item{}{\code{dimensionality}: numeric vector with entries "num_components",
-    "num_interaction_terms", "num_groups", "num_strata"}
+  \item{}{\code{newdata_prediction}: prediction for data provided with the \code{newdata} argument}
+  \item{}{\code{dimensionality}: numeric vector with entries \code{"num_components"},
+    \code{"num_interaction_terms"}, \code{"num_groups"}, \code{"num_strata"}}
   \item{}{\code{interval_prob}: interval probabilities reported in the standard outputs}
   \item{}{\code{interval_max_mass}: named vector defining for each interval of the
     \code{interval_prob} vector a maxmimal admissable
     probability mass for a given dose level}
+  \item{}{\code{ewoc_check}: MCMC diagnostic and precision estimates of ewoc defining metrics for the defined doses in \code{dose_info} (default) or for the doses provided in the \code{newdata} argument. Please refer to the details for reported diagnostics.}
 }}
 
-\item{...}{further arguments for summary.blrmfit}
+\item{...}{further arguments for \code{\link{summary.blrmfit}}}
 }
 \description{
 Provides model summaries for \code{\link{blrm_trial}} analyses.
+}
+\details{
+The \code{ewoc_check} summary routine allows to assess the
+    accuracy and reliability of the ewoc criterion with respect to
+    MCMC sampling noise. The returned summary provides detailled
+    MCMC convergence and precision estimates for all criteria
+    defined by \code{interval_prob} and \code{interval_max_mass}
+    which contribute to EWOC metric. That is, for each interval
+    probability with a maximal mass of less than unity the routine
+    will return these columns:
+\describe{
+\item{\code{est}}{the MCMC estimate defining the critical value. For intervals defined by a tail probability this corresponds to the respective critical quantile while for interval probabilites this is equal to the interval probability.}
+\item{\code{stat}}{centered and standardized test quantity. The estimate is centered by the critical value and scaled by the Monte-Carlo standard error (MCSE) of the estimate. Hence, negative (positive) values correspond to the constraint being (not) fulfilled. The standardization with the MCSE allows to compare the values to standard normal quantiles accordingly.}
+\item{\code{mcse}}{the Monte-Carlo standard error of the estimate determined with \code{\link[posterior]{mcse_quantile}} (tail probability) or \code{\link[posterior]{mcse_mean}} (interval probability) functions.}
+\item{\code{ess}}{the Monte-Carlo effective sample size of the estimate determined with \code{\link[posterior]{ess_quantile}} (tail probability) or \code{\link[posterior]{ess_mean}} (interval probability) functions.}
+\item{\code{rhat}}{the Monte-Carlo non-convergence diagnostic Rhat as determined with the \code{\link[posterior]{rhat} function}.}
+}
+
+For the common case of requiring that 33\% DLT probability is not
+exceeded by more than 25\% of the posterior probability mass, the
+estimate column \code{est} contains the 75\% quantile
+\eqn{q_{75\%}}{q75\%} and the standardized statistic \code{stat} is
+defined as:
+
+\deqn{\mbox{stat} = \frac{q_{75\%} - 33\%}{\mbox{mcse}_{q_{75\%}}}}{stat = (q75\% - 33\%)/mcse_q75\%}
+
+The statistic is approximately distributed as a standard normal
+variate. The \code{ewoc_check} summary can be used to ensure that
+the MCMC estimation accuracy is sufficient.
 }
 \examples{
 ## Setting up dummy sampling for fast execution of example
@@ -54,6 +84,17 @@ combo2_trial_setup <- blrm_trial(
 
 # extract blrm_call to see setup of the prior as passed to blrm_exnex
 summary(combo2_trial_setup, "blrm_exnex_call")
+
+# extract ewoc precision accuracy
+ec <- summary(combo2_trial_setup, "ewoc_check")
+
+# find any ewoc metrics which are within 95\% MCMC error of the threshold
+# these are counted as "imprecise" when printing blrm_trial objects
+subset(ec, abs(prob_overdose_stat) < qnorm(0.975))
+
+# ensure that the ewoc metric only flags "ok" whenever the MCMC error
+# is with 95\% below the threshold
+ewoc_ok <- ec$prob_overdose_stat < qnorm(0.025)
 
 ## Recover user set sampling defaults
 options(.user_mc_options)

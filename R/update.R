@@ -95,13 +95,14 @@ update.blrm_trial <- function(object, ...)
     if (has_name(object, "update_blrmfit")) {
         # If blrmfit exists, update it
         object <- object$update_blrmfit(object, ...)
-
-        return(object)
     } else {
         # Otherwise, create it
         object <- .blrm_trial_compute_prior(object, ...)
-
-        return(object)
     }
+    # add ewoc check for pre-defined doses
+    object$ewoc_check <- .blrm_trial_compute_ewoc_check(object, object$dose_info)
+    .blrm_trial_ewoc_check(object, object$ewoc_check)
+
+    return(object)
 }
 

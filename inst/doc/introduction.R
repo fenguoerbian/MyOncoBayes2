@@ -18,13 +18,10 @@ is_CRAN <- !identical(Sys.getenv("NOT_CRAN", "false"), "true")
 .user_mc_options <- list()
 
 if (is_CRAN) {
-.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1, OncoBayes2.MC.save_warmup=FALSE)
+.user_mc_options <- options(OncoBayes2.MC.warmup=10, OncoBayes2.MC.iter=20, OncoBayes2.MC.chains=1, OncoBayes2.MC.save_warmup=FALSE, mc.cores=1)
 } else {
-.user_mc_options <- options(OncoBayes2.MC.warmup=500, OncoBayes2.MC.iter=1000, OncoBayes2.MC.chains=4, OncoBayes2.MC.save_warmup=FALSE)
-options(mc.cores=parallel::detectCores(logical=FALSE))
+.user_mc_options <- options(OncoBayes2.MC.warmup=500, OncoBayes2.MC.iter=1000, OncoBayes2.MC.chains=4, OncoBayes2.MC.save_warmup=FALSE, mc.cores=1)
 }
-
-##options(warn = -1)
 
 
 ## ---- message = FALSE---------------------------------------------------------
@@ -71,6 +68,13 @@ combo2_trial_start <- blrm_trial(
 
 ## -----------------------------------------------------------------------------
 kable(summary(combo2_trial_start, "dose_prediction"), digits = 2)
+
+## -----------------------------------------------------------------------------
+kable(summary(combo2_trial_start, "ewoc_check"), digits = 3)
+
+## ---- include=FALSE-----------------------------------------------------------
+po <- summary(combo2_trial_start, "ewoc_check")$prob_overdose_stat
+min_stat <- po[which.min(abs(po))]
 
 ## -----------------------------------------------------------------------------
 candidate_starting_dose <- summary(combo2_trial_start, "dose_info") %>%
