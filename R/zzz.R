@@ -11,5 +11,5 @@ pkg_env$.cmdstanr_blrm_exnex_model <- NULL
 
 .onAttach <- function(...) {
     ver <- utils::packageVersion("OncoBayes2")
-    packageStartupMessage("This is OncoBayes2 version ", ver)
+    packageStartupMessage("This is OncoBayes2 version ", ver, " (released ", format(pkg_create_date, "%F"), ", git-sha ", pkg_sha, ")")
 }

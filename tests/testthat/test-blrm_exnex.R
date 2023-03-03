@@ -739,3 +739,74 @@ test_that("posterior_linpred is consistent at exp(1) times reference dose (singl
 test_that("posterior_linpred is consistent at exp(1) times reference dose (combo2)", check_slope_linpred_consistency(combo2, codata_combo2, logit(0.2)))
 test_that("posterior_linpred is consistent at exp(1) times reference dose (combo3)", check_slope_linpred_consistency(combo3, hist_combo3, logit(1/3)))
 
+test_that(
+  "no unexpected error of posterior summary when num_groups = 1 or 2 and has_inter = TRUE",
+  {
+      ## this test is to trigger a problem in posterior prior to
+      ## 1.4.0, see https://github.com/stan-dev/posterior/issues/265
+      ## for the bug report
+      groups <- "one_group"
+      combo_data <- tibble(
+          group_id = factor(groups, groups),
+          drug_A = 1,
+          drug_B = 1,
+          num_patients = 3,
+          num_toxicities = 1
+      )
+
+      num_groups <- 1
+      fit <- blrm_exnex(
+          cbind(num_toxicities, num_patients - num_toxicities) ~
+              1 + I(log(drug_A)) |
+              1 + I(log(drug_B)) |
+              0 + I(2 * drug_A * drug_B / (1 + drug_A * drug_B)) |
+              group_id,
+          data = combo_data,
+          prior_EX_mu_mean_comp = matrix(
+              c(log(1/4), 0,
+                log(1/4), 0),
+              nrow = 2,
+              ncol = 2,
+              byrow = TRUE
+          ),
+          prior_EX_mu_sd_comp = matrix(
+              c(1, 0.7,
+                1, 0.7),
+              nrow = 2,
+              ncol = 2,
+              byrow = TRUE
+          ),
+          prior_EX_mu_mean_inter = 0,
+          prior_EX_mu_sd_inter = 1,
+          prior_EX_tau_mean_comp = matrix(
+              c(0, 0),
+              nrow = 2,
+              ncol = 2
+          ),
+          prior_EX_tau_sd_comp = matrix(
+              c(1, 1),
+              nrow = 2,
+              ncol = 2
+          ),
+          prior_EX_tau_mean_inter = matrix(0),
+          prior_EX_tau_sd_inter = matrix(1),
+          prior_is_EXNEX_comp = c(FALSE, FALSE),
+          prior_is_EXNEX_inter = FALSE,
+          prior_EX_prob_comp = matrix(1, nrow = num_groups, ncol = 2),
+          prior_EX_prob_inter = matrix(1, nrow = num_groups, ncol = 1),
+          prior_tau_dist = 0,
+          prior_PD = FALSE
+      )
+
+      expect_data_frame(summary(fit), nrows=1)
+
+      groups <- c(groups, "new_group")
+      new_data <- combo_data
+      levels(new_data$group_id) <- groups
+      num_groups <- 2
+
+      fit2 <- update(fit, data = new_data)
+      expect_data_frame(summary(fit2), nrows=1)
+  }
+)
+

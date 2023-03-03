@@ -214,7 +214,7 @@ git_hash <- system2("git", c("rev-parse", "HEAD"), stdout=TRUE)
 created <- Sys.time()
 created_str <- format(created, "%F %T %Z", tz="UTC")
 
-calibration <- list(raw = calibration_data,
+calibration <- list(##raw = calibration_data, ## stop storing raw results, which are not needed for SBC reports
                     data = calibration_binned,
                     sampler_diagnostics = sampler_diagnostics_summary,
                     S = S,
@@ -223,6 +223,7 @@ calibration <- list(raw = calibration_data,
                     created = created)
 
 saveRDS(calibration, file = here("inst", "sbc", "calibration.rds"))
+saveRDS(calibration_data, file = here("inst", "sbc", "calibration_data.rds"))
 
 library(tools)
 md5 <- md5sum(here("inst", "sbc", "calibration.rds"))
@@ -240,7 +241,7 @@ job_report$phase <- factor(idx_warmup, c(TRUE, FALSE), c("warmup", "main"))
 runtime_by_problem_phase  <- job_report %>%
     group_by(data_scenario, phase) %>%
     summarize(total=sum(time.running), mean=mean(time.running), max=max(time.running)) %>%
-    pivot_wider("data_scenario", "phase", values_from=c("total", "mean", "max"))
+    pivot_wider("data_scenario", names_from="phase", values_from=c("total", "mean", "max"))
 
 runtime_by_problem  <- job_report %>%
     group_by(data_scenario) %>%

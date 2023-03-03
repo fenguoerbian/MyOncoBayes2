@@ -624,6 +624,10 @@ print.blrm_trial <- function(x, ...)
 
     check_sum <- summarise_draws(post, check_fn)
     check_sum$variable <- NULL
+    ## convert to plain numeric types rather than then pillar_num from
+    ## posterior 1.4.0 (only affects formatting of numbers when
+    ## displayed)
+    check_sum <- as.data.frame(lapply(check_sum, as.numeric))
     bind_cols(newdata, check_sum)
 }
 
@@ -701,7 +705,7 @@ print.blrm_trial <- function(x, ...)
   }
 
   newdata_prediction <- cbind(newdata_prediction, trial_est)
-  
+
   as_tibble(newdata_prediction)
 }
 

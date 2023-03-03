@@ -1,3 +1,18 @@
+# OncoBayes2 0.8-8 - March 3rd, 2023
+
+## Enhancements
+
+* upon package load `OncoBayes2` will now report the date of the release
+  and the respective git commit hash used to create the sources of the
+  package.
+
+## Bug fixes
+
+* ensure compatibility with posterior 1.4.0 (posterior returns `num()`
+  formatted columns, which `OncoBayes2` is not supporting)
+* ensure C++17 compatiblity per CRAN (triggers an issue with
+  clang 16)
+
 # OncoBayes2 0.8-7 - August 24th, 2022
 
 ## Enhancements

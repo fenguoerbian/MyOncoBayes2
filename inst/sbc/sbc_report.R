@@ -88,6 +88,9 @@ md5sum(here("inst", "sbc", "calibration.rds"))
 
 calibration <- readRDS(here("inst", "sbc", "calibration.rds"))
 
+have_raw <- file.exists(here("inst", "sbc", "calibration_data.rds"))
+if(have_raw)
+    calibration_raw <- readRDS(here("inst", "sbc", "calibration_data.rds"))
 
 include_plots <- TRUE
 if("params" %in% ls())
@@ -168,8 +171,8 @@ kable(calibration$sampler_diagnostics, digits=3)
 
 
 #'
-#+ include=include_plots, eval=include_plots, fig.width=8,fig.height=6
-calibration$raw %>%
+#+ include=include_plots&have_raw, eval=include_plots&have_raw, fig.width=8,fig.height=6
+calibration_raw %>%
     select(starts_with("min_"), "max_Rhat", starts_with("lp_"), "data_scenario") %>%
     pivot_longer(!data_scenario, names_to="metric") %>%
     ggplot(aes(value)) +
@@ -185,7 +188,8 @@ calibration$raw %>%
 #' ## Sampler Adaptation & Performance Overview
 #'
 #'
-sampler_performance <- calibration$raw %>%
+#+ include=include_plots&have_raw, eval=include_plots&have_raw
+sampler_performance <- calibration_raw %>%
     select("time.running", starts_with("lp_"), "stepsize", "accept_stat", "data_scenario") %>%
     mutate(lp_ess_bulk_speed=lp_ess_bulk / time.running, lp_ess_tail_speed=lp_ess_tail / time.running) %>%
     select("data_scenario", "stepsize", "accept_stat", ends_with("_speed"))
@@ -199,7 +203,7 @@ sampler_performance %>% group_by(data_scenario) %>%
 #' ESS speed is in units of ESS per second.
 #'
 
-#+ include=include_plots, eval=include_plots, fig.width=8,fig.height=6
+#+ include=include_plots&have_raw, eval=include_plots&have_raw, fig.width=8,fig.height=6
 sampler_performance %>%
     pivot_longer(!data_scenario, names_to="metric") %>%
     mutate(metric=factor(metric, c("accept_stat", "stepsize", "lp_ess_bulk_speed", "lp_ess_tail_speed"))) %>%
