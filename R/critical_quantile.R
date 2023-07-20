@@ -121,6 +121,7 @@ critical_quantile <- function(object, ...) UseMethod("critical_quantile")
 
 #' @method critical_quantile default
 #' @noRd
+#' @export
 critical_quantile.default <- function(object, ...) { stop("object must inherit blrmfit or blrm_trial class") }
 
 #' @rdname critical_quantile

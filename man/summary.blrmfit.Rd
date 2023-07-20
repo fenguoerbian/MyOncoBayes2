@@ -70,8 +70,8 @@ by the number of trials such that results are on the 0-1 scale.
 
 example_model("single_agent", silent=TRUE)
 
-## obtain underdosing (0-0.16), target dosing (0.16-0.33) and
-## overdosing (0.33-1) probabilities
+## obtain underdosing (0-0.16], target dosing (0.16-0.33] and
+## overdosing (0.33-1] probabilities
 summary(blrmfit, interval_prob=c(0,0.16,0.33,1))
 
 ## obtain predictive distribution for respective cohorts and

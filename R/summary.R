@@ -36,8 +36,8 @@
 #' @examples
 #' example_model("single_agent", silent=TRUE)
 #'
-#' ## obtain underdosing (0-0.16), target dosing (0.16-0.33) and
-#' ## overdosing (0.33-1) probabilities
+#' ## obtain underdosing (0-0.16], target dosing (0.16-0.33] and
+#' ## overdosing (0.33-1] probabilities
 #' summary(blrmfit, interval_prob=c(0,0.16,0.33,1))
 #'
 #' ## obtain predictive distribution for respective cohorts and
@@ -114,7 +114,7 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
 
         quants <- matrix(NA, nrow=nr, ncol=length(probs))
         for(r in seq_len(nr)) {
-            quants[r,]  <- findInterval(probs, pred_cpmf[seq_len(sizes[r]+1),r])
+            quants[r,]  <- findInterval(probs, pred_cpmf[seq_len(sizes[r]+1),r], left.open=FALSE)
         }
         if(transform)
             quants <- sweep(quants, 1, sizes, "/")
@@ -132,7 +132,7 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
             out_interval <- matrix(NA, nrow=nr, ncol=nip+1)
             for(r in seq_len(nr)) {
                 all_outcomes_r <- all_outcomes[seq_len(sizes[r]+1),r]
-                outcome_idx <- findInterval(c(-Inf, interval_prob, Inf), all_outcomes_r)
+                outcome_idx <- findInterval(c(-Inf, interval_prob, Inf), all_outcomes_r, left.open=FALSE)
                 cpmf <- c(0,pred_cpmf[,r])
                 out_interval[r,] <- diff(cpmf[outcome_idx+1])
             }
@@ -164,8 +164,7 @@ summary.blrmfit <- function(object, newdata, transform=!predictive, prob=0.95, i
                 assert_numeric(interval_prob, any.missing=FALSE, sorted=TRUE, finite=TRUE)
             }
 
-            if (ncol(post) > 0)
-            {
+            if (ncol(post) > 0) {
               out_interval <- as.data.frame(t(apply(post, 2, function(l) table(cut(l, breaks=c(-Inf, interval_prob, Inf)))/S )))
             } else {
               out_interval <- data.frame(0.0 * matrix(ncol = (1+length(interval_prob)), nrow = 0))
@@ -280,8 +279,7 @@ summary.blrm_trial <- function(
     "ewoc_check"
   ),
   ...
-)
-{
+) {
   args <- list(...)
   if (missing(summarize)) {
     if ("newdata" %in% names(args)) {

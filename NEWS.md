@@ -1,3 +1,10 @@
+# OncoBayes2 0.8-9 - July 20th, 2023
+
+## Bug fixes
+
+* resolve compilation from source issues on some platforms triggered by
+  changes in rstantools
+
 # OncoBayes2 0.8-8 - March 3rd, 2023
 
 ## Enhancements
