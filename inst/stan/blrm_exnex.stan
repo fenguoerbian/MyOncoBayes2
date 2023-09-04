@@ -461,13 +461,22 @@ parameters {
   // for differential discounting we allow the tau's to vary by
   // stratum (but not the means)
   vector<lower=0>[2] tau_log_beta_raw[num_strata,num_comp];
-  cholesky_factor_corr[2] L_corr_log_beta[num_comp];
-
+  
+  // ------ Original version, correlation matrix is sampled ------
+  cholesky_factor_corr[2] L_corr_log_beta[num_comp];    // comment out by Chao Cheng
+  // ------ End of Original version ------
+  
   vector[num_inter] mu_eta;
   vector<lower=0>[num_inter] tau_eta_raw[num_strata];
   cholesky_factor_corr[num_inter] L_corr_eta;
 }
 transformed parameters {
+  // ------ Chao's version, correlation matrix is fixed ------
+  // matrix[2, 2] L_corr_log_beta[num_comp];    // added by ChaoCheng
+  // L_corr_log_beta[0] = [[1.0, 0], [-0.817, 0.5766377]];    // added by Chao Cheng
+  // L_corr_log_beta[1] = [[1.0, 0], [-0.817, 0.5766377]];    // added by Chao Cheng
+  // ------ End of Chao's version ------
+  
   vector[2] beta[2*num_groups,num_comp];
   vector[num_inter] eta[2*num_groups];
   vector<lower=0>[2] tau_log_beta[num_strata,num_comp];
@@ -563,7 +572,11 @@ model {
       tau_log_beta_raw[s,j,1] ~ tau_prior(prior_tau_dist, prior_EX_tau_mean_comp[s,j,1], prior_EX_tau_sd_comp[s,j,1]);
       tau_log_beta_raw[s,j,2] ~ tau_prior(prior_tau_dist, prior_EX_tau_mean_comp[s,j,2], prior_EX_tau_sd_comp[s,j,2]);
     }
-    L_corr_log_beta[j] ~ lkj_corr_cholesky(prior_EX_corr_eta_comp[j]);
+    
+    // ------ Original version, correlation matrix is sampled ------
+    L_corr_log_beta[j] ~ lkj_corr_cholesky(prior_EX_corr_eta_comp[j]);    // commented by Chao Cheng
+    // ------ End of Original version ------
+    
   }
   
   mu_eta ~ normal(prior_EX_mu_mean_inter, prior_EX_mu_sd_inter);
@@ -601,6 +614,7 @@ generated quantities {
 
   for(j in 1:num_comp) {
     matrix[2,2] Sigma_corr_log_beta = multiply_lower_tri_self_transpose(L_corr_log_beta[j]);
+    // Sigma_corr_log_beta = [[1, -0.817], [-0.817, 1]];
     rho_log_beta[j] = Sigma_corr_log_beta[2,1];
   }
 
