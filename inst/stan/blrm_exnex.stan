@@ -552,8 +552,13 @@ model {
   
   // EX part: hyper-parameters priors for hierarchical priors
   for(j in 1:num_comp) {
-    mu_log_beta[j,1] ~ normal(prior_EX_mu_mean_comp[j,1], prior_EX_mu_sd_comp[j,1]);
-    mu_log_beta[j,2] ~ normal(prior_EX_mu_mean_comp[j,2], prior_EX_mu_sd_comp[j,2]);
+    // mu_log_beta[j,1] ~ normal(prior_EX_mu_mean_comp[j,1], prior_EX_mu_sd_comp[j,1]);
+    // mu_log_beta[j,2] ~ normal(prior_EX_mu_mean_comp[j,2], prior_EX_mu_sd_comp[j,2]);
+    mu_log_beta[j] ~ multi_normal(prior_EX_mu_mean_comp, 
+    [[prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,1], 
+    -0.817 * prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,2]], 
+    [-0.817 * prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,2], 
+    prior_EX_mu_sd_comp[j,2] * prior_EX_mu_sd_comp[j,2]]]);
     for(s in 1:num_strata) {
       tau_log_beta_raw[s,j,1] ~ tau_prior(prior_tau_dist, prior_EX_tau_mean_comp[s,j,1], prior_EX_tau_sd_comp[s,j,1]);
       tau_log_beta_raw[s,j,2] ~ tau_prior(prior_tau_dist, prior_EX_tau_mean_comp[s,j,2], prior_EX_tau_sd_comp[s,j,2]);
