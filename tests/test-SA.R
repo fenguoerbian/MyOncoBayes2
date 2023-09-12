@@ -44,56 +44,56 @@ SA_trial_setup <- blrm_trial(
 )
 
 
-dims <- summary(SA_trial_setup,"dimensionality")
-num_comp <- dims$num_components
-
-SA_trial_start <- update(
-    SA_trial_setup,
-    ##component1 MAP prior
-    prior_EX_mu_mean_comp = matrix(
-        c(-3.068, # mean of intercept 
-          0.564), # mean of log-slope 
-        nrow = num_comp,
-        ncol = 2
-    ),
-    prior_EX_mu_sd_comp = matrix(
-        c(2.706, # sd of intercept
-          0.728), # sd of log-slope
-        nrow = num_comp,
-        ncol = 2
-    ),
-    prior_EX_corr_mu_comp = -0.817, 
-    prior_EX_tau_mean_comp = matrix(
-        c(0, 0),
-        nrow = num_comp,
-        ncol = 2
-    ),
-    prior_EX_tau_sd_comp = matrix(
-        c(1, 1),
-        nrow = num_comp,
-        ncol = 2
-    ),
-    # prior_EX_corr_eta_comp = 0.817,
-    # prior_EX_corr_eta_inter = 0.817,
-    # prior_EX_mu_mean_inter = -0.817,
+    dims <- summary(SA_trial_setup,"dimensionality")
+    num_comp <- dims$num_components
     
-    #component2: non-informative prior
-    # prior_NEX_mu_mean_comp = matrix(
-    #   c(logit(0.25),
-    #     0),
-    #   nrow=num_comp,
-    #   ncol=2
-    # ),
-    # prior_NEX_mu_sd_comp = matrix(
-    #   c(2,
-    #     1),
-    #   nrow=num_comp,
-    #   ncol=2
-    # ),
-    prior_EX_prob_comp = matrix(1, nrow = 1, ncol = 1),
-    prior_tau_dist = 0, #1=log-normal
-    prior_PD = FALSE
-)
+    SA_trial_start <- update(
+        SA_trial_setup,
+        ##component1 MAP prior
+        prior_EX_mu_mean_comp = matrix(
+            c(-3.068, # mean of intercept 
+              0.564), # mean of log-slope 
+            nrow = num_comp,
+            ncol = 2
+        ),
+        prior_EX_mu_sd_comp = matrix(
+            c(2.706, # sd of intercept
+              0.728), # sd of log-slope
+            nrow = num_comp,
+            ncol = 2
+        ),
+        prior_EX_corr_mu_comp = -0.817, 
+        prior_EX_tau_mean_comp = matrix(
+            c(0, 0),
+            nrow = num_comp,
+            ncol = 2
+        ),
+        prior_EX_tau_sd_comp = matrix(
+            c(1, 1),
+            nrow = num_comp,
+            ncol = 2
+        ),
+        # prior_EX_corr_eta_comp = 0.817,
+        # prior_EX_corr_eta_inter = 0.817,
+        # prior_EX_mu_mean_inter = -0.817,
+        
+        #component2: non-informative prior
+        # prior_NEX_mu_mean_comp = matrix(
+        #   c(logit(0.25),
+        #     0),
+        #   nrow=num_comp,
+        #   ncol=2
+        # ),
+        # prior_NEX_mu_sd_comp = matrix(
+        #   c(2,
+        #     1),
+        #   nrow=num_comp,
+        #   ncol=2
+        # ),
+        prior_EX_prob_comp = matrix(1, nrow = 1, ncol = 1),
+        prior_tau_dist = 0, #1=log-normal
+        prior_PD = FALSE
+    )
 
 prior_summary(SA_trial_start)    # Need to update summary to refect correlation information
 
