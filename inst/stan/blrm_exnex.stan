@@ -239,6 +239,7 @@ data {
   // EX priors
   vector[2] prior_EX_mu_mean_comp[num_comp];
   vector<lower=0>[2] prior_EX_mu_sd_comp[num_comp];
+  real<lower=-1,upper=1> prior_EX_corr_mu_comp;
   vector[2] prior_EX_tau_mean_comp[num_strata,num_comp];
   vector<lower=0>[2] prior_EX_tau_sd_comp[num_strata,num_comp];
   real<lower=0> prior_EX_corr_eta_comp[num_comp];
@@ -565,8 +566,8 @@ model {
     // mu_log_beta[j,2] ~ normal(prior_EX_mu_mean_comp[j,2], prior_EX_mu_sd_comp[j,2]);
     mu_log_beta[j] ~ multi_normal(prior_EX_mu_mean_comp, 
     [[prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,1], 
-    -0.817 * prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,2]], 
-    [-0.817 * prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,2], 
+    prior_EX_corr_mu_comp * prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,2]], 
+    [prior_EX_corr_mu_comp * prior_EX_mu_sd_comp[j,1] * prior_EX_mu_sd_comp[j,2], 
     prior_EX_mu_sd_comp[j,2] * prior_EX_mu_sd_comp[j,2]]]);
     for(s in 1:num_strata) {
       tau_log_beta_raw[s,j,1] ~ tau_prior(prior_tau_dist, prior_EX_tau_mean_comp[s,j,1], prior_EX_tau_sd_comp[s,j,1]);

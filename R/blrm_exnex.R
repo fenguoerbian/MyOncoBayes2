@@ -344,6 +344,7 @@ blrm_exnex <- function(formula,
                        data,
                        prior_EX_mu_mean_comp,
                        prior_EX_mu_sd_comp,
+                       prior_EX_corr_mu_comp,
                        prior_EX_tau_mean_comp,
                        prior_EX_tau_sd_comp,
                        prior_EX_corr_eta_comp,
@@ -496,7 +497,10 @@ blrm_exnex <- function(formula,
 
     assert_matrix(prior_EX_mu_mean_comp, any.missing=FALSE, nrows=num_comp, ncols=2)
     assert_matrix(prior_EX_mu_sd_comp, any.missing=FALSE, nrows=num_comp, ncols=2)
-
+    
+    # TODO: assert prior_ex_corr_mu_comp is correlation, hence -1 to 1
+    
+    
     ## in case a single stratum is used, the user can input a matrix
     if(num_strata == 1) {
         if (is.matrix(prior_EX_tau_mean_comp))
@@ -635,6 +639,7 @@ blrm_exnex <- function(formula,
         prior_EX_prob_inter=prior_EX_prob_inter,
         prior_EX_mu_mean_comp=prior_EX_mu_mean_comp,
         prior_EX_mu_sd_comp=prior_EX_mu_sd_comp,
+        prior_EX_corr_mu_comp = prior_EX_corr_mu_comp, 
         prior_EX_tau_mean_comp=prior_EX_tau_mean_comp,
         prior_EX_tau_sd_comp=prior_EX_tau_sd_comp,
         prior_EX_corr_eta_comp=array(prior_EX_corr_eta_comp, num_comp),
