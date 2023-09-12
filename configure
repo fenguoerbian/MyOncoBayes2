@@ -3,3 +3,18 @@
 
 "${R_HOME}/bin/Rscript" -e "rstantools::rstan_config()"
 
+# disable eigen warning
+PKG_CXXFLAGS+=-Wno-ignored-attributes
+PKG_CXX11FLAGS+=-Wno-ignored-attributes
+PKG_CXX14FLAGS+=-Wno-ignored-attributes
+
+# compiler optimization, from https://github.com/david-cortes/installing-optimized-libraries
+# echo "PKG_CXXFLAGS += -Wa,-mbig-obj" >> ./src/Makevars.win
+echo "PKG_CFLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
+echo "PKG_FCFLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
+echo "PKG_FFLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
+echo "PKG_CXXFLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
+echo "PKG_CXX11FLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
+echo "PKG_CXX14FLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
+echo "PKG_CXX17FLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
+echo "PKG_CXX20FLAGS += -O3 -march=native -fno-math-errno -fno-trapping-math -g0 -Wa,-mbig-obj" >> ./src/Makevars
