@@ -462,7 +462,7 @@ parameters {
   // stratum (but not the means)
   vector<lower=0>[2] tau_log_beta_raw[num_strata,num_comp];
   
-  // ------ Original version, correlation matrix is sampled ------
+  // ------ Original version, (hierarchical) correlation matrix is sampled ------
   cholesky_factor_corr[2] L_corr_log_beta[num_comp];    // comment out by Chao Cheng
   // ------ End of Original version ------
   
@@ -573,7 +573,7 @@ model {
       tau_log_beta_raw[s,j,2] ~ tau_prior(prior_tau_dist, prior_EX_tau_mean_comp[s,j,2], prior_EX_tau_sd_comp[s,j,2]);
     }
     
-    // ------ Original version, correlation matrix is sampled ------
+    // ------ Original version, (hierarchical) correlation matrix is sampled ------
     L_corr_log_beta[j] ~ lkj_corr_cholesky(prior_EX_corr_eta_comp[j]);    // commented by Chao Cheng
     // ------ End of Original version ------
     
