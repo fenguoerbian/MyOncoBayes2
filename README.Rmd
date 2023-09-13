@@ -11,6 +11,7 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
+options(width = 200)
 ```
 
 # My modified OncoBayes2
@@ -38,7 +39,7 @@ to accept user defined correlation, which is also reported on the [internet](htt
 
 ## Installation
 
-You can install the development version of OncoBayes2 like so:
+You can install the development version of my modified OncoBayes2 like so:
 
 ``` r
 remotes::install_github("fenguoerbian/MyOncoBayes2")
@@ -50,7 +51,6 @@ This is a basic example which reproduce the results in Table 14-7 in this [trial
 
 ```{r example}
 library(OncoBayes2)
-## basic example code
 ```
 
 ### Setup MCMC options
@@ -107,7 +107,8 @@ num_comp <- dims$num_components
 
 SA_trial_start <- update(
     SA_trial_setup,
-    ##component1 MAP prior
+    # component1 MAP prior
+    # check the usage in single agent example documentation.
     prior_EX_mu_mean_comp = matrix(
         c(-3.068, # mean of intercept 
           0.564), # mean of log-slope 

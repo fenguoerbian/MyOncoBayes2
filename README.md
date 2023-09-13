@@ -42,7 +42,8 @@ supplying the **correlation** via `prior_EX_corr_mu_comp`.
 
 ## Installation
 
-You can install the development version of OncoBayes2 like so:
+You can install the development version of my modified OncoBayes2 like
+so:
 
 ``` r
 remotes::install_github("fenguoerbian/MyOncoBayes2")
@@ -57,7 +58,6 @@ protocol](https://clinicaltrials.gov/ProvidedDocs/64/NCT02108964/Prot_001.pdf).
 ``` r
 library(OncoBayes2)
 #> This is OncoBayes2 version 0.8.123456 (released 2023-07-21, git-sha e5a8128)
-## basic example code
 ```
 
 ### Setup MCMC options
@@ -114,7 +114,8 @@ num_comp <- dims$num_components
 
 SA_trial_start <- update(
     SA_trial_setup,
-    ##component1 MAP prior
+    # component1 MAP prior
+    # check the usage in single agent example documentation.
     prior_EX_mu_mean_comp = matrix(
         c(-3.068, # mean of intercept 
           0.564), # mean of log-slope 
@@ -204,33 +205,29 @@ prior_summary(SA_trial_start)
 ``` r
 summary(SA_trial_start, "dose_prediction")
 #> # A tibble: 8 × 13
-#>   group_id drug_A dose_id stratum_id   mean    sd   `2.5%`   `50%` `97.5%`
-#>   <fct>     <dbl>   <dbl> <fct>       <dbl> <dbl>    <dbl>   <dbl>   <dbl>
-#> 1 All          50       1 all        0.0776 0.190 8.75e-10 0.00183   0.786
-#> 2 All          75       2 all        0.0905 0.202 1.61e- 8 0.00372   0.819
-#> 3 All         150       3 all        0.121  0.226 2.23e- 6 0.0128    0.868
-#> 4 All         300       4 all        0.172  0.254 2.27e- 4 0.0447    0.907
-#> 5 All         450       5 all        0.223  0.269 2.02e- 3 0.0961    0.926
-#> 6 All         600       6 all        0.282  0.279 5.91e- 3 0.172     0.939
-#> 7 All         800       7 all        0.366  0.291 1.37e- 2 0.289     0.959
-#> 8 All        1000       8 all        0.441  0.298 2.37e- 2 0.400     0.975
-#> # ℹ 4 more variables: prob_underdose <dbl>, prob_target <dbl>,
-#> #   prob_overdose <dbl>, ewoc_ok <lgl>
+#>   group_id drug_A dose_id stratum_id   mean    sd   `2.5%`   `50%` `97.5%` prob_underdose prob_target prob_overdose ewoc_ok
+#>   <fct>     <dbl>   <dbl> <fct>       <dbl> <dbl>    <dbl>   <dbl>   <dbl>          <dbl>       <dbl>         <dbl> <lgl>  
+#> 1 All          50       1 all        0.0776 0.190 8.75e-10 0.00183   0.786          0.867      0.0484        0.0843 TRUE   
+#> 2 All          75       2 all        0.0905 0.202 1.61e- 8 0.00372   0.819          0.845      0.0558        0.0993 TRUE   
+#> 3 All         150       3 all        0.121  0.226 2.23e- 6 0.0128    0.868          0.791      0.0747        0.134  TRUE   
+#> 4 All         300       4 all        0.172  0.254 2.27e- 4 0.0447    0.907          0.698      0.110         0.192  TRUE   
+#> 5 All         450       5 all        0.223  0.269 2.02e- 3 0.0961    0.926          0.602      0.146         0.253  FALSE  
+#> 6 All         600       6 all        0.282  0.279 5.91e- 3 0.172     0.939          0.483      0.185         0.332  FALSE  
+#> 7 All         800       7 all        0.366  0.291 1.37e- 2 0.289     0.959          0.335      0.207         0.457  FALSE  
+#> 8 All        1000       8 all        0.441  0.298 2.37e- 2 0.400     0.975          0.235      0.197         0.569  FALSE
 ```
 
 ``` r
 summary(SA_trial_start, "ewoc_check")
 #> # A tibble: 8 × 9
-#>   group_id drug_A dose_id stratum_id prob_overdose_est prob_overdose_stat
-#>   <fct>     <dbl>   <dbl> <fct>                  <dbl>              <dbl>
-#> 1 All          50       1 all                   0.0336            -609.  
-#> 2 All          75       2 all                   0.0525            -379.  
-#> 3 All         150       3 all                   0.110             -172.  
-#> 4 All         300       4 all                   0.225              -57.4 
-#> 5 All         450       5 all                   0.335                2.33
-#> 6 All         600       6 all                   0.447               58.5 
-#> 7 All         800       7 all                   0.589              149.  
-#> 8 All        1000       8 all                   0.696              258.  
-#> # ℹ 3 more variables: prob_overdose_mcse <dbl>, prob_overdose_ess <dbl>,
-#> #   prob_overdose_rhat <dbl>
+#>   group_id drug_A dose_id stratum_id prob_overdose_est prob_overdose_stat prob_overdose_mcse prob_overdose_ess prob_overdose_rhat
+#>   <fct>     <dbl>   <dbl> <fct>                  <dbl>              <dbl>              <dbl>             <dbl>              <dbl>
+#> 1 All          50       1 all                   0.0336            -609.             0.000487           116842.               1.00
+#> 2 All          75       2 all                   0.0525            -379.             0.000732           117018.               1.00
+#> 3 All         150       3 all                   0.110             -172.             0.00128            119441.               1.00
+#> 4 All         300       4 all                   0.225              -57.4            0.00184            123470.               1.00
+#> 5 All         450       5 all                   0.335                2.33           0.00198            127508.               1.00
+#> 6 All         600       6 all                   0.447               58.5            0.00200            133847.               1.00
+#> 7 All         800       7 all                   0.589              149.             0.00174            138891.               1.00
+#> 8 All        1000       8 all                   0.696              258.             0.00142            144318.               1.00
 ```
